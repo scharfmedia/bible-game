@@ -9,5 +9,9 @@
   "types": "./src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "framer-motion": "*",
+    "react": "*"
   }
 }

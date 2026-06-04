@@ -1,0 +1,244 @@
+import {
+  blankCount,
+  canMove,
+  evalGate,
+  gappedDisplay,
+  getLocaleData,
+  memberMaxHp,
+  nodeVisible,
+  type Direction,
+  type GameState,
+  type NodeType,
+} from '@bible/engine'
+
+export interface VerseView { reference: string; gapped: string; blanks: number }
+
+export function selectVerse(state: GameState, challengeId: string): VerseView | null {
+  const run = state.run
+  if (!run) return null
+  const challenge = run.content.verses[challengeId]
+  if (!challenge) return null
+  const data = getLocaleData(challenge, state.profile.settings.locale)
+  return { reference: data.reference, gapped: gappedDisplay(data), blanks: blankCount(data) }
+}
+
+export interface HotspotView { id: string; nameKey: string; rect?: { x: number; y: number; w: number; h: number } }
+export interface SceneView { sceneId: string; bgAsset: string; hotspots: HotspotView[] }
+
+export function selectScene(state: GameState): SceneView | null {
+  const run = state.run
+  if (!run || run.world.movement.kind !== 'inScene') return null
+  const scene = run.content.scenes[run.world.movement.sceneId]
+  if (!scene) return null
+  return {
+    sceneId: scene.id,
+    bgAsset: scene.bgAsset,
+    hotspots: scene.hotspots.map((h) => ({ id: h.id, nameKey: h.nameKey, rect: 'x' in h.shape ? h.shape : undefined })),
+  }
+}
+
+export interface EventChoiceView { id: string; labelKey: string; enabled: boolean }
+export interface EventView { eventId: string; bgAsset: string; titleKey: string; bodyKey: string; choices: EventChoiceView[] }
+
+export function selectEvent(state: GameState): EventView | null {
+  const run = state.run
+  if (!run || run.world.movement.kind !== 'inEvent') return null
+  const def = run.content.events[run.world.movement.eventId]
+  if (!def) return null
+  const ctx = { inventory: run.inventory, spirit: run.spirit.spirit, world: run.world }
+  return {
+    eventId: def.id,
+    bgAsset: def.bgAsset,
+    titleKey: def.titleKey,
+    bodyKey: def.bodyKey,
+    choices: def.choices.map((c) => ({ id: c.id, labelKey: c.labelKey, enabled: evalGate(c.requires, ctx) })),
+  }
+}
+
+export interface RewardOptionView { id: string; kind: string; label: string }
+export interface RewardView { options: RewardOptionView[]; righteous: boolean; peacefulBonus: boolean }
+
+export function selectReward(state: GameState): RewardView | null {
+  const c = state.combat
+  if (!c?.reward) return null
+  const content = state.run?.content
+  return {
+    righteous: c.reward.righteous,
+    peacefulBonus: (c.reward.peacefulSpiritBonus ?? 0) > 0,
+    options: c.reward.options.map((o) => ({
+      id: o.id,
+      kind: o.kind,
+      label:
+        o.kind === 'money'
+          ? `${o.amount ?? 0}`
+          : o.kind === 'card' && o.defId
+            ? (content?.cards[o.defId]?.nameKey ?? o.defId)
+            : o.kind === 'relic' && o.defId
+              ? (content?.items[o.defId]?.nameKey ?? o.defId)
+              : o.defId ?? o.kind,
+    })),
+  }
+}
+
+// Pure view-model derivations. Keeps components free of game logic — they render these + dispatch.
+
+export interface MapNodeView {
+  id: string
+  type: NodeType
+  nameKey: string
+  pos: { x: number; y: number }
+  visited: boolean
+  cleared: boolean
+  current: boolean
+  movable: boolean
+  direction?: Direction
+}
+
+export interface MapEdgeView {
+  id: string
+  a: { x: number; y: number }
+  b: { x: number; y: number }
+  gated: boolean
+}
+
+export interface MapView {
+  nodes: MapNodeView[]
+  edges: MapEdgeView[]
+  bounds: { w: number; h: number }
+}
+
+export function selectMap(state: GameState): MapView | null {
+  const run = state.run
+  if (!run) return null
+  const map = run.content.worlds[run.worldId]?.map
+  if (!map) return null
+  const ctx = { inventory: run.inventory, spirit: run.spirit.spirit, world: run.world }
+
+  const nodes: MapNodeView[] = Object.values(map.nodes)
+    .filter((n) => nodeVisible(map, run.world, ctx, n.id))
+    .map((n) => {
+      const chk = canMove(map, run.world, ctx, n.id)
+      return {
+        id: n.id,
+        type: n.type,
+        nameKey: n.nameKey,
+        pos: n.pos,
+        visited: run.world.visited.includes(n.id),
+        cleared: run.world.cleared.includes(n.id),
+        current: run.world.current === n.id,
+        movable: chk.ok,
+        direction: chk.ok ? chk.direction : undefined,
+      }
+    })
+
+  const edges: MapEdgeView[] = Object.values(map.edges).map((e) => ({
+    id: e.id,
+    a: map.nodes[e.a]!.pos,
+    b: map.nodes[e.b]!.pos,
+    gated: e.gate !== undefined && !run.world.edgesUnlocked.includes(e.id),
+  }))
+
+  const xs = Object.values(map.nodes).map((n) => n.pos.x)
+  const ys = Object.values(map.nodes).map((n) => n.pos.y)
+  return { nodes, edges, bounds: { w: Math.max(...xs) + 1, h: Math.max(...ys) + 1 } }
+}
+
+export interface CombatantView {
+  id: string
+  nameKey: string
+  displayName?: string
+  faction: 'party' | 'enemy'
+  isHuman: boolean
+  isDemon: boolean
+  alive: boolean
+  hp: number
+  maxHp: number
+  block: number
+  ward: number
+  row: 'front' | 'back'
+  intentKind?: string
+  intentValue?: number
+}
+
+export interface HandCardView {
+  iid: string
+  defId: string
+  nameKey: string
+  textKey: string
+  cost: number
+  layer: 'flesh' | 'spirit' | 'both'
+  type: string
+  target: string
+}
+
+export interface CombatView {
+  party: CombatantView[]
+  enemies: CombatantView[]
+  hand: HandCardView[]
+  energy: { current: number; max: number }
+  grace: { current: number; max: number }
+  drawCount: number
+  discardCount: number
+  phase: string
+  outcome: string
+  roundActionTaken: boolean
+  canFlee: boolean
+  graceAbilities: string[]
+}
+
+export function selectCombat(state: GameState): CombatView | null {
+  const c = state.combat
+  if (!c) return null
+  const heroName = (id: string) => state.run?.party.find((m) => m.memberId === id)?.displayName
+
+  const toView = (id: string): CombatantView => {
+    const x = c.combatants[id]!
+    return {
+      id: x.id,
+      nameKey: x.faction === 'enemy' ? `enemy.${x.archetype}` : `enemy.${x.archetype}`,
+      displayName: x.faction === 'party' ? heroName(x.memberId ?? '') : undefined,
+      faction: x.faction,
+      isHuman: x.isHuman,
+      isDemon: x.isDemon ?? false,
+      alive: x.alive,
+      hp: x.hp,
+      maxHp: x.maxHp,
+      block: x.block,
+      ward: x.spiritualBlock,
+      row: x.row,
+      intentKind: x.intent?.kind,
+      intentValue: x.intent?.value,
+    }
+  }
+
+  return {
+    party: c.partyOrder.map(toView),
+    enemies: c.enemyOrder.map(toView).filter((e) => e.alive),
+    hand: c.hand.map((ci) => {
+      const def = c.cardDefs[ci.defId]!
+      return { iid: ci.iid, defId: ci.defId, nameKey: def.nameKey, textKey: def.textKey, cost: ci.costOverride ?? def.cost, layer: def.layer, type: def.type, target: def.target }
+    }),
+    energy: c.energy,
+    grace: c.grace,
+    drawCount: c.drawPile.length,
+    discardCount: c.discardPile.length,
+    phase: c.phase,
+    outcome: c.outcome,
+    roundActionTaken: c.roundActionTaken,
+    canFlee: c.flags.allowFlee && !c.flags.mandatory && c.phase === 'partyDecision' && !c.roundActionTaken,
+    graceAbilities: c.partyOrder.flatMap((id) => c.combatants[id]?.graceAbilityIds ?? []),
+  }
+}
+
+export const heroSummary = (state: GameState) => {
+  const run = state.run
+  if (!run) return null
+  const hero = run.party[0]!
+  return {
+    name: hero.displayName ?? hero.nameKey ?? 'Hero',
+    level: hero.level,
+    hp: hero.currentHp,
+    maxHp: memberMaxHp(hero),
+    gold: run.inventory.currency,
+  }
+}
