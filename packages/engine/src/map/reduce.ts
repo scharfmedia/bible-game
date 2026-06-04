@@ -31,6 +31,12 @@ function withSpirit(run: RunState, spiritEvents: SpiritEvent[]): { run: RunState
   return { run: r, events }
 }
 
+function heroOwnedVerseCards(state: GameState): string[] {
+  const run = state.run!
+  const characterId = run.party.find((m) => m.memberId === run.heroMemberId)?.characterId
+  return state.profile.slots.find((s) => s.id === characterId)?.character.ownedVerseCardIds ?? []
+}
+
 const clearNode = (run: RunState, nodeId: NodeId): RunState =>
   run.world.cleared.includes(nodeId)
     ? run
@@ -238,11 +244,21 @@ function eventChoice(state: GameState, eventId: string, choiceId: string): Reduc
 
 // ---- fireplace --------------------------------------------------------------------------
 
-function fireplace(state: GameState, action: 'rest' | 'pray' | 'leave'): ReduceResult {
+function fireplace(state: GameState, action: 'rest' | 'pray' | 'leave' | 'study'): ReduceResult {
   const run = state.run!
   const node = run.world.current
   const restFlag = `fireplace:${node}:rested`
   const prayFlag = `fireplace:${node}:prayed`
+
+  if (action === 'study') {
+    // Offer the first not-yet-earned verse challenge as a gap-fill prompt.
+    const owned = new Set(heroOwnedVerseCards(state))
+    const challenge = Object.values(run.content.verses).find((v) => !owned.has(v.cardDefId))
+    if (!challenge) return reject(state, 'no-verse-available')
+    return ok({ ...state, prompt: { kind: 'verseChallenge', cardDefId: challenge.cardDefId, challengeId: challenge.id } }, [
+      { type: 'notice', messageKey: 'fireplace.study' },
+    ])
+  }
 
   if (action === 'rest') {
     if (run.world.flags[restFlag]) return reject(state, 'already-rested')

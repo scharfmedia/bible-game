@@ -37,7 +37,7 @@ export type Command =
   | { type: 'world/sceneInteract'; sceneId: SceneId; hotspotId: HotspotId; verb: Verb; itemId?: ItemId }
   | { type: 'world/leaveScene' }
   | { type: 'world/eventChoice'; eventId: EventId; choiceId: string }
-  | { type: 'world/fireplace'; action: 'rest' | 'pray' | 'leave' }
+  | { type: 'world/fireplace'; action: 'rest' | 'pray' | 'leave' | 'study' }
   | { type: 'world/advanceWorld' }
   // ---- combat ----
   | { type: 'combat/reposition'; moves: Array<{ id: CombatantId; row?: Row; side?: Side }> }
