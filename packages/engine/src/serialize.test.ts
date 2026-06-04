@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { newGame, reduce } from './commands/reduce'
 import { deserialize, serialize } from './serialize'
+import { testContent } from './testing/fixtures'
 
 const startedRun = () => {
   const created = reduce(newGame(), { type: 'createHero', id: 'h1', name: 'Gideon' }).state
-  return reduce(created, { type: 'startRun', characterId: 'h1', worldId: 'world-01', seed: 'seed-1' }).state
+  return reduce(created, {
+    type: 'startRun',
+    characterId: 'h1',
+    worldId: 'world-01',
+    seed: 'seed-1',
+    content: testContent(),
+  }).state
 }
 
 describe('serialize / deserialize', () => {

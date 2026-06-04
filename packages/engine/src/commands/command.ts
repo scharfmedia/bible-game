@@ -1,4 +1,5 @@
 import type { Row, Side } from '../combat/types'
+import type { ContentBundle } from '../content/bundle'
 import type { Verb } from '../scene/types'
 import type { ScreenId, Settings } from '../state/gameState'
 import type { StatId } from '../state/stats'
@@ -27,7 +28,7 @@ export type Command =
   | { type: 'selectHero'; id: CharacterId }
   | { type: 'updateSettings'; settings: Partial<Settings> }
   | { type: 'navigate'; screen: ScreenId }
-  | { type: 'startRun'; characterId: CharacterId; worldId: string; seed: string }
+  | { type: 'startRun'; characterId: CharacterId; worldId: string; seed: string; content: ContentBundle }
   | { type: 'abandonRun' }
   // ---- leveling ----
   | { type: 'allocateStat'; memberId: MemberId; stat: StatId }

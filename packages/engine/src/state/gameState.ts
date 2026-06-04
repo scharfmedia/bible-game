@@ -1,4 +1,5 @@
 import type { CombatState } from '../combat/types'
+import type { ContentBundle } from '../content/bundle'
 import type { InventoryState } from '../inventory/types'
 import type { WorldState } from '../map/types'
 import type { RngState } from '../rng/rng'
@@ -50,6 +51,9 @@ export interface RunState {
   seed: string
   rng: RngState
   worldId: string
+  /** the run's immutable content (map/encounters/cards/scenes/events/…), embedded so saves are
+   *  self-contained and reduce stays pure */
+  content: ContentBundle
   /** party[0] is the hero */
   party: PartyMember[]
   heroMemberId: MemberId

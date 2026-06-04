@@ -80,8 +80,8 @@ export type MovementPhase =
   | { kind: 'idle' }
   | { kind: 'resolvingFixed'; node: NodeId }
   | { kind: 'inScene'; sceneId: SceneId }
-  | { kind: 'inEvent'; eventId: EventId; node: NodeId }
-  | { kind: 'inCombat'; encounter: EncounterId; node: NodeId }
+  | { kind: 'inEvent'; eventId: EventId; node: NodeId; backward?: boolean }
+  | { kind: 'inCombat'; encounter: EncounterId; node: NodeId; backward?: boolean }
   | { kind: 'locked'; reason: string }
 
 /** Mutable run progress, separate from the immutable WorldMap. Uses arrays/records (JSON-safe). */

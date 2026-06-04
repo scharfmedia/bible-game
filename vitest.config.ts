@@ -19,7 +19,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['packages/engine/src/**'],
-      exclude: ['**/*.test.ts', '**/index.ts', '**/*.d.ts'],
+      exclude: ['**/*.test.ts', '**/index.ts', '**/*.d.ts', '**/testing/**'],
       reporter: ['text', 'html'],
       thresholds: {
         // Engine pillars must be exhaustively covered (raised as modules land).

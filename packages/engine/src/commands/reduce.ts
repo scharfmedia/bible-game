@@ -1,4 +1,5 @@
 import { reduceCombat } from '../combat/reduce'
+import type { ContentBundle } from '../content/bundle'
 import type { GameEvent, ReduceResult } from '../events/event'
 import { reduceWorld } from '../map/reduce'
 import { createCharacter, partyMemberFromCharacter } from '../state/character'
@@ -56,7 +57,7 @@ export function reduce(state: GameState, cmd: Command): ReduceResult {
     case 'navigate':
       return ok({ ...state, screen: cmd.screen }, [{ type: 'screenChanged', screen: cmd.screen }])
     case 'startRun':
-      return startRun(state, cmd.characterId, cmd.worldId, cmd.seed)
+      return startRun(state, cmd.characterId, cmd.worldId, cmd.seed, cmd.content)
     case 'abandonRun':
       return state.run
         ? ok({ ...state, run: null, combat: null, prompt: null, screen: 'start' }, [
@@ -130,24 +131,33 @@ function selectHero(state: GameState, id: string): ReduceResult {
   return ok({ ...state, profile: { ...state.profile, lastSelectedId: id } }, [])
 }
 
-function startRun(state: GameState, characterId: string, worldId: string, seed: string): ReduceResult {
+function startRun(
+  state: GameState,
+  characterId: string,
+  worldId: string,
+  seed: string,
+  content: ContentBundle,
+): ReduceResult {
   const slot = state.profile.slots.find((s) => s.id === characterId)
   if (!slot) return reject(state, 'no-such-hero')
+  const world = content.worlds[worldId]
+  if (!world) return reject(state, 'no-such-world')
 
-  // Phase 1: a minimal run shell (placeholder world + empty deck). Phase 4/5 fill the real map
-  // and starter deck via the encounter builder + content.
-  const hero = partyMemberFromCharacter(slot.character, [], ['sight', 'mercy'])
+  // Build the hero party member from the permanent Character + the bundle's starter kit.
+  const startDeck = [...content.heroStartDeck, ...slot.character.ownedVerseCardIds]
+  const hero = partyMemberFromCharacter(slot.character, startDeck, content.heroGraceAbilities)
   const run: RunState = {
     seed,
     rng: seedRng(seed),
     worldId,
+    content,
     party: [hero],
     heroMemberId: hero.memberId,
-    world: initialWorldState(worldId, 'entrance'),
+    world: initialWorldState(worldId, world.map.entrance),
     inventory: emptyInventory(),
     spirit: initialSpiritState(),
-    deckByMember: { [hero.memberId]: [] },
-    depth: 0,
+    deckByMember: { [hero.memberId]: startDeck },
+    depth: world.map.nodes[world.map.entrance]?.depth ?? 0,
     baseGrace: 1,
   }
   return ok({ ...state, run, combat: null, prompt: null, screen: 'map' }, [

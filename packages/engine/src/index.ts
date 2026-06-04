@@ -156,7 +156,32 @@ export { emptyInventory, itemCount } from './inventory/types'
 export { startCombat, HAND_SIZE, type CombatInit, type CombatStep } from './combat/combat'
 export { physicalAmount, spiritualAmount, absorb, statusStacks } from './combat/damage'
 export { pickIntent } from './combat/ai'
+export { buildEncounter, encounterExists } from './combat/encounterBuilder'
 export { GRACE_ABILITIES, getGrace, type GraceAbilityMeta } from './grace/grace'
+
+// ---- content bundle (engine owns the types; @bible/content supplies the data) ----
+export {
+  worldMapOf,
+  type ContentBundle,
+  type WorldContent,
+  type EncounterDef,
+  type EnemyTemplate,
+  type BackwardEncounterTable,
+} from './content/bundle'
+
+// ---- world / map / scene ----
+export { canMove, classify, edgeBetween, nodeVisible, type Direction, type MoveCheck } from './map/movement'
+export { evalGate, type GateContext } from './map/gate'
+export {
+  resolveInteraction,
+  runScript,
+  type ScriptOutcome,
+  type SceneIntent,
+  type SceneTransition,
+} from './scene/resolve'
+
+// ---- headless simulation ----
+export { simulate, sawEvent, type SimResult, type SimEntry } from './sim/simulate'
 
 // ---- shared id vocabulary ----
 export type {

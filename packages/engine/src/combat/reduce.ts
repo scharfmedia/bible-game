@@ -3,7 +3,17 @@ import type { GameEvent, ReduceResult } from '../events/event'
 import { grantXp } from '../leveling/scaling'
 import { applySpiritEvent } from '../spirit/spirit'
 import type { GameState } from '../state/gameState'
+import type { PartyMember } from '../state/character'
 import { endTurn, ensureActing, flee, playCard, reposition, useGrace, type CombatStep } from './combat'
+import type { CombatState } from './types'
+
+/** Persist combat HP back onto the run's party members (alive → current hp, dead → 0). */
+function writebackHp(party: PartyMember[], combat: CombatState): PartyMember[] {
+  return party.map((m) => {
+    const c = combat.combatants[m.memberId]
+    return c ? { ...m, currentHp: c.alive ? c.hp : 0 } : m
+  })
+}
 
 const reject = (state: GameState, reason: string): ReduceResult => ({
   state,
@@ -70,7 +80,8 @@ function applyStep(state: GameState, result: CombatStep): ReduceResult {
       screen = 'gameOver'
       break
     case 'fled': {
-      // back to the map; the node is NOT cleared (you fled)
+      // back to the map; the node is NOT cleared (you fled). Persist current HP.
+      run = { ...run, party: writebackHp(run.party, combat) }
       if (run.world.movement.kind === 'inCombat') run = { ...run, world: { ...run.world, movement: { kind: 'idle' } } }
       nextCombat = null
       screen = 'map'
@@ -142,16 +153,19 @@ function chooseReward(state: GameState, optionId: string): ReduceResult {
     events.push({ type: 'spiritShifted', delta: out.delta, reason: out.reason })
   }
 
-  // clear the node + leave combat back to the map
-  const world =
-    run.world.movement.kind === 'inCombat'
-      ? {
-          ...run.world,
-          movement: { kind: 'idle' as const },
-          cleared: run.world.cleared.includes(combat.nodeId) ? run.world.cleared : [...run.world.cleared, combat.nodeId],
-          bossDefeated: combat.flags.isBoss ? true : run.world.bossDefeated,
-        }
-      : run.world
+  // leave combat back to the map. Fixed-encounter nodes get cleared; backward random fights do not.
+  party = writebackHp(party, combat)
+  const mv = run.world.movement
+  let world = run.world
+  if (mv.kind === 'inCombat') {
+    const clearsNode = !mv.backward
+    world = {
+      ...run.world,
+      movement: { kind: 'idle' as const },
+      cleared: clearsNode && !run.world.cleared.includes(combat.nodeId) ? [...run.world.cleared, combat.nodeId] : run.world.cleared,
+      bossDefeated: clearsNode && combat.flags.isBoss ? true : run.world.bossDefeated,
+    }
+  }
 
   const newRun = { ...run, inventory, deckByMember, spirit, party, world }
 

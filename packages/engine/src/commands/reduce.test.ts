@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { Command } from './command'
 import { newGame, reduce } from './reduce'
 import type { GameState } from '../state/gameState'
+import { testContent } from '../testing/fixtures'
+
+const CONTENT = testContent()
 
 const run = (state: GameState, cmd: Command) => reduce(state, cmd)
 const eventTypes = (state: GameState, cmd: Command) => run(state, cmd).events.map((e) => e.type)
@@ -72,6 +75,7 @@ describe('run lifecycle', () => {
       characterId: 'h1',
       worldId: 'world-01',
       seed: 'seed-1',
+      content: CONTENT,
     })
     expect(state.screen).toBe('map')
     expect(state.run).not.toBeNull()
@@ -84,13 +88,13 @@ describe('run lifecycle', () => {
   })
 
   it('rejects starting a run for an unknown hero', () => {
-    expect(eventTypes(newGame(), { type: 'startRun', characterId: 'x', worldId: 'w', seed: 's' })).toEqual([
+    expect(eventTypes(newGame(), { type: 'startRun', characterId: 'x', worldId: 'world-01', seed: 's', content: CONTENT })).toEqual([
       'rejected',
     ])
   })
 
   it('abandons a run back to the start screen', () => {
-    const started = run(withHero(), { type: 'startRun', characterId: 'h1', worldId: 'w', seed: 's' }).state
+    const started = run(withHero(), { type: 'startRun', characterId: 'h1', worldId: 'world-01', seed: 's', content: CONTENT }).state
     const { state, events } = run(started, { type: 'abandonRun' })
     expect(state.run).toBeNull()
     expect(state.screen).toBe('start')
@@ -98,7 +102,7 @@ describe('run lifecycle', () => {
   })
 
   it('deleting the active hero abandons the run', () => {
-    const started = run(withHero(), { type: 'startRun', characterId: 'h1', worldId: 'w', seed: 's' }).state
+    const started = run(withHero(), { type: 'startRun', characterId: 'h1', worldId: 'world-01', seed: 's', content: CONTENT }).state
     const { state } = run(started, { type: 'deleteHero', id: 'h1' })
     expect(state.run).toBeNull()
     expect(state.screen).toBe('start')
@@ -109,7 +113,7 @@ describe('stat allocation', () => {
   it('rejects when there are no unspent points', () => {
     const started = run(
       run(newGame(), { type: 'createHero', id: 'h1', name: 'A' }).state,
-      { type: 'startRun', characterId: 'h1', worldId: 'w', seed: 's' },
+      { type: 'startRun', characterId: 'h1', worldId: 'world-01', seed: 's', content: CONTENT },
     ).state
     expect(eventTypes(started, { type: 'allocateStat', memberId: started.run!.heroMemberId, stat: 'maxHp' })).toEqual([
       'rejected',
@@ -119,7 +123,7 @@ describe('stat allocation', () => {
   it('spends a point on the chosen stat (both Character and party member)', () => {
     const started = run(
       run(newGame(), { type: 'createHero', id: 'h1', name: 'A' }).state,
-      { type: 'startRun', characterId: 'h1', worldId: 'w', seed: 's' },
+      { type: 'startRun', characterId: 'h1', worldId: 'world-01', seed: 's', content: CONTENT },
     ).state
     // Grant a point by hand (level-up wiring arrives with combat in Phase 3).
     const withPoint: GameState = {
@@ -151,7 +155,7 @@ describe('purity & determinism', () => {
 
   it('is deterministic: same (state, command) yields equal results', () => {
     const s = run(newGame(), { type: 'createHero', id: 'h1', name: 'A' }).state
-    const cmd: Command = { type: 'startRun', characterId: 'h1', worldId: 'w', seed: 'fixed-seed' }
+    const cmd: Command = { type: 'startRun', characterId: 'h1', worldId: 'world-01', seed: 'fixed-seed', content: CONTENT }
     expect(reduce(s, cmd)).toEqual(reduce(s, cmd))
   })
 
