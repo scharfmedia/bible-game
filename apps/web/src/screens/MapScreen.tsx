@@ -25,6 +25,10 @@ const NODE_GLYPH: Record<string, string> = {
 const CELL_X = 200
 const CELL_Y = 155
 const PAD = 130
+// node/figure are centred by offsetting half their size (NOT a CSS transform — Framer Motion owns
+// `transform` for the hover-scale / walk tweens, and a CSS translate would be clobbered).
+const NODE = 64
+const TOKEN = 34
 
 // stable per-edge curve direction so the mesh reads as organic arcs, never a straight grid
 const hash = (s: string) => {
@@ -131,7 +135,7 @@ export function MapScreen() {
                 key={n.id}
                 ref={n.current ? currentRef : undefined}
                 className={['map-node', `t-${n.type}`, stateClass, n.cleared ? 'cleared' : ''].join(' ')}
-                style={{ left: p.x, top: p.y }}
+                style={{ left: p.x - NODE / 2, top: p.y - NODE / 2 }}
                 onClick={() => onNodeClick(n)}
                 disabled={!clickable}
                 whileHover={clickable ? { scale: 1.09 } : undefined}
@@ -149,7 +153,7 @@ export function MapScreen() {
           {currentNode && (
             <motion.div
               className="player-token"
-              style={{ left: base.x, top: base.y }}
+              style={{ left: base.x - TOKEN / 2, top: base.y - TOKEN / 2 }}
               initial={false}
               animate={walk ? { x: walk.x, y: walk.y } : { x: 0, y: 0 }}
               transition={walk ? { duration: 0.9, ease: 'easeInOut', times: [0, 0.5, 1] } : { duration: 0 }}
