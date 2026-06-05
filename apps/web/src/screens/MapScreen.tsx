@@ -28,7 +28,7 @@ const PAD = 130
 // node/figure are centred by offsetting half their size (NOT a CSS transform — Framer Motion owns
 // `transform` for the hover-scale / walk tweens, and a CSS translate would be clobbered).
 const NODE = 64
-const TOKEN = 34
+const TOKEN = 50
 
 // stable per-edge curve direction so the mesh reads as organic arcs, never a straight grid
 const hash = (s: string) => {
@@ -89,10 +89,13 @@ export function MapScreen() {
     if (!travel || !currentNode) return null
     const to = view.nodes.find((n) => n.id === travel.to)
     if (!to) return null
-    const a = px(currentNode.pos)
-    const b = px(to.pos)
-    const c = ctrlOf(a, b, [travel.from, travel.to].sort().join('__'))
-    return { x: [0, c.x - a.x, b.x - a.x], y: [0, c.y - a.y, b.y - a.y] }
+    const fromPx = px(currentNode.pos)
+    const toPx = px(to.pos)
+    // build the control point in the SAME canonical (sorted) order the edge is drawn with, so the
+    // figure follows the identical line whichever way it travels — no mirrored return path.
+    const [idA, idB] = [travel.from, travel.to].sort()
+    const c = idA === currentNode.id ? ctrlOf(fromPx, toPx, `${idA}__${idB}`) : ctrlOf(toPx, fromPx, `${idA}__${idB}`)
+    return { x: [0, c.x - fromPx.x, toPx.x - fromPx.x], y: [0, c.y - fromPx.y, toPx.y - fromPx.y] }
   })()
 
   const onNodeClick = (n: (typeof view.nodes)[number]) => {
