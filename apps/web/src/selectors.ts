@@ -96,11 +96,12 @@ export interface MapNodeView {
   bgAsset?: string
 }
 
+export type EdgeKind = 'gold' | 'gated' | 'trodden' | 'untrodden'
 export interface MapEdgeView {
   id: string
   a: { x: number; y: number }
   b: { x: number; y: number }
-  gated: boolean
+  kind: EdgeKind
 }
 
 export interface MapView {
@@ -134,12 +135,26 @@ export function selectMap(state: GameState): MapView | null {
       }
     })
 
-  const edges: MapEdgeView[] = Object.values(map.edges).map((e) => ({
-    id: e.id,
-    a: map.nodes[e.a]!.pos,
-    b: map.nodes[e.b]!.pos,
-    gated: e.gate !== undefined && !run.world.edgesUnlocked.includes(e.id),
-  }))
+  const current = run.world.current
+  const visible = (id: string) => nodeVisible(map, run.world, ctx, id)
+  const edges: MapEdgeView[] = Object.values(map.edges)
+    .filter((e) => visible(e.a) && visible(e.b))
+    .map((e) => {
+      const gated = e.gate !== undefined && !run.world.edgesUnlocked.includes(e.id) && !evalGate(e.gate, ctx)
+      let kind: EdgeKind
+      if (gated) {
+        kind = 'gated'
+      } else if (e.a === current || e.b === current) {
+        const other = e.a === current ? e.b : e.a
+        // an edge from where you stand to a place you can step is "open to you"
+        kind = canMove(map, run.world, ctx, other).ok ? 'gold' : run.world.visited.includes(other) ? 'trodden' : 'untrodden'
+      } else if (run.world.visited.includes(e.a) && run.world.visited.includes(e.b)) {
+        kind = 'trodden'
+      } else {
+        kind = 'untrodden'
+      }
+      return { id: e.id, a: map.nodes[e.a]!.pos, b: map.nodes[e.b]!.pos, kind }
+    })
 
   const xs = Object.values(map.nodes).map((n) => n.pos.x)
   const ys = Object.values(map.nodes).map((n) => n.pos.y)
