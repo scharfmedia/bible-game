@@ -376,6 +376,8 @@ export interface CombatInit {
   encounterId: string
   rewardOptions?: RewardOption[]
   rewardXp?: number
+  battleBg?: string
+  rewardBg?: string
 }
 
 export function startCombat(init: CombatInit): CombatStep {
@@ -407,6 +409,8 @@ export function startCombat(init: CombatInit): CombatStep {
     demonsRevealed: false,
     nextIid: init.deck.length,
     cardDefs: init.cardDefs,
+    battleBg: init.battleBg,
+    rewardBg: init.rewardBg,
     nodeId: init.nodeId,
     encounterId: init.encounterId,
     reward: undefined,

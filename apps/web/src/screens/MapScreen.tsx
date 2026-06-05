@@ -59,7 +59,7 @@ export function MapScreen() {
               'map-node',
               n.current ? 'current' : '',
               n.cleared ? 'cleared' : '',
-              n.movable ? `movable ${n.direction}` : 'locked',
+              n.movable ? `movable ${n.visit}` : 'locked',
             ].join(' ')}
             style={place(n.pos)}
             onClick={() => onClick(n)}

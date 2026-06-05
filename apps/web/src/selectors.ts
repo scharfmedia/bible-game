@@ -6,9 +6,9 @@ import {
   getLocaleData,
   memberMaxHp,
   nodeVisible,
-  type Direction,
   type GameState,
   type NodeType,
+  type Visit,
 } from '@bible/engine'
 
 export interface VerseView { reference: string; gapped: string; blanks: number }
@@ -91,7 +91,7 @@ export interface MapNodeView {
   cleared: boolean
   current: boolean
   movable: boolean
-  direction?: Direction
+  visit?: Visit
 }
 
 export interface MapEdgeView {
@@ -127,7 +127,7 @@ export function selectMap(state: GameState): MapView | null {
         cleared: run.world.cleared.includes(n.id),
         current: run.world.current === n.id,
         movable: chk.ok,
-        direction: chk.ok ? chk.direction : undefined,
+        visit: chk.ok ? chk.visit : undefined,
       }
     })
 

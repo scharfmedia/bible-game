@@ -83,8 +83,8 @@ describe('the cross-node gate', () => {
   })
 })
 
-describe('backward movement', () => {
-  it('rolls the backward table → moral event, which a choice resolves', () => {
+describe('revisit movement', () => {
+  it('revisiting a non-quiet node rolls the ambush table → moral event, which a choice resolves', () => {
     const res = simulate(newGame(), [
       ...bootstrap(),
       { type: 'world/move', target: 'n1' },
@@ -94,10 +94,10 @@ describe('backward movement', () => {
       { type: 'combat/playCard', iid: strikeA, targetId: 'wolf' },
       { type: 'combat/playCard', iid: strikeB, targetId: 'wolf' },
       { type: 'combat/chooseReward', optionId: 'money' },
-      { type: 'world/move', target: 'n1' }, // backward to a seen node → event
+      { type: 'world/move', target: 'n1' }, // revisit a seen (non-quiet) node → ambush event
       { type: 'world/eventChoice', eventId: 'traveler', choiceId: 'give' },
     ])
-    expect(res.events).toContainEqual({ type: 'backwardEncounter', kind: 'event' })
+    expect(res.events).toContainEqual({ type: 'ambush', kind: 'event' })
     expect(res.events.some((e) => e.type === 'spiritShifted' && e.reason === 'gaveToTraveler')).toBe(true)
     expect(res.state.screen).toBe('map')
   })

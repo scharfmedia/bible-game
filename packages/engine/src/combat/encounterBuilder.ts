@@ -105,5 +105,7 @@ export function buildEncounter(run: RunState, encounterId: EncounterId, nodeId: 
     encounterId,
     rewardOptions: enc.rewardOptions,
     rewardXp: enc.rewardXp,
+    battleBg: enc.battleBg,
+    rewardBg: enc.rewardBg,
   })
 }

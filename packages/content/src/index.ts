@@ -23,7 +23,7 @@ export function createContent(): ContentBundle {
     worlds: {
       'world-01': {
         map: WORLD_01_MAP,
-        backwardTable: { fight: 0.3, event: 0.3, fightEncounterId: 'forest_beast', eventId: 'traveler' },
+        ambushTable: { combat: 0.3, event: 0.3, combatEncounterId: 'forest_beast', eventId: 'traveler' },
       },
     },
   }

@@ -59,7 +59,7 @@ const map: WorldMap = {
     n0: { id: 'n0', type: 'entrance', nameKey: 'node.entrance', pos: { x: 0, y: 0 }, depth: 0, fixedEvent: { kind: 'none' }, tags: [] },
     n1: { id: 'n1', type: 'scene', nameKey: 'node.house', pos: { x: 1, y: 0 }, depth: 1, fixedEvent: { kind: 'scene', sceneId: 'forestHouse' }, sceneId: 'forestHouse', tags: [] },
     n2: { id: 'n2', type: 'combat', nameKey: 'node.glade', pos: { x: 2, y: 0 }, depth: 2, fixedEvent: { kind: 'combat', encounter: 'beast' }, tags: [] },
-    n3: { id: 'n3', type: 'fireplace', nameKey: 'node.fire', pos: { x: 3, y: 0 }, depth: 3, fixedEvent: { kind: 'fireplace' }, tags: [] },
+    n3: { id: 'n3', type: 'rest', nameKey: 'node.fire', pos: { x: 3, y: 0 }, depth: 3, fixedEvent: { kind: 'fireplace' }, tags: [] },
     n4: { id: 'n4', type: 'boss', nameKey: 'node.crossroads', pos: { x: 4, y: 0 }, depth: 4, fixedEvent: { kind: 'boss', encounter: 'thief' }, tags: [] },
   },
   edges: {
@@ -115,7 +115,7 @@ export function testContent(): ContentBundle {
     worlds: {
       'world-01': {
         map,
-        backwardTable: { fight: 0, event: 1, eventId: 'traveler' }, // backward → always the moral event (deterministic)
+        ambushTable: { combat: 0, event: 1, eventId: 'traveler' }, // revisit → always the moral event (deterministic)
       },
     },
   }

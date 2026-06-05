@@ -11,8 +11,8 @@ import type { GameState, RunState } from '../state/gameState'
 import { fork, nextFloat } from '../rng/rng'
 import { resolveInteraction, runScript, type SceneTransition } from '../scene/resolve'
 import type { NodeId } from '../types'
-import type { MapNode, WorldMap } from './types'
-import { canMove } from './movement'
+import { REST_TYPES, type MapNode, type WorldMap } from './types'
+import { canMove, isQuiet } from './movement'
 import { evalGate } from './gate'
 
 const reject = (state: GameState, reason: string): ReduceResult => ({ state, events: [{ type: 'rejected', reason }] })
@@ -62,6 +62,17 @@ export function reduceWorld(state: GameState, cmd: Command): ReduceResult {
   }
 }
 
+// ---- entrance ---------------------------------------------------------------------------
+
+/** Fire the current node's fixed event — used at run start so the entrance (e.g. an intro combat) triggers. */
+export function triggerEntrance(state: GameState): ReduceResult {
+  const run = state.run
+  if (!run) return { state, events: [] }
+  const node = mapOf(run).nodes[run.world.current]
+  if (!node) return { state, events: [] }
+  return triggerFixed(state, run, node, [])
+}
+
 // ---- movement ---------------------------------------------------------------------------
 
 function move(state: GameState, target: NodeId): ReduceResult {
@@ -73,20 +84,25 @@ function move(state: GameState, target: NodeId): ReduceResult {
 
   const node = map.nodes[target]!
   const fromId = run.world.current
-  const visited = run.world.visited.includes(target) ? run.world.visited : [...run.world.visited, target]
-  const depth = chk.direction === 'forward' ? Math.max(run.depth, node.depth) : run.depth
+  const firstVisit = chk.visit === 'first'
+  const visited = firstVisit ? [...run.world.visited, target] : run.world.visited
+  const depth = Math.max(run.depth, node.depth)
   const run2: RunState = { ...run, depth, world: { ...run.world, current: target, visited } }
 
-  const moved: GameEvent = { type: 'moved', from: fromId, to: target, direction: chk.direction }
+  const moved: GameEvent = { type: 'moved', from: fromId, to: target, visit: chk.visit }
 
-  if (chk.direction === 'forward' && !run.world.cleared.includes(target)) {
-    return triggerFixed(state, run2, node, [moved])
+  // First visit fires the node's fixed event.
+  if (firstVisit) return triggerFixed(state, run2, node, [moved])
+
+  // Revisit: quiet nodes are safe (rest re-opens its screen; cleared combats are free passage);
+  // everything else risks an ambush.
+  if (isQuiet(node, run2.world)) {
+    if (REST_TYPES.includes(node.type)) {
+      return ok({ ...state, run: run2, screen: 'fireplace' }, [moved, { type: 'screenChanged', screen: 'fireplace' }])
+    }
+    return ok({ ...state, run: run2 }, [moved])
   }
-  if (chk.direction === 'backward') {
-    return rollBackward(state, run2, node, [moved])
-  }
-  // forward into an already-cleared node: free passage
-  return ok({ ...state, run: run2 }, [moved])
+  return rollAmbush(state, run2, node, [moved])
 }
 
 function triggerFixed(state: GameState, run: RunState, node: MapNode, pre: GameEvent[]): ReduceResult {
@@ -117,19 +133,20 @@ function triggerFixed(state: GameState, run: RunState, node: MapNode, pre: GameE
   }
 }
 
-function rollBackward(state: GameState, run: RunState, node: MapNode, pre: GameEvent[]): ReduceResult {
-  const table = run.content.worlds[run.worldId]!.backwardTable
-  const [f, rng] = nextFloat(run.rng)
-  const run2: RunState = { ...run, rng, world: { ...run.world, backwardCursor: run.world.backwardCursor + 1 } }
+/** Revisiting a non-quiet node rolls the ambush table (the road may turn against you). */
+function rollAmbush(state: GameState, run: RunState, node: MapNode, pre: GameEvent[]): ReduceResult {
+  const table = run.content.worlds[run.worldId]!.ambushTable
+  const [f] = nextFloat(fork(run.rng, `ambush:${run.world.ambushCursor}`))
+  const run2: RunState = { ...run, world: { ...run.world, ambushCursor: run.world.ambushCursor + 1 } }
 
-  let kind: 'nothing' | 'fight' | 'event' = 'nothing'
-  if (f < table.fight) kind = 'fight'
-  else if (f < table.fight + table.event) kind = 'event'
+  let kind: 'nothing' | 'combat' | 'event' = 'nothing'
+  if (f < table.combat) kind = 'combat'
+  else if (f < table.combat + table.event) kind = 'event'
 
-  const events: GameEvent[] = [...pre, { type: 'backwardEncounter', kind }]
+  const events: GameEvent[] = [...pre, { type: 'ambush', kind }]
 
-  if (kind === 'fight' && table.fightEncounterId && encounterExists(run.content, table.fightEncounterId)) {
-    return startCombatNode(state, run2, node.id, table.fightEncounterId, true, events)
+  if (kind === 'combat' && table.combatEncounterId && encounterExists(run.content, table.combatEncounterId)) {
+    return startCombatNode(state, run2, node.id, table.combatEncounterId, true, events)
   }
   if (kind === 'event' && table.eventId && run.content.events[table.eventId]) {
     const run3 = {
@@ -152,7 +169,7 @@ function startCombatNode(
   pre: GameEvent[],
 ): ReduceResult {
   if (!encounterExists(run.content, encounterId)) return reject(state, 'no-such-encounter')
-  const combatRng = fork(run.rng, `combat:${nodeId}:${run.world.backwardCursor}`)
+  const combatRng = fork(run.rng, `combat:${nodeId}:${run.world.ambushCursor}`)
   const startStep = buildEncounter(run, encounterId, nodeId, combatRng)
 
   let run2: RunState = {

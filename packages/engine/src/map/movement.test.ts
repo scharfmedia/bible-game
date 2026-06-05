@@ -29,10 +29,10 @@ describe('evalGate', () => {
 })
 
 describe('canMove', () => {
-  it('allows a forward step to an adjacent node', () => {
+  it('allows a step to an adjacent unvisited node (first visit)', () => {
     const r = canMove(map, world(), ctx(), 'n1')
     expect(r.ok).toBe(true)
-    expect(r.ok && r.direction).toBe('forward')
+    expect(r.ok && r.visit).toBe('first')
   })
 
   it('rejects non-adjacent jumps', () => {
@@ -48,11 +48,9 @@ describe('canMove', () => {
     expect(r.ok).toBe(true)
   })
 
-  it('only permits backward steps to already-seen nodes', () => {
+  it('classifies an already-visited adjacent node as a revisit', () => {
     const w = { ...world(), current: 'n2', visited: ['n0', 'n1', 'n2'] }
     const back = canMove(map, w, { ...ctx(), world: w }, 'n1')
-    expect(back.ok && back.direction).toBe('backward')
-    const wUnseen = { ...world(), current: 'n2', visited: ['n2'] }
-    expect(canMove(map, wUnseen, { ...ctx(), world: wUnseen }, 'n1')).toEqual({ ok: false, reason: 'not-seen' })
+    expect(back.ok && back.visit).toBe('revisit')
   })
 })

@@ -1,7 +1,7 @@
 import { reduceCombat } from '../combat/reduce'
 import type { ContentBundle } from '../content/bundle'
 import type { GameEvent, ReduceResult } from '../events/event'
-import { reduceWorld } from '../map/reduce'
+import { reduceWorld, triggerEntrance } from '../map/reduce'
 import { createCharacter, partyMemberFromCharacter } from '../state/character'
 import {
   defaultSettings,
@@ -160,10 +160,10 @@ function startRun(
     depth: world.map.nodes[world.map.entrance]?.depth ?? 0,
     baseGrace: 1,
   }
-  return ok({ ...state, run, combat: null, prompt: null, screen: 'map' }, [
-    { type: 'runStarted', worldId },
-    { type: 'screenChanged', screen: 'map' },
-  ])
+  // Fire the entrance node's fixed event (e.g. the intro combat) immediately on arrival.
+  const base: GameState = { ...state, run, combat: null, prompt: null, screen: 'map' }
+  const entered = triggerEntrance(base)
+  return { state: entered.state, events: [{ type: 'runStarted', worldId }, ...entered.events] }
 }
 
 function allocateStat(state: GameState, memberId: string, stat: string): ReduceResult {

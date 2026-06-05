@@ -156,6 +156,10 @@ export interface CombatState {
   /** card defs needed to resolve this combat, embedded so combat is self-contained + serializable */
   cardDefs: Record<CardDefId, CardDef>
 
+  /** per-encounter backgrounds for the battle (sideview) and reward screens */
+  battleBg?: string
+  rewardBg?: string
+
   // the encounter→run handoff context
   nodeId: NodeId
   encounterId: EncounterId

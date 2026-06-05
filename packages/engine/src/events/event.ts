@@ -28,8 +28,8 @@ export type GameEvent =
   | { type: 'leveledUp'; memberId: MemberId; level: number; points: number }
   | { type: 'statAllocated'; memberId: MemberId; stat: string }
   // world
-  | { type: 'moved'; from: NodeId; to: NodeId; direction: 'forward' | 'backward' }
-  | { type: 'backwardEncounter'; kind: 'nothing' | 'fight' | 'event' }
+  | { type: 'moved'; from: NodeId; to: NodeId; visit: 'first' | 'revisit' }
+  | { type: 'ambush'; kind: 'nothing' | 'combat' | 'event' }
   | { type: 'sceneEntered'; sceneId: string }
   | { type: 'sceneLine'; lineKey: I18nKey; speaker?: string }
   | { type: 'itemGained'; itemId: ItemId; count: number }

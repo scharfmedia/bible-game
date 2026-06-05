@@ -166,11 +166,11 @@ export {
   type WorldContent,
   type EncounterDef,
   type EnemyTemplate,
-  type BackwardEncounterTable,
+  type AmbushTable,
 } from './content/bundle'
 
 // ---- world / map / scene ----
-export { canMove, classify, edgeBetween, nodeVisible, type Direction, type MoveCheck } from './map/movement'
+export { canMove, isQuiet, edgeBetween, nodeVisible, type Visit, type MoveCheck } from './map/movement'
 export { evalGate, type GateContext } from './map/gate'
 export {
   resolveInteraction,

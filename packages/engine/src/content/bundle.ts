@@ -11,7 +11,7 @@ import type { EnemyScalingDef } from '../leveling/scaling'
 import type { MoralEvent, Scene } from '../scene/types'
 import type { ItemDef } from '../inventory/types'
 import type { VerseChallenge } from '../verse/types'
-import type { CardDefId, EncounterId, EventId, GraceAbilityId, I18nKey, ItemId, SceneId } from '../types'
+import type { AssetRef, CardDefId, EncounterId, EventId, GraceAbilityId, I18nKey, ItemId, SceneId } from '../types'
 
 /** A content-side enemy template; the encounter builder scales it to the hero's level/depth. */
 export interface EnemyTemplate {
@@ -42,19 +42,22 @@ export interface EncounterDef {
   winCondition: WinCondition
   rewardOptions?: RewardOption[]
   rewardXp?: number
+  /** background shown during the battle (sideview) and on the reward screen */
+  battleBg?: AssetRef
+  rewardBg?: AssetRef
 }
 
-/** Backward-step encounter table (probabilities; remainder = nothing). Milestone-1 minimal. */
-export interface BackwardEncounterTable {
-  fight: number
+/** Revisit-ambush table (probabilities; remainder = nothing). */
+export interface AmbushTable {
+  combat: number
   event: number
-  fightEncounterId?: EncounterId
+  combatEncounterId?: EncounterId
   eventId?: EventId
 }
 
 export interface WorldContent {
   map: WorldMap
-  backwardTable: BackwardEncounterTable
+  ambushTable: AmbushTable
 }
 
 export interface ContentBundle {

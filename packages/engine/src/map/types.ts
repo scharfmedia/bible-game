@@ -1,4 +1,4 @@
-import type { EdgeId, EncounterId, EventId, I18nKey, NodeId, SceneId } from '../types'
+import type { AssetRef, EdgeId, EncounterId, EventId, I18nKey, NodeId, SceneId } from '../types'
 
 export type NodeType =
   | 'entrance'
@@ -7,9 +7,16 @@ export type NodeType =
   | 'boss'
   | 'shop'
   | 'fireplace'
+  | 'rest'
   | 'event'
   | 'scene'
+  | 'waypoint'
+  | 'explore'
   | 'secret'
+
+/** Node types that are "quiet" on revisit (no ambush): rest nodes and cleared combats. */
+export const REST_TYPES: readonly NodeType[] = ['rest', 'fireplace']
+export const COMBAT_TYPES: readonly NodeType[] = ['combat', 'elite', 'boss']
 
 /** Tiny pure boolean DSL gating edges and node visibility against world flags/inventory/spirit. */
 export type GateExpr =
@@ -42,8 +49,10 @@ export interface MapNode {
   depth: number
   fixedEvent: FixedEvent
   sceneId?: SceneId
-  /** node hidden until this gate is satisfied (secret nodes) */
+  /** node hidden until this gate is satisfied (secret/hidden nodes) */
   reveal?: GateExpr
+  /** background for non-combat node screens (rest/fireplace) + map thumbnail */
+  bgAsset?: AssetRef
   tags: string[]
 }
 
@@ -95,8 +104,8 @@ export interface WorldState {
   flags: Record<string, string | number | boolean>
   sceneStates: Record<SceneId, SceneRuntimeState>
   movement: MovementPhase
-  /** dedicated cursor for the backward-encounter RNG sub-stream */
-  backwardCursor: number
+  /** dedicated cursor for the revisit-ambush RNG sub-stream */
+  ambushCursor: number
   bossDefeated: boolean
 }
 
@@ -110,6 +119,6 @@ export const initialWorldState = (worldId: string, entrance: NodeId): WorldState
   flags: {},
   sceneStates: {},
   movement: { kind: 'idle' },
-  backwardCursor: 0,
+  ambushCursor: 0,
   bossDefeated: false,
 })
