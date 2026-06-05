@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { assetBg } from '@bible/assets'
 import { useGame } from '../store/gameStore'
 import { selectReward } from '../selectors'
 
@@ -11,7 +12,7 @@ export function RewardScreen() {
   if (!view) return null
 
   return (
-    <div className="screen reward centered">
+    <div className="screen reward centered" style={{ backgroundImage: assetBg(view.rewardBg) }}>
       <div className="vignette" />
       <div className="panel narrow">
         <h2>{t('ui.reward.title')}</h2>

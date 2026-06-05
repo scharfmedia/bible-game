@@ -3,6 +3,8 @@
 // only keys; this is the one place display strings live. Verse TEXT lives in content (it must
 // match exactly what the gap-fill checks).
 
+import { jerichoDe, jerichoEn } from './jericho'
+
 export type Locale = 'en' | 'de'
 export type Messages = Record<string, string>
 
@@ -336,6 +338,6 @@ export const de: Messages = {
 }
 
 export const resources = {
-  en: { translation: en },
-  de: { translation: de },
+  en: { translation: { ...en, ...jerichoEn } },
+  de: { translation: { ...de, ...jerichoDe } },
 } as const

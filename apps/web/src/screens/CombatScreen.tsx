@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
+import { assetBg } from '@bible/assets'
 import { useGame } from '../store/gameStore'
 import { selectCombat, type CombatantView } from '../selectors'
 import { CardView } from '../components/Card'
@@ -84,7 +85,7 @@ export function CombatScreen() {
   }
 
   return (
-    <div className="screen combat" style={{ backgroundImage: 'url(/assets/004-battlefield-enchanted-forest.png)' }}>
+    <div className="screen combat" style={{ backgroundImage: assetBg(view.battleBg) ?? 'url(/assets/004-battlefield-enchanted-forest.png)' }}>
       <div className="scrim" />
       <Hud />
 

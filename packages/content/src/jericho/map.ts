@@ -1,0 +1,170 @@
+import type { EncounterDef, GateExpr, ItemDef, MapEdge, MapNode, WorldMap } from '@bible/engine'
+
+// World 01 — "The Jericho Road" (the Good-Samaritan road from Jerusalem down to Jericho).
+// An undirected mesh: a route is usable if either node lists the other. We build symmetric edges +
+// adjacency from a plain connection list so the graph can't drift out of sync.
+
+type Conns = Record<string, string[]>
+
+const CONNECTIONS: Conns = {
+  road: ['oliveGrove', 'dryWash'],
+  oliveGrove: ['road', 'house', 'cistern'],
+  dryWash: ['road', 'pottersField'],
+  pottersField: ['dryWash', 'lowerWell', 'shepherdsTrack'],
+  house: ['oliveGrove', 'lowerWell', 'cistern'],
+  cistern: ['oliveGrove', 'house', 'traveler', 'lowerWell'],
+  lowerWell: ['house', 'cistern', 'pottersField', 'shepherdsTrack'],
+  shepherdsTrack: ['pottersField', 'lowerWell', 'marketplace'],
+  traveler: ['cistern', 'marketFork', 'samaritanRoad'],
+  marketFork: ['traveler', 'marketplace', 'merchant', 'prayer'],
+  samaritanRoad: ['traveler', 'ridgePath', 'merchant'],
+  marketplace: ['shepherdsTrack', 'marketFork', 'merchant'],
+  merchant: ['marketFork', 'samaritanRoad', 'marketplace', 'prayer', 'ridgePath', 'tollGate'],
+  prayer: ['marketFork', 'merchant', 'ridgePath', 'quietCave'],
+  ridgePath: ['samaritanRoad', 'merchant', 'prayer', 'rocky'],
+  quietCave: ['prayer', 'rocky', 'inn'],
+  tollGate: ['merchant', 'watchtower', 'rocky'],
+  rocky: ['ridgePath', 'quietCave', 'tollGate', 'watchtower', 'inn'],
+  watchtower: ['tollGate', 'rocky', 'inn'],
+  inn: ['rocky', 'watchtower', 'quietCave', 'narrowSteps'],
+  narrowSteps: ['inn', 'boss'],
+  boss: ['narrowSteps'],
+}
+
+const edgeId = (a: string, b: string): string => [a, b].sort().join('__')
+
+// The boss (Narrow Gate) is sealed until the Jericho Inn is rested at.
+const GATES: Record<string, GateExpr> = {
+  [edgeId('narrowSteps', 'boss')]: { clearedNode: 'inn' },
+}
+
+function buildGraph(conns: Conns): { edges: Record<string, MapEdge>; adjacency: Record<string, string[]> } {
+  const edges: Record<string, MapEdge> = {}
+  const adjacency: Record<string, string[]> = {}
+  const ensure = (n: string) => (adjacency[n] ??= [])
+  for (const [a, list] of Object.entries(conns)) {
+    ensure(a)
+    for (const b of list) {
+      ensure(b)
+      const [x, y] = [a, b].sort()
+      const id = `${x}__${y}`
+      if (!edges[id]) {
+        edges[id] = { id, a: x!, b: y!, ...(GATES[id] ? { gate: GATES[id] } : {}) }
+      }
+      if (!adjacency[a]!.includes(id)) adjacency[a]!.push(id)
+      if (!adjacency[b]!.includes(id)) adjacency[b]!.push(id)
+    }
+  }
+  return { edges, adjacency }
+}
+
+const REVEAL_HIDDEN: GateExpr = {
+  any: [{ flag: 'helpedTraveler' }, { spiritAtLeast: 130 }, { flag: 'familyPrayer' }],
+}
+
+// node id → [type, fixedEvent, bgAsset, pos, depth, (reveal?)]
+const nameKey = (id: string) => `node.jericho.${id}`
+
+const NODES: Record<string, MapNode> = {
+  road: { id: 'road', type: 'combat', nameKey: nameKey('road'), pos: { x: 0, y: 3 }, depth: 0, fixedEvent: { kind: 'combat', encounter: 'roadRobbers' }, bgAsset: 'bg-road-dusty-road', tags: ['entrance'] },
+  oliveGrove: { id: 'oliveGrove', type: 'waypoint', nameKey: nameKey('oliveGrove'), pos: { x: 1, y: 2 }, depth: 1, fixedEvent: { kind: 'scene', sceneId: 'oliveGrove' }, sceneId: 'oliveGrove', bgAsset: 'bg-waypoint-olive-grove', tags: [] },
+  dryWash: { id: 'dryWash', type: 'combat', nameKey: nameKey('dryWash'), pos: { x: 1, y: 4 }, depth: 1, fixedEvent: { kind: 'combat', encounter: 'roadAmbush' }, bgAsset: 'bg-combat-dry-wash', tags: [] },
+  house: { id: 'house', type: 'explore', nameKey: nameKey('house'), pos: { x: 2, y: 1 }, depth: 2, fixedEvent: { kind: 'scene', sceneId: 'house' }, sceneId: 'house', bgAsset: 'bg-explore-poor-family-house', tags: [] },
+  cistern: { id: 'cistern', type: 'rest', nameKey: nameKey('cistern'), pos: { x: 2, y: 2.6 }, depth: 2, fixedEvent: { kind: 'fireplace' }, bgAsset: 'bg-rest-old-cistern', tags: [] },
+  pottersField: { id: 'pottersField', type: 'waypoint', nameKey: nameKey('pottersField'), pos: { x: 2, y: 5 }, depth: 2, fixedEvent: { kind: 'scene', sceneId: 'pottersField' }, sceneId: 'pottersField', bgAsset: 'bg-waypoint-potters-field', tags: [] },
+  lowerWell: { id: 'lowerWell', type: 'waypoint', nameKey: nameKey('lowerWell'), pos: { x: 3, y: 3 }, depth: 3, fixedEvent: { kind: 'scene', sceneId: 'lowerWell' }, sceneId: 'lowerWell', bgAsset: 'bg-waypoint-lower-well', tags: [] },
+  shepherdsTrack: { id: 'shepherdsTrack', type: 'combat', nameKey: nameKey('shepherdsTrack'), pos: { x: 3, y: 5 }, depth: 3, fixedEvent: { kind: 'combat', encounter: 'roadAmbush' }, bgAsset: 'bg-combat-shepherds-track', tags: [] },
+  traveler: { id: 'traveler', type: 'event', nameKey: nameKey('traveler'), pos: { x: 4, y: 2.6 }, depth: 4, fixedEvent: { kind: 'event', eventId: 'traveler' }, bgAsset: 'bg-event-wounded-traveler', tags: [] },
+  marketFork: { id: 'marketFork', type: 'waypoint', nameKey: nameKey('marketFork'), pos: { x: 5, y: 2 }, depth: 5, fixedEvent: { kind: 'scene', sceneId: 'marketFork' }, sceneId: 'marketFork', bgAsset: 'bg-waypoint-market-fork', tags: [] },
+  samaritanRoad: { id: 'samaritanRoad', type: 'waypoint', nameKey: nameKey('samaritanRoad'), pos: { x: 5, y: 3.6 }, depth: 5, fixedEvent: { kind: 'scene', sceneId: 'samaritanRoad' }, sceneId: 'samaritanRoad', bgAsset: 'bg-waypoint-samaritan-road', tags: [] },
+  marketplace: { id: 'marketplace', type: 'shop', nameKey: nameKey('marketplace'), pos: { x: 5, y: 5 }, depth: 5, fixedEvent: { kind: 'scene', sceneId: 'marketplace' }, sceneId: 'marketplace', bgAsset: 'bg-shop-roadside-market', tags: [] },
+  merchant: { id: 'merchant', type: 'shop', nameKey: nameKey('merchant'), pos: { x: 6, y: 3 }, depth: 6, fixedEvent: { kind: 'scene', sceneId: 'merchant' }, sceneId: 'merchant', bgAsset: 'bg-shop-merchant-camp', tags: ['hub'] },
+  prayer: { id: 'prayer', type: 'rest', nameKey: nameKey('prayer'), pos: { x: 6, y: 1 }, depth: 6, fixedEvent: { kind: 'fireplace' }, bgAsset: 'bg-rest-hidden-prayer-place', reveal: REVEAL_HIDDEN, tags: ['hidden'] },
+  ridgePath: { id: 'ridgePath', type: 'combat', nameKey: nameKey('ridgePath'), pos: { x: 7, y: 3.6 }, depth: 7, fixedEvent: { kind: 'combat', encounter: 'roadAmbush' }, bgAsset: 'bg-combat-ridge-path', tags: [] },
+  quietCave: { id: 'quietCave', type: 'rest', nameKey: nameKey('quietCave'), pos: { x: 7, y: 0.5 }, depth: 7, fixedEvent: { kind: 'fireplace' }, bgAsset: 'bg-rest-quiet-cave', reveal: REVEAL_HIDDEN, tags: ['hidden'] },
+  tollGate: { id: 'tollGate', type: 'combat', nameKey: nameKey('tollGate'), pos: { x: 7, y: 2 }, depth: 7, fixedEvent: { kind: 'combat', encounter: 'roadRobbers' }, bgAsset: 'bg-combat-broken-toll-gate', tags: [] },
+  rocky: { id: 'rocky', type: 'combat', nameKey: nameKey('rocky'), pos: { x: 8, y: 2.6 }, depth: 8, fixedEvent: { kind: 'combat', encounter: 'thiefGreed' }, bgAsset: 'bg-combat-rocky-pass', tags: [] },
+  watchtower: { id: 'watchtower', type: 'waypoint', nameKey: nameKey('watchtower'), pos: { x: 8, y: 1.5 }, depth: 8, fixedEvent: { kind: 'scene', sceneId: 'watchtower' }, sceneId: 'watchtower', bgAsset: 'bg-waypoint-ruined-watchtower', tags: [] },
+  inn: { id: 'inn', type: 'rest', nameKey: nameKey('inn'), pos: { x: 9, y: 2 }, depth: 9, fixedEvent: { kind: 'fireplace' }, bgAsset: 'bg-rest-jericho-inn', tags: [] },
+  narrowSteps: { id: 'narrowSteps', type: 'waypoint', nameKey: nameKey('narrowSteps'), pos: { x: 10, y: 2 }, depth: 10, fixedEvent: { kind: 'scene', sceneId: 'narrowSteps' }, sceneId: 'narrowSteps', bgAsset: 'bg-waypoint-narrow-steps', tags: [] },
+  boss: { id: 'boss', type: 'boss', nameKey: nameKey('boss'), pos: { x: 11, y: 2 }, depth: 11, fixedEvent: { kind: 'boss', encounter: 'accuser' }, bgAsset: 'bg-boss-narrow-gate', tags: [] },
+}
+
+const graph = buildGraph(CONNECTIONS)
+
+export const WORLD_01_MAP: WorldMap = {
+  worldId: 'world-01',
+  seed: 'jericho-road',
+  entrance: 'road',
+  bossId: 'boss',
+  nodes: NODES,
+  edges: graph.edges,
+  adjacency: graph.adjacency,
+}
+
+// ---- encounters ---------------------------------------------------------------------------
+// Human enemies (robbers, the thief) grief Spirit if killed — subdue/Mercy is the righteous path.
+// Demons (the Spirit of Greed, the Accuser) are the real foe: flesh-capped + dread → only Spirit
+// (grace + spiritual/verse cards) can overcome them.
+
+export const ENCOUNTERS: Record<string, EncounterDef> = {
+  roadRobbers: {
+    id: 'roadRobbers',
+    enemies: [
+      { id: 'robber1', archetype: 'robber', nameKey: 'enemy.robber', isHuman: true, scaling: { baseHp: 7, baseAtk: 2, hpLevelExp: 1, atkLevelExp: 1 } },
+      { id: 'robber2', archetype: 'robber', nameKey: 'enemy.robber', isHuman: true, side: 'right', row: 'back', scaling: { baseHp: 5, baseAtk: 2, hpLevelExp: 1, atkLevelExp: 1 } },
+    ],
+    flags: { mandatory: false, allowFlee: true, isBoss: false },
+    winCondition: { kind: 'allEnemiesDefeated' },
+    rewardOptions: [{ id: 'money', kind: 'money', amount: 20 }, { id: 'card', kind: 'card', defId: 'brace' }],
+    rewardXp: 18,
+    battleBg: 'bg-road-dusty-road',
+    rewardBg: 'bg-road-dusty-road',
+  },
+  roadAmbush: {
+    id: 'roadAmbush',
+    enemies: [{ id: 'ambusher', archetype: 'robber', nameKey: 'enemy.ambusher', isHuman: true, scaling: { baseHp: 9, baseAtk: 3, hpLevelExp: 1, atkLevelExp: 1 } }],
+    flags: { mandatory: false, allowFlee: true, isBoss: false },
+    winCondition: { kind: 'allEnemiesDefeated' },
+    rewardOptions: [{ id: 'money', kind: 'money', amount: 22 }, { id: 'card', kind: 'card', defId: 'compassion' }],
+    rewardXp: 20,
+    battleBg: 'bg-combat-dry-wash-sideview',
+    rewardBg: 'bg-combat-dry-wash',
+  },
+  thiefGreed: {
+    id: 'thiefGreed',
+    enemies: [
+      { id: 'thief', archetype: 'thief', nameKey: 'enemy.thief', isHuman: true, revealsId: 'greed', scaling: { baseHp: 8, baseAtk: 2, hpLevelExp: 1, atkLevelExp: 1 } },
+      { id: 'greed', archetype: 'demon', nameKey: 'enemy.greed', isHuman: false, isDemon: true, hidden: true, boundToId: 'thief', dread: 5, fleshDamageCap: 1, scaling: { baseHp: 5, baseAtk: 1, hpLevelExp: 1, atkLevelExp: 1 } },
+    ],
+    flags: { mandatory: false, allowFlee: true, isBoss: false },
+    winCondition: { kind: 'allDemonsDestroyed' },
+    rewardOptions: [{ id: 'money', kind: 'money', amount: 45 }, { id: 'relic', kind: 'relic', defId: 'veil_lifted' }],
+    rewardXp: 35,
+    battleBg: 'bg-combat-rocky-pass-sideview',
+    rewardBg: 'bg-combat-rocky-pass',
+  },
+  accuser: {
+    id: 'accuser',
+    enemies: [
+      { id: 'accuser', archetype: 'demon', nameKey: 'enemy.accuser', isHuman: false, isDemon: true, dread: 8, fleshDamageCap: 1, spiritualArmor: 2, scaling: { baseHp: 16, baseAtk: 2, hpLevelExp: 1.1, atkLevelExp: 1 } },
+    ],
+    flags: { mandatory: false, allowFlee: false, isBoss: true },
+    winCondition: { kind: 'allDemonsDestroyed' },
+    rewardOptions: [{ id: 'money', kind: 'money', amount: 100 }],
+    rewardXp: 60,
+    battleBg: 'bg-boss-narrow-gate-sideview',
+    rewardBg: 'bg-boss-narrow-gate',
+  },
+}
+
+// ---- items --------------------------------------------------------------------------------
+export const ITEMS: Record<string, ItemDef> = {
+  bread: { id: 'bread', kind: 'consumable', nameKey: 'item.bread.name', descKey: 'item.bread.desc', icon: 'item/bread', stackable: true, usableInScene: true },
+  oilFlask: { id: 'oilFlask', kind: 'questItem', nameKey: 'item.oilFlask.name', descKey: 'item.oilFlask.desc', icon: 'item/oil', stackable: false, usableInScene: true },
+  letter: { id: 'letter', kind: 'questItem', nameKey: 'item.letter.name', descKey: 'item.letter.desc', icon: 'item/letter', stackable: false, usableInScene: false },
+  coin: { id: 'coin', kind: 'currency', nameKey: 'item.coin.name', descKey: 'item.coin.desc', icon: 'item/coin', stackable: true, usableInScene: false },
+  veil_lifted: { id: 'veil_lifted', kind: 'relic', nameKey: 'item.veil_lifted.name', descKey: 'item.veil_lifted.desc', icon: 'item/veil', stackable: false, usableInScene: false, spiritEffectWhileHeld: 2 },
+}
+
+export const AMBUSH_TABLE = { combat: 0.3, event: 0.15, combatEncounterId: 'roadAmbush', eventId: 'traveler' } as const

@@ -26,15 +26,16 @@ export const CARDS: Record<string, CardDef> = {
   // --- verse cards (latent until earned via gap-fill; the most potency-gated) ---
   verse_phil_4_6: { id: 'verse_phil_4_6', type: 'verse', layer: 'spirit', cost: 1, target: 'self', nameKey: 'card.verse_phil_4_6.name', textKey: 'card.verse_phil_4_6.text', rarity: 'rare', fruitAffinity: 'faith', verseChallengeId: 'phil_4_6', effects: [{ kind: 'block', amount: 10, layer: 'spirit' }, { kind: 'draw', count: 1 }] },
   verse_zech_4_6: { id: 'verse_zech_4_6', type: 'verse', layer: 'spirit', cost: 2, target: 'enemy', nameKey: 'card.verse_zech_4_6.name', textKey: 'card.verse_zech_4_6.text', rarity: 'rare', fruitAffinity: 'faith', verseChallengeId: 'zech_4_6', effects: [{ kind: 'damage', amount: 12, damageType: 'spiritual' }] },
+  verse_luke_10_27: { id: 'verse_luke_10_27', type: 'verse', layer: 'spirit', cost: 1, target: 'self', nameKey: 'card.verse_luke_10_27.name', textKey: 'card.verse_luke_10_27.text', rarity: 'rare', fruitAffinity: 'mercy', verseChallengeId: 'luke_10_27', effects: [{ kind: 'block', amount: 8, layer: 'spirit' }, { kind: 'heal', amount: 4 }] },
 }
 
 export const HERO_START_DECK: string[] = [
   'strike',
   'strike',
   'strike',
-  'strike',
   'guard',
   'guard',
+  'subdue', // mercy is possible from the very first robber fight
   'second_wind',
   'flurry',
   'prayer_of_peace',

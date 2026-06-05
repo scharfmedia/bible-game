@@ -56,7 +56,7 @@ export function selectEvent(state: GameState): EventView | null {
 }
 
 export interface RewardOptionView { id: string; kind: string; label: string }
-export interface RewardView { options: RewardOptionView[]; righteous: boolean; peacefulBonus: boolean }
+export interface RewardView { options: RewardOptionView[]; righteous: boolean; peacefulBonus: boolean; rewardBg?: string }
 
 export function selectReward(state: GameState): RewardView | null {
   const c = state.combat
@@ -65,6 +65,7 @@ export function selectReward(state: GameState): RewardView | null {
   return {
     righteous: c.reward.righteous,
     peacefulBonus: (c.reward.peacefulSpiritBonus ?? 0) > 0,
+    rewardBg: c.rewardBg,
     options: c.reward.options.map((o) => ({
       id: o.id,
       kind: o.kind,
@@ -92,6 +93,7 @@ export interface MapNodeView {
   current: boolean
   movable: boolean
   visit?: Visit
+  bgAsset?: string
 }
 
 export interface MapEdgeView {
@@ -128,6 +130,7 @@ export function selectMap(state: GameState): MapView | null {
         current: run.world.current === n.id,
         movable: chk.ok,
         visit: chk.ok ? chk.visit : undefined,
+        bgAsset: n.bgAsset,
       }
     })
 
@@ -184,6 +187,7 @@ export interface CombatView {
   roundActionTaken: boolean
   canFlee: boolean
   graceAbilities: string[]
+  battleBg?: string
 }
 
 export function selectCombat(state: GameState): CombatView | null {
@@ -227,6 +231,32 @@ export function selectCombat(state: GameState): CombatView | null {
     roundActionTaken: c.roundActionTaken,
     canFlee: c.flags.allowFlee && !c.flags.mandatory && c.phase === 'partyDecision' && !c.roundActionTaken,
     graceAbilities: c.partyOrder.flatMap((id) => c.combatants[id]?.graceAbilityIds ?? []),
+    battleBg: c.battleBg,
+  }
+}
+
+export interface RestView {
+  nameKey: string
+  bgAsset?: string
+  reflectKey: string
+  rested: boolean
+  prayed: boolean
+  verseAvailable: boolean
+}
+
+export function selectFireplace(state: GameState): RestView | null {
+  const run = state.run
+  if (!run) return null
+  const node = run.content.worlds[run.worldId]?.map.nodes[run.world.current]
+  if (!node) return null
+  const heroVerseOwned = new Set(state.profile.slots.flatMap((s) => s.character.ownedVerseCardIds))
+  return {
+    nameKey: node.nameKey,
+    bgAsset: node.bgAsset,
+    reflectKey: `${node.nameKey}.reflect`,
+    rested: Boolean(run.world.flags[`fireplace:${node.id}:rested`]),
+    prayed: Boolean(run.world.flags[`fireplace:${node.id}:prayed`]),
+    verseAvailable: Object.values(run.content.verses).some((v) => !heroVerseOwned.has(v.cardDefId)),
   }
 }
 

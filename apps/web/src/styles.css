@@ -90,20 +90,25 @@ body {
 .hp-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; text-shadow: 0 1px 2px #000; }
 .coin { font-size: 1rem; color: var(--gold); }
 
-/* ---------- map ---------- */
-.map-area { position: relative; flex: 1; }
-.map-edges { position: absolute; inset: 0; width: 100%; height: 100%; }
-.edge { stroke: rgba(216,185,98,0.4); stroke-width: 0.5; }
-.edge.gated { stroke: #8c3a36; stroke-dasharray: 2 1.5; }
-.map-node { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 4px; background: var(--panel); border: 2px solid var(--panel-edge); border-radius: 12px; padding: 0.5rem 0.7rem; cursor: pointer; min-width: 84px; color: var(--ink); }
-.map-node.locked { opacity: 0.45; cursor: default; filter: grayscale(0.6); }
-.map-node.cleared { border-color: rgba(120,140,110,0.5); }
-.map-node.current { border-color: var(--gold-bright); box-shadow: 0 0 22px rgba(244,231,161,0.5); }
-.map-node.movable.forward { border-color: var(--gold); }
-.map-node.movable.backward { border-color: var(--spirit); }
-.node-icon { font-size: 1.6rem; }
-.node-label { font-size: 0.72rem; text-align: center; max-width: 90px; }
-.map-footer { position: relative; z-index: 5; display: flex; justify-content: space-between; align-items: center; padding: 0.7rem 1.1rem; }
+/* ---------- map (scrollable canvas) ---------- */
+.screen.map { background: radial-gradient(ellipse at 50% 40%, #20281b, #0c0f0a); }
+.map-scroll { position: absolute; inset: 56px 0 44px; overflow: auto; }
+.map-canvas { position: relative; }
+.map-edges { position: absolute; top: 0; left: 0; pointer-events: none; }
+.edge { stroke: rgba(216,185,98,0.45); stroke-width: 3; }
+.edge.gated { stroke: #b0524c; stroke-width: 3; stroke-dasharray: 7 6; }
+.map-node { position: absolute; transform: translate(-50%, -50%); width: 132px; height: 96px; border-radius: 12px; border: 2px solid var(--panel-edge); cursor: pointer; color: var(--ink); overflow: hidden; background-size: cover; background-position: center; background-color: #1a2016; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 6px; }
+.node-scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.78)); }
+.map-node.locked { opacity: 0.5; cursor: default; filter: grayscale(0.7); }
+.map-node.cleared { border-color: rgba(120,140,110,0.6); }
+.map-node.cleared .node-scrim { background: linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.85)); }
+.map-node.current { border-color: var(--gold-bright); }
+.map-node.movable.first { border-color: var(--gold); }
+.map-node.movable.revisit { border-color: var(--spirit); border-style: dashed; }
+.node-icon { position: relative; font-size: 1.7rem; line-height: 1; filter: drop-shadow(0 2px 3px #000); }
+.node-label { position: relative; font-size: 0.72rem; text-align: center; max-width: 120px; text-shadow: 0 1px 3px #000; padding: 0 4px; }
+.map-footer { position: absolute; bottom: 0; left: 0; right: 0; z-index: 5; display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1.1rem; background: linear-gradient(0deg, rgba(0,0,0,0.7), transparent); }
+.reflect { font-style: italic; }
 
 /* ---------- combat ---------- */
 .battlefield { position: relative; z-index: 2; flex: 1; display: flex; justify-content: space-between; align-items: center; padding: 1rem 4%; }

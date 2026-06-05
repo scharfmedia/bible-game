@@ -17,12 +17,28 @@ function profileWithHeroes(...names: string[]): GameState {
   return s
 }
 
+// The Jericho road opens with an intro combat; win it (subdue the robbers) to reach a map boundary.
+function winCombat(start: GameState): GameState {
+  let s = start
+  let guard = 0
+  while (s.combat && s.combat.outcome === 'ongoing' && guard++ < 200) {
+    if (s.combat.phase === 'partyDecision') {
+      s = apply(s, { type: 'combat/beginAction' })
+      continue
+    }
+    const c = s.combat
+    const enemy = c.enemyOrder.map((id) => c.combatants[id]!).find((e) => e.alive && !e.hidden)
+    const card = ['subdue', 'strike', 'flurry'].map((d) => c.hand.find((h) => h.defId === d)).find(Boolean)
+    s = enemy && card ? apply(s, { type: 'combat/playCard', iid: card.iid, targetId: enemy.id }) : apply(s, { type: 'combat/endTurn' })
+  }
+  if (s.combat?.reward) s = apply(s, { type: 'combat/chooseReward', optionId: 'money' })
+  return s
+}
+
 function startedRun(): GameState {
   let s = apply(newGame(), { type: 'createHero', id: 'h0', name: 'Gideon' })
   s = apply(s, { type: 'startRun', characterId: 'h0', worldId: 'world-01', seed: 'persist-seed', content })
-  // take a step so the run has some non-initial state
-  s = apply(s, { type: 'world/move', target: 'n1' })
-  s = apply(s, { type: 'world/leaveScene' })
+  s = winCombat(s) // road robbers → reward → map boundary (combat null)
   return s
 }
 
@@ -49,12 +65,12 @@ describe('SaveStore', () => {
     const store = freshStore()
     const onMap = startedRun()
     await store.persist(onMap)
-    // walk into a combat node, then try to persist mid-combat
-    const s = apply(onMap, { type: 'world/move', target: 'n2' })
+    // walk into a combat node (the dry wash ambush), then try to persist mid-combat
+    const s = apply(onMap, { type: 'world/move', target: 'dryWash' })
     expect(s.combat).not.toBeNull()
     await store.persist(s)
     const loaded = await store.loadRun('h0')
-    expect(loaded!.world.current).toBe('n1') // still the pre-combat boundary
+    expect(loaded!.world.current).toBe('road') // still the pre-combat boundary
   })
 
   it('deletes a hero and its run', async () => {

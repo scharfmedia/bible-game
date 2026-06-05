@@ -1,36 +1,35 @@
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { assetBg } from '@bible/assets'
 import { useGame } from '../store/gameStore'
+import { selectFireplace } from '../selectors'
 
 export function FireplaceScreen() {
   const { t } = useTranslation()
-  const run = useGame((s) => s.state.run)
+  const state = useGame((s) => s.state)
+  const view = useMemo(() => selectFireplace(state), [state])
   const dispatch = useGame((s) => s.dispatch)
   const lastEvents = useGame((s) => s.lastEvents)
-  if (!run) return null
+  if (!view) return null
 
-  const node = run.world.current
-  const rested = Boolean(run.world.flags[`fireplace:${node}:rested`])
-  const prayed = Boolean(run.world.flags[`fireplace:${node}:prayed`])
-  const heroVerseOwned = new Set(
-    run.party.flatMap((m) => (m.kind === 'hero' ? run.deckByMember[m.memberId]?.filter((c) => c.startsWith('verse_')) ?? [] : [])),
-  )
-  const verseAvailable = Object.values(run.content.verses).some((v) => !heroVerseOwned.has(v.cardDefId))
   const notice = lastEvents.flatMap((e) => (e.type === 'notice' ? [e.messageKey] : [])).at(-1)
 
   return (
-    <div className="screen fireplace centered">
-      <div className="firelight" />
+    <div className="screen fireplace centered" style={{ backgroundImage: assetBg(view.bgAsset) }}>
+      {!view.bgAsset && <div className="firelight" />}
+      <div className="scrim" />
       <div className="panel narrow">
-        <h2>🔥 {t('ui.fireplace.title')}</h2>
+        <h2>{t(view.nameKey)}</h2>
+        <p className="muted reflect">{t(view.reflectKey)}</p>
         {notice && <p className="muted">{t(notice)}</p>}
         <div className="choices">
-          <button className="btn block" disabled={rested} onClick={() => dispatch({ type: 'world/fireplace', action: 'rest' })}>
+          <button className="btn block" disabled={view.rested} onClick={() => dispatch({ type: 'world/fireplace', action: 'rest' })}>
             {t('ui.fireplace.rest')}
           </button>
-          <button className="btn block" disabled={prayed} onClick={() => dispatch({ type: 'world/fireplace', action: 'pray' })}>
+          <button className="btn block" disabled={view.prayed} onClick={() => dispatch({ type: 'world/fireplace', action: 'pray' })}>
             {t('ui.fireplace.pray')}
           </button>
-          <button className="btn block" disabled={!verseAvailable} onClick={() => dispatch({ type: 'world/fireplace', action: 'study' })}>
+          <button className="btn block" disabled={!view.verseAvailable} onClick={() => dispatch({ type: 'world/fireplace', action: 'study' })}>
             {t('ui.fireplace.study')}
           </button>
           <button className="btn primary block" onClick={() => dispatch({ type: 'world/fireplace', action: 'leave' })}>
