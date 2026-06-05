@@ -12,10 +12,10 @@ export function WorldSelect() {
       <div className="vignette" />
       <div className="panel narrow">
         <h2>{t('ui.worldSelect.title')}</h2>
-        <div className="world-card" style={{ backgroundImage: 'url(/assets/004-battlefield-forest.png)' }}>
+        <div className="world-card" style={{ backgroundImage: 'url(/assets/bg-road-dusty-road.png)' }}>
           <div className="world-card-body">
-            <h3>{t('node.world01.entrance')}</h3>
-            <p className="muted">The Forest Road</p>
+            <h3>{t('ui.worldSelect.world01.title')}</h3>
+            <p className="muted">{t('ui.worldSelect.world01.subtitle')}</p>
           </div>
         </div>
         <div className="row gap">
