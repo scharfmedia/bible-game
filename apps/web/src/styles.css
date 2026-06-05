@@ -153,11 +153,13 @@ body {
 .targeting-hint { position: absolute; z-index: 4; top: 70px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.75); border: 1px solid var(--gold); border-radius: 8px; padding: 0.3rem 0.9rem; color: var(--gold-bright); }
 
 /* ---------- scene / event ---------- */
+/* discovery-first: invisible hotspots, a soft bloom on dwell, an eye cursor — no spoilers */
+.eye-cursor, .eye-cursor .hotspot, .eye-cursor .scene-hotspots {
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><ellipse cx='20' cy='20' rx='17' ry='10' fill='black' fill-opacity='0.35' stroke='rgb(244,231,161)' stroke-width='2'/><circle cx='20' cy='20' r='6' fill='rgb(244,231,161)'/><circle cx='20' cy='20' r='2.5' fill='rgb(26,20,8)'/></svg>") 20 20, pointer;
+}
 .scene-hotspots { position: absolute; inset: 0; z-index: 2; }
-.hotspot { position: absolute; background: transparent; border: 2px dashed transparent; border-radius: 8px; cursor: pointer; }
-.hotspot:hover { border-color: var(--gold-bright); background: rgba(244,231,161,0.12); }
-.hotspot-label { position: absolute; bottom: -1.4rem; left: 50%; transform: translateX(-50%); white-space: nowrap; background: rgba(0,0,0,0.7); padding: 1px 6px; border-radius: 5px; font-size: 0.75rem; opacity: 0; transition: opacity 0.2s; }
-.hotspot:hover .hotspot-label { opacity: 1; }
+.hotspot { position: absolute; background: transparent; border: none; padding: 0; }
+.bloom { position: absolute; inset: -18%; border-radius: 50%; pointer-events: none; filter: blur(3px); background: radial-gradient(ellipse at center, rgba(244,231,161,0.5), rgba(244,231,161,0.18) 45%, transparent 72%); }
 .scene-dialog { position: absolute; z-index: 3; bottom: 5rem; left: 50%; transform: translateX(-50%); width: min(640px, 90vw); text-align: center; background: rgba(0,0,0,0.7); border: 1px solid var(--panel-edge); border-radius: 10px; padding: 0.8rem 1rem; min-height: 1.5rem; }
 .verb-bar { position: absolute; z-index: 4; bottom: 1rem; left: 50%; transform: translateX(-50%); display: flex; gap: 0.5rem; align-items: center; background: rgba(0,0,0,0.6); padding: 0.5rem 0.8rem; border-radius: 10px; width: min(640px, 92vw); }
 .event-panel .event-body { line-height: 1.5; }

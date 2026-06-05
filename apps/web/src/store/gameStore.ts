@@ -58,7 +58,9 @@ export const useGame = create<GameStore>((set, get) => ({
     const run = await saveStore.loadRun(characterId)
     get().dispatch({ type: 'selectHero', id: characterId })
     if (run) {
-      set((s) => ({ state: { ...s.state, run, combat: null, prompt: null, screen: 'map' } }))
+      // Always resume on the map: reset any open scene/event so screen and movement stay consistent.
+      const resumed = { ...run, world: { ...run.world, movement: { kind: 'idle' as const } } }
+      set((s) => ({ state: { ...s.state, run: resumed, combat: null, prompt: null, screen: 'map' } }))
     } else {
       get().dispatch({ type: 'navigate', screen: 'worldSelect' })
     }
