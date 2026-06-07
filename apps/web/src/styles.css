@@ -191,7 +191,7 @@ body {
 .map-node.current { --ring: var(--gold-bright); z-index: 3; }
 .map-node.current .node-disc { filter: none; }
 .map-node.current .node-label { background: rgba(54,42,12,0.9); color: var(--gold-bright); }
-.map-footer { position: absolute; bottom: 0; left: 0; right: 0; z-index: 5; display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1.1rem; background: linear-gradient(0deg, rgba(20,22,14,0.78), transparent); }
+.map-footer { position: absolute; bottom: 0; left: 0; right: 0; z-index: 5; display: flex; justify-content: flex-end; align-items: center; padding: 0.5rem 1.1rem; background: linear-gradient(0deg, rgba(20,22,14,0.78), transparent); }
 
 /* the pilgrim's figure — a board-game pawn standing on the current node, walking the trail on travel */
 .player-token { position: absolute; width: 50px; height: 50px; z-index: 6; pointer-events: none; display: flex; align-items: center; justify-content: center; }
@@ -199,6 +199,41 @@ body {
 .player-pawn { font-size: 2.7rem; line-height: 1; color: var(--gold-bright); text-shadow: 0 0 7px rgba(0,0,0,0.75), 0 2px 4px rgba(0,0,0,0.9); }
 .map-canvas.traveling .map-node { pointer-events: none; }
 .map-canvas.traveling .node-label { opacity: 0.55; transition: opacity 0.2s; }
+
+/* ---------- map cartographic details: cartouche, region names, legend, compass ---------- */
+.map-cartouche {
+  position: absolute; top: 60px; left: 50%; transform: translateX(-50%); z-index: 5; pointer-events: none; white-space: nowrap;
+  padding: 0.2rem 1.2rem; border: 1px solid var(--panel-edge); border-radius: 10px;
+  background: linear-gradient(180deg, rgba(20,16,10,0.6), rgba(20,16,10,0.22));
+  color: var(--gold-bright); font-size: 1.05rem; font-weight: 700; letter-spacing: 0.06em;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.75);
+}
+/* faint region names painted on the parchment (inside the canvas, behind the nodes) */
+.map-region { position: absolute; transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap;
+  color: #5a4a28; opacity: 0.34; font-style: italic; font-size: 1.5rem; letter-spacing: 0.14em; text-transform: uppercase;
+  text-shadow: 0 1px 1px rgba(255,255,255,0.18); }
+
+.map-legend {
+  position: absolute; bottom: 54px; left: 12px; z-index: 5; width: 208px; pointer-events: none; /* info-only — never block a node behind it */
+  padding: 0.7rem 0.8rem; border: 1px solid var(--panel-edge); border-radius: 9px;
+  background: rgba(20,24,18,0.9); box-shadow: 0 4px 14px rgba(0,0,0,0.5); backdrop-filter: blur(2px);
+}
+.lg-title { font-size: 0.78rem; font-weight: 700; color: var(--gold-bright); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; }
+.lg-rows { display: flex; flex-direction: column; gap: 0.28rem; }
+.lg-row { display: flex; align-items: center; gap: 0.55rem; font-size: 0.72rem; line-height: 1.1; }
+.lg-glyph { width: 18px; flex: none; text-align: center; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+.lg-glyph.t-rest { color: #74e0ce; }
+.lg-glyph.t-combat { color: #f0b066; }
+.lg-glyph.t-boss { color: #ef8a82; }
+.lg-glyph.t-shop { color: var(--gold-bright); }
+.lg-glyph.t-event { color: #9cc0e6; }
+.lg-glyph.t-waypoint { color: #efe9d6; }
+.lg-line { width: 40px; height: 6px; flex: none; }
+.lg-label { color: var(--ink); }
+.lg-divider { height: 1px; background: var(--panel-edge); margin: 0.45rem 0; }
+.lg-progress { margin-top: 0.5rem; padding-top: 0.45rem; border-top: 1px solid var(--panel-edge); font-size: 0.66rem; color: var(--muted); text-align: center; letter-spacing: 0.04em; }
+
+.map-compass { position: absolute; bottom: 56px; right: 16px; z-index: 5; pointer-events: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.45)); }
 .reflect { font-style: italic; }
 
 /* ---------- combat ---------- */

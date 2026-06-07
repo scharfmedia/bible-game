@@ -53,6 +53,28 @@ const ctrlOf = (a: { x: number; y: number }, b: { x: number; y: number }, id: st
 // gold (open to you) draws last, on top of the trodden/untrodden web
 const EDGE_Z: Record<string, number> = { untrodden: 0, trodden: 1, gated: 2, gold: 3 }
 
+// legend key: node-type glyphs (colour from the .lg-glyph.t-* rules) + the four trail kinds
+const NODE_LEGEND = [
+  { glyph: '+', cls: 't-rest', key: 'ui.map.legend.rest' },
+  { glyph: '!', cls: 't-combat', key: 'ui.map.legend.combat' },
+  { glyph: '‡', cls: 't-boss', key: 'ui.map.legend.boss' },
+  { glyph: '$', cls: 't-shop', key: 'ui.map.legend.shop' },
+  { glyph: '?', cls: 't-event', key: 'ui.map.legend.event' },
+  { glyph: '•', cls: 't-waypoint', key: 'ui.map.legend.waypoint' },
+] as const
+const TRAIL_LEGEND = [
+  { kind: 'gold', key: 'ui.map.legend.open' },
+  { kind: 'trodden', key: 'ui.map.legend.trodden' },
+  { kind: 'untrodden', key: 'ui.map.legend.untrodden' },
+  { kind: 'gated', key: 'ui.map.legend.gated' },
+] as const
+// faint region names painted on the parchment (grid coords, in the empty band above the nodes)
+const REGIONS = [
+  { key: 'ui.map.region.departure', pos: { x: 1, y: -0.05 } },
+  { key: 'ui.map.region.midway', pos: { x: 5, y: -0.05 } },
+  { key: 'ui.map.region.ascent', pos: { x: 9.5, y: -0.05 } },
+] as const
+
 type Travel = { from: string; to: string; firstVisit: boolean }
 
 export function MapScreen() {
@@ -125,9 +147,15 @@ export function MapScreen() {
     setTravel({ from: currentId, to: n.id, firstVisit: !n.visited })
   }
 
+  const visited = view.nodes.filter((n) => n.visited).length
+
   return (
     <div className="screen map">
       <Hud />
+
+      {/* title cartouche (world name), fixed under the HUD */}
+      <div className="map-cartouche">{t('ui.worldSelect.world01.title')}</div>
+
       <div className="map-scroll">
         <div className={`map-canvas${travel ? ' traveling' : ''}`} style={{ width: W, height: H }}>
           <svg className="map-edges" width={W} height={H} viewBox={`0 0 ${W} ${H}`} fill="none">
@@ -135,6 +163,14 @@ export function MapScreen() {
               <path key={e.id} d={arc(e.a, e.b, e.id)} className={`edge ${e.kind}`} />
             ))}
           </svg>
+
+          {/* faint region names on the parchment (scroll with the map, behind the nodes) */}
+          {REGIONS.map((r) => {
+            const p = px(r.pos)
+            return (
+              <span key={r.key} className="map-region" style={{ left: p.x, top: p.y }}>{t(r.key)}</span>
+            )
+          })}
 
           {view.nodes.map((n) => {
             const p = px(n.pos)
@@ -175,8 +211,51 @@ export function MapScreen() {
         </div>
       </div>
 
+      {/* legend key — node types + trail kinds + journey progress (fixed above the footer) */}
+      <aside className="map-legend">
+        <div className="lg-title">{t('ui.map.legendTitle')}</div>
+        <div className="lg-rows">
+          {NODE_LEGEND.map((r) => (
+            <div className="lg-row" key={r.key}>
+              <span className={`lg-glyph ${r.cls}`}>{r.glyph}</span>
+              <span className="lg-label">{t(r.key)}</span>
+            </div>
+          ))}
+        </div>
+        <div className="lg-divider" />
+        <div className="lg-rows">
+          {TRAIL_LEGEND.map((r) => (
+            <div className="lg-row" key={r.key}>
+              <svg className="lg-line" viewBox="0 0 40 6" width="40" height="6" fill="none">
+                <path d="M2 3 H38" className={`edge ${r.kind}`} />
+              </svg>
+              <span className="lg-label">{t(r.key)}</span>
+            </div>
+          ))}
+        </div>
+        <div className="lg-progress">{t('ui.map.progress', { visited, total: view.nodes.length })}</div>
+      </aside>
+
+      {/* decorative compass rose (bottom-right) */}
+      <div className="map-compass" aria-hidden="true">
+        <svg viewBox="0 0 64 64" width="54" height="54">
+          <g fill="var(--gold)" opacity="0.5">
+            <polygon points="32,3 37,30 32,27 27,30" />
+            <polygon points="61,32 34,37 37,32 34,27" />
+            <polygon points="32,61 27,34 32,37 37,34" />
+            <polygon points="3,32 30,27 27,32 30,37" />
+          </g>
+          <g fill="var(--gold)" opacity="0.28">
+            <polygon points="50,14 35,29 33,27 31,25" />
+            <polygon points="50,50 31,35 33,33 35,31" />
+            <polygon points="14,50 29,31 27,33 25,35" />
+            <polygon points="14,14 33,29 31,31 29,33" />
+          </g>
+          <circle cx="32" cy="32" r="2.6" fill="var(--gold-bright)" opacity="0.7" />
+        </svg>
+      </div>
+
       <footer className="map-footer">
-        <span className="muted small">{t('ui.map.legend')}</span>
         {confirmAbandon ? (
           <span className="row gap">
             <span className="muted small">{t('ui.map.abandonConfirm')}</span>
