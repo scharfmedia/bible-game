@@ -1,5 +1,5 @@
 import { type ComponentType } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import type { ScreenId } from '@bible/engine'
 import { useGame } from './store/gameStore'
 import { StartScreen } from './screens/StartScreen'
@@ -34,23 +34,14 @@ export function App() {
 
   return (
     <div className="app">
-      {/* a soft cross-dissolve whenever we move between the map and a node (combat/scene/rest/…) */}
-      <AnimatePresence>
-        <motion.div
-          key={screen}
-          className="screen-layer"
-          initial={{ opacity: 0, scale: 1.02 }}
-          animate={{ opacity: 1, scale: 1, pointerEvents: 'auto' }}
-          // a LEAVING layer must never intercept clicks: the outgoing screen often renders null
-          // (its selector returns null once state changed), leaving an invisible full-screen div on
-          // top of the map. If AnimatePresence ever fails to remove it the map would freeze — so make
-          // it click-through immediately, and display:none once the exit finishes.
-          exit={{ opacity: 0, scale: 0.99, pointerEvents: 'none', transitionEnd: { display: 'none' } }}
-          transition={{ duration: 0.45, ease: 'easeInOut' }}
-        >
-          <Screen />
-        </motion.div>
-      </AnimatePresence>
+      {/* EXACTLY ONE screen is mounted at a time — a keyed fade-in (the key change remounts it).
+          Deliberately NOT AnimatePresence: overlapping enter/exit layers were leaving an invisible
+          outgoing layer on top of the map (worst after the two combat→reward→map transitions),
+          swallowing every click. With no overlap, a leaving screen unmounts instantly and can never
+          block input. */}
+      <motion.div key={screen} className="screen-layer" initial={{ opacity: 0, scale: 1.01 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3, ease: 'easeOut' }}>
+        <Screen />
+      </motion.div>
 
       {prompt?.kind === 'verseChallenge' && <VerseModal challengeId={prompt.challengeId} />}
     </div>
