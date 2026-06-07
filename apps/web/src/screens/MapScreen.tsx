@@ -29,6 +29,7 @@ const PAD = 130
 // `transform` for the hover-scale / walk tweens, and a CSS translate would be clobbered).
 const NODE = 64
 const TOKEN = 50
+const WALK_MS = 820 // how long the figure walks a trail before the move is committed
 
 // stable per-edge curve direction so the mesh reads as organic arcs, never a straight grid
 const hash = (s: string) => {
@@ -68,6 +69,20 @@ export function MapScreen() {
     if (!travel) currentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
   }, [currentId, travel])
 
+  // A TIMER — not the animation callback — commits the move once the figure has walked the trail.
+  // This is the single source of truth, so a missed/duplicated framer onAnimationComplete (StrictMode
+  // remount, AnimatePresence layer reuse) can never leave `travel` stuck and freeze the whole map.
+  useEffect(() => {
+    if (!travel) return
+    const { to, firstVisit } = travel
+    const id = window.setTimeout(() => {
+      dispatch({ type: 'world/move', target: to })
+      if (firstVisit) dispatch({ type: 'world/enter' }) // first arrival opens the node; a revisit waits for a click
+      setTravel(null)
+    }, WALK_MS)
+    return () => window.clearTimeout(id)
+  }, [travel, dispatch])
+
   if (!view) return null
   const W = view.bounds.w * CELL_X + PAD * 2
   const H = view.bounds.h * CELL_Y + PAD * 2
@@ -106,15 +121,6 @@ export function MapScreen() {
     }
     if (!n.movable || !currentId) return
     setTravel({ from: currentId, to: n.id, firstVisit: !n.visited })
-  }
-
-  const finishTravel = () => {
-    if (!travel) return
-    const { to, firstVisit } = travel
-    dispatch({ type: 'world/move', target: to })
-    // a place you've never been opens at once; a known place waits for a second click to enter
-    if (firstVisit) dispatch({ type: 'world/enter' })
-    setTravel(null)
   }
 
   return (
@@ -159,8 +165,7 @@ export function MapScreen() {
               style={{ left: base.x - TOKEN / 2, top: base.y - TOKEN / 2 }}
               initial={false}
               animate={walk ? { x: walk.x, y: walk.y } : { x: 0, y: 0 }}
-              transition={walk ? { duration: 0.9, ease: 'easeInOut', times: [0, 0.5, 1] } : { duration: 0 }}
-              onAnimationComplete={() => travel && finishTravel()}
+              transition={walk ? { duration: WALK_MS / 1000 - 0.04, ease: 'easeInOut', times: [0, 0.5, 1] } : { duration: 0 }}
             >
               <span className="player-pawn">♟</span>
             </motion.div>
