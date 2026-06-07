@@ -40,8 +40,12 @@ export function App() {
           key={screen}
           className="screen-layer"
           initial={{ opacity: 0, scale: 1.02 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.99 }}
+          animate={{ opacity: 1, scale: 1, pointerEvents: 'auto' }}
+          // a LEAVING layer must never intercept clicks: the outgoing screen often renders null
+          // (its selector returns null once state changed), leaving an invisible full-screen div on
+          // top of the map. If AnimatePresence ever fails to remove it the map would freeze — so make
+          // it click-through immediately, and display:none once the exit finishes.
+          exit={{ opacity: 0, scale: 0.99, pointerEvents: 'none', transitionEnd: { display: 'none' } }}
           transition={{ duration: 0.45, ease: 'easeInOut' }}
         >
           <Screen />
