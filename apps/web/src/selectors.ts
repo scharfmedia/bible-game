@@ -252,7 +252,7 @@ export function selectCombat(state: GameState): CombatView | null {
     phase: c.phase,
     outcome: c.outcome,
     roundActionTaken: c.roundActionTaken,
-    canFlee: c.flags.allowFlee && !c.flags.mandatory && c.phase === 'partyDecision' && !c.roundActionTaken,
+    canFlee: c.flags.allowFlee && !c.flags.mandatory && (c.phase === 'partyDecision' || c.phase === 'partyAction') && !c.roundActionTaken,
     graceAbilities: c.partyOrder.flatMap((id) => c.combatants[id]?.graceAbilityIds ?? []),
     battleBg: c.battleBg,
   }

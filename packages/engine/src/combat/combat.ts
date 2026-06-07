@@ -478,23 +478,26 @@ export function reposition(c: CombatState, moves: Array<{ id: CombatantId; row?:
 }
 
 export function flee(c: CombatState): CombatStep {
-  if (c.phase !== 'partyDecision' || c.roundActionTaken) return reject(c, 'flee-not-allowed')
+  // allowed during the decision window AND once you're acting (auto-begin draws the hand) — either
+  // way fleeing forfeits the turn, so any cards already drawn are discarded.
+  if ((c.phase !== 'partyDecision' && c.phase !== 'partyAction') || c.roundActionTaken) return reject(c, 'flee-not-allowed')
   if (c.flags.mandatory || !c.flags.allowFlee) return reject(c, 'flee-forbidden')
+  const base: CombatState = c.hand.length ? { ...c, discardPile: [...c.discardPile, ...c.hand], hand: [] } : c
 
-  const fleeRng = fork(c.rng, `flee:${c.roundNumber}`)
-  const speed = aliveParty(c).reduce((s, m) => s + m.stats.speed, 0)
+  const fleeRng = fork(base.rng, `flee:${base.roundNumber}`)
+  const speed = aliveParty(base).reduce((s, m) => s + m.stats.speed, 0)
   const probability = Math.min(0.9, 0.4 + speed * 0.01)
   const [roll] = nextFloat(fleeRng)
   const success = roll < probability
 
   if (success) {
-    return step({ ...c, outcome: 'fled', phase: 'combatEnd' }, [
+    return step({ ...base, outcome: 'fled', phase: 'combatEnd' }, [
       { type: 'fleeAttempt', success: true },
       { type: 'combatEnded', outcome: 'fled' },
     ])
   }
   // failed flee still costs the turn
-  const after = enemyPhase({ ...c, roundActionTaken: true })
+  const after = enemyPhase({ ...base, roundActionTaken: true })
   return step(after.combat, [{ type: 'fleeAttempt', success: false }, ...after.events], after.spiritEvents)
 }
 
