@@ -56,6 +56,44 @@ export function selectEvent(state: GameState): EventView | null {
   }
 }
 
+export interface DialogueChoiceView { id: string; textKey: string; enabled: boolean }
+export interface DialogueView {
+  dialogueId: string
+  nodeId: string
+  speaker?: string
+  portraitAsset?: string
+  bgAsset?: string
+  lines: string[]
+  choices: DialogueChoiceView[]
+}
+
+/** The active conversation overlay (null when no dialogue is running). Choices are filtered: a spent
+ *  `once` choice and a `hideWhenLocked` choice whose gate fails are dropped; others carry `enabled`. */
+export function selectDialogue(state: GameState): DialogueView | null {
+  const run = state.run
+  const active = run?.world.dialogue
+  if (!run || !active) return null
+  const dlg = run.content.dialogues?.[active.dialogueId]
+  const node = dlg?.nodes[active.node]
+  if (!dlg || !node) return null
+  const ctx = { inventory: run.inventory, spirit: run.spirit.spirit, world: run.world }
+  const spent = (choiceId: string) => Boolean(run.world.flags[`dlg:${active.dialogueId}:${choiceId}`])
+  const choices: DialogueChoiceView[] = node.choices
+    .filter((c) => !(c.once && spent(c.id)))
+    .map((c) => ({ c, enabled: c.requires ? evalGate(c.requires, ctx) : true }))
+    .filter(({ c, enabled }) => enabled || !c.hideWhenLocked)
+    .map(({ c, enabled }) => ({ id: c.id, textKey: c.textKey, enabled }))
+  return {
+    dialogueId: dlg.id,
+    nodeId: node.id,
+    speaker: node.speaker ?? dlg.speakerNameKey,
+    portraitAsset: dlg.portraitAsset,
+    bgAsset: dlg.bgAsset,
+    lines: node.lines,
+    choices,
+  }
+}
+
 export interface RewardOptionView { id: string; kind: string; label: string }
 export interface RewardView { options: RewardOptionView[]; righteous: boolean; peacefulBonus: boolean; rewardBg?: string }
 

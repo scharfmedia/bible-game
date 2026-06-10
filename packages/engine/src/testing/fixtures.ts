@@ -7,7 +7,7 @@ import type { CardDef } from '../cards/types'
 import type { ContentBundle } from '../content/bundle'
 import type { WorldMap } from '../map/types'
 import type { Scene } from '../scene/types'
-import type { MoralEvent } from '../scene/types'
+import type { Dialogue, MoralEvent } from '../scene/types'
 
 const cards: Record<string, CardDef> = {
   strike: { id: 'strike', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: 'card.strike.name', textKey: 'card.strike.text', effects: [{ kind: 'damage', amount: 6, damageType: 'physical' }] },
@@ -35,7 +35,46 @@ const forestHouse: Scene = {
         },
       },
     },
+    {
+      id: 'stranger',
+      shape: { x: 50, y: 10, w: 20, h: 30 },
+      nameKey: 'scene.forestHouse.stranger',
+      interactions: {
+        observe: { fallbackLineKey: 'scene.forestHouse.stranger.observe' },
+        talk: { script: [{ startDialogue: 'wanderer' }] },
+      },
+    },
   ],
+}
+
+// A tiny multi-path conversation for engine tests: greet → branch (ask / key-gated unlock / provoke
+// → combat / leave). Exercises goto, GateExpr gating, once-only choices, unlock side-effects, and a
+// startCombat transition out of the overlay.
+const wanderer: Dialogue = {
+  id: 'wanderer',
+  start: 'greet',
+  speakerNameKey: 'dialogue.wanderer.name',
+  nodes: {
+    greet: {
+      id: 'greet',
+      lines: ['dialogue.wanderer.greet'],
+      choices: [
+        { id: 'ask', textKey: 'dialogue.wanderer.ask', goto: 'tale' },
+        { id: 'unlock', textKey: 'dialogue.wanderer.unlock', requires: { hasItem: 'key' }, script: [{ setFlag: 'wandererToldSecret', value: true }, { revealNode: 'n3' }], goto: 'tale' },
+        { id: 'provoke', textKey: 'dialogue.wanderer.provoke', script: [{ startCombat: 'beast' }] },
+        { id: 'bye', textKey: 'dialogue.wanderer.bye' }, // no goto → ends the conversation
+      ],
+    },
+    tale: {
+      id: 'tale',
+      lines: ['dialogue.wanderer.tale'],
+      onEnter: [{ addSpirit: 3, reason: 'heardTale' }],
+      choices: [
+        { id: 'coin', textKey: 'dialogue.wanderer.coin', once: true, script: [{ giveItem: 'coin', count: 1 }] },
+        { id: 'bye2', textKey: 'dialogue.wanderer.bye' }, // ends
+      ],
+    },
+  },
 }
 
 const traveler: MoralEvent = {
@@ -107,6 +146,7 @@ export function testContent(): ContentBundle {
     },
     scenes: { forestHouse },
     events: { traveler },
+    dialogues: { wanderer },
     items: {
       key: { id: 'key', kind: 'key', nameKey: 'item.key.name', descKey: 'item.key.desc', icon: 'item/key', stackable: false, usableInScene: true },
       coin: { id: 'coin', kind: 'currency', nameKey: 'item.coin.name', descKey: 'item.coin.desc', icon: 'item/coin', stackable: true, usableInScene: false },

@@ -88,13 +88,17 @@ const marketplace: Scene = {
     hs('marketplace', 'trader', [0.68, 0.4, 0.18, 0.32]),
   ],
 }
+// The merchant camp hosts several talkable entities — the keeper (a deep branching conversation),
+// a fellow traveler, and the pack donkey — each launched by the `talk` verb on its own hotspot.
 const merchant: Scene = {
   id: 'merchant',
   bgAsset: 'bg-shop-merchant-camp',
   hotspots: [
-    hs('merchant', 'wares', [0.55, 0.5, 0.2, 0.25]),
-    hs('merchant', 'keeper', [0.3, 0.38, 0.18, 0.34]),
-    hs('merchant', 'fire', [0.12, 0.62, 0.14, 0.16]),
+    hs('merchant', 'wares', [0.54, 0.62, 0.2, 0.2]),
+    hs('merchant', 'keeper', [0.26, 0.36, 0.18, 0.36], { talk: { script: [{ startDialogue: 'merchantKeeper' }] } }),
+    hs('merchant', 'traveler', [0.46, 0.34, 0.15, 0.32], { talk: { script: [{ startDialogue: 'roadTraveler' }] } }),
+    hs('merchant', 'donkey', [0.76, 0.5, 0.2, 0.3], { talk: { script: [{ startDialogue: 'packDonkey' }] } }),
+    hs('merchant', 'fire', [0.1, 0.66, 0.14, 0.16]),
   ],
 }
 

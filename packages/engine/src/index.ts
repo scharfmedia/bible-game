@@ -145,9 +145,21 @@ export type {
   GateExpr,
   MovementPhase,
   SceneRuntimeState,
+  ActiveDialogue,
 } from './map/types'
 export { initialWorldState } from './map/types'
-export type { Scene, Hotspot, Interaction, Script, ScriptCmd, Verb, MoralEvent } from './scene/types'
+export type {
+  Scene,
+  Hotspot,
+  Interaction,
+  Script,
+  ScriptCmd,
+  Verb,
+  MoralEvent,
+  Dialogue,
+  DialogueNode,
+  DialogueChoice,
+} from './scene/types'
 export { M1_VERBS, VERBS } from './scene/types'
 export type { InventoryState, ItemDef, ItemKind } from './inventory/types'
 export { emptyInventory, itemCount } from './inventory/types'
@@ -198,6 +210,8 @@ export type {
   EventId,
   EncounterId,
   ItemId,
+  DialogueId,
+  DialogueNodeId,
   GraceAbilityId,
   Locale,
 } from './types'

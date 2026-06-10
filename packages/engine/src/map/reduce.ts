@@ -12,6 +12,7 @@ import { applySpiritEvent, type SpiritEvent } from '../spirit/spirit'
 import type { GameState, RunState } from '../state/gameState'
 import { fork } from '../rng/rng'
 import { resolveInteraction, runScript, type SceneTransition } from '../scene/resolve'
+import type { DialogueChoice } from '../scene/types'
 import type { NodeId } from '../types'
 import { COMBAT_TYPES, type MapNode, type WorldMap } from './types'
 import { canMove, mapEntrances } from './movement'
@@ -59,6 +60,10 @@ export function reduceWorld(state: GameState, cmd: Command): ReduceResult {
       return leaveScene(state)
     case 'world/eventChoice':
       return eventChoice(state, cmd.eventId, cmd.choiceId)
+    case 'world/dialogueChoice':
+      return dialogueChoice(state, cmd.dialogueId, cmd.nodeId, cmd.choiceId)
+    case 'world/leaveDialogue':
+      return leaveDialogue(state)
     case 'world/fireplace':
       return fireplace(state, cmd.action)
     case 'world/advanceWorld':
@@ -93,6 +98,7 @@ function chooseEntry(state: GameState, nodeId: NodeId): ReduceResult {
  *  next click, on a revisit) to actually resolve the node. */
 function move(state: GameState, target: NodeId): ReduceResult {
   const run = state.run!
+  if (run.world.dialogue) return reject(state, 'busy-dialogue')
   const map = mapOf(run)
   const ctx = { inventory: run.inventory, spirit: run.spirit.spirit, world: run.world }
   const chk = canMove(map, run.world, ctx, target)
@@ -114,6 +120,7 @@ function move(state: GameState, target: NodeId): ReduceResult {
  *  run start (click the starting node to begin). */
 function enter(state: GameState): ReduceResult {
   const run = state.run!
+  if (run.world.dialogue) return reject(state, 'busy-dialogue')
   if (run.world.movement.kind !== 'idle') return reject(state, 'enter:busy')
   const node = mapOf(run).nodes[run.world.current]
   if (!node) return reject(state, 'enter:no-node')
@@ -143,6 +150,13 @@ function triggerFixed(state: GameState, run: RunState, node: MapNode, pre: GameE
     case 'event': {
       const run2 = { ...run, world: { ...run.world, movement: { kind: 'inEvent' as const, eventId: ev.eventId, node: node.id } } }
       return ok({ ...state, run: run2, screen: 'event' }, [...pre, { type: 'screenChanged', screen: 'event' }])
+    }
+    case 'dialogue': {
+      // A map node that IS a conversation: resolve the node now (so re-entry is quiet) and open the
+      // dialogue overlay on top of the map. There is no scene to return to; ending clears the overlay.
+      const dlg = (run.content.dialogues ?? {})[ev.dialogueId]
+      if (!dlg) return reject(state, 'no-such-dialogue')
+      return enterDialogueNode(state, clearNode(run, node.id), ev.dialogueId, dlg.start, pre)
     }
     case 'fireplace':
       return ok({ ...state, run, screen: 'fireplace' }, [...pre, { type: 'screenChanged', screen: 'fireplace' }])
@@ -185,6 +199,7 @@ function startCombatNode(
 
 function sceneInteract(state: GameState, cmd: Extract<Command, { type: 'world/sceneInteract' }>): ReduceResult {
   const run = state.run!
+  if (run.world.dialogue) return reject(state, 'busy-dialogue')
   if (run.world.movement.kind !== 'inScene') return reject(state, 'not-in-scene')
   const scene = run.content.scenes[cmd.sceneId]
   if (!scene) return reject(state, 'no-such-scene')
@@ -217,6 +232,13 @@ function applyTransition(state: GameState, run: RunState, t: SceneTransition, pr
   if (t.kind === 'event') {
     const run2 = { ...run, world: { ...run.world, movement: { kind: 'inEvent' as const, eventId: t.id, node: run.world.current } } }
     return ok({ ...state, run: run2, screen: 'event' }, [...pre, { type: 'screenChanged', screen: 'event' }])
+  }
+  if (t.kind === 'dialogue') {
+    // Open a conversation overlay. Additive — the current scene/map and movement phase are left
+    // exactly as they are, so there is nothing to "return" to when the conversation ends.
+    const dlg = (run.content.dialogues ?? {})[t.id]
+    if (!dlg) return reject(state, 'no-such-dialogue')
+    return enterDialogueNode(state, run, t.id, dlg.start, pre)
   }
   if (t.kind === 'goto') {
     // a discovered secret path: leave the scene (clearing the origin node, like leaveScene) and
@@ -274,6 +296,83 @@ function eventChoice(state: GameState, eventId: string, choiceId: string): Reduc
   run2 = { ...run2, world: { ...run2.world, movement: { kind: 'idle' } } }
   if (!backward) run2 = clearNode(run2, run.world.current)
   return ok({ ...state, run: run2, screen: 'map' }, [...events, { type: 'screenChanged', screen: 'map' }])
+}
+
+// ---- dialogue (branching conversations) -------------------------------------------------
+// A conversation is an additive overlay: it sets run.world.dialogue and otherwise leaves the
+// scene/map and movement phase untouched, so when it ends we simply clear the field — the screen
+// underneath is already correct. Choice side-effects and gating reuse runScript + evalGate.
+
+const onceFlag = (dialogueId: string, choiceId: string): string => `dlg:${dialogueId}:${choiceId}`
+
+const latchOnce = (run: RunState, dialogueId: string, choice: DialogueChoice): RunState =>
+  choice.once
+    ? { ...run, world: { ...run.world, flags: { ...run.world.flags, [onceFlag(dialogueId, choice.id)]: true } } }
+    : run
+
+/** Move the conversation cursor onto a node and run its onEnter (which may itself transition out). */
+function enterDialogueNode(state: GameState, run: RunState, dialogueId: string, nodeId: string, pre: GameEvent[]): ReduceResult {
+  const dlg = (run.content.dialogues ?? {})[dialogueId]
+  const node = dlg?.nodes[nodeId]
+  if (!dlg || !node) return reject(state, 'dialogue:no-node')
+
+  let run2 = run
+  const events: GameEvent[] = [...pre]
+  if (node.onEnter && node.onEnter.length) {
+    const out = runScript(run.world, run.inventory, run.spirit.spirit, `dialogue:${dialogueId}`, node.onEnter)
+    run2 = { ...run, world: out.world, inventory: out.inventory }
+    const sp = withSpirit(run2, out.spiritEvents)
+    run2 = sp.run
+    events.push(...out.events, ...sp.events)
+    if (out.transition) {
+      const cleared = { ...run2, world: { ...run2.world, dialogue: null } }
+      return applyTransition(state, cleared, out.transition, events)
+    }
+  }
+  run2 = { ...run2, world: { ...run2.world, dialogue: { dialogueId, node: nodeId } } }
+  return ok({ ...state, run: run2 }, events)
+}
+
+function dialogueChoice(state: GameState, dialogueId: string, nodeId: string, choiceId: string): ReduceResult {
+  const run = state.run!
+  const active = run.world.dialogue
+  if (!active) return reject(state, 'not-in-dialogue')
+  if (active.dialogueId !== dialogueId || active.node !== nodeId) return reject(state, 'dialogue-stale')
+  const dlg = (run.content.dialogues ?? {})[dialogueId]
+  const node = dlg?.nodes[nodeId]
+  if (!dlg || !node) return reject(state, 'no-such-dialogue-node')
+  const choice = node.choices.find((c) => c.id === choiceId)
+  if (!choice) return reject(state, 'no-such-choice')
+  const ctx = { inventory: run.inventory, spirit: run.spirit.spirit, world: run.world }
+  if (choice.requires && !evalGate(choice.requires, ctx)) return reject(state, 'choice-locked')
+  if (choice.once && run.world.flags[onceFlag(dialogueId, choiceId)]) return reject(state, 'choice-spent')
+
+  let run2 = run
+  const events: GameEvent[] = []
+  if (choice.script && choice.script.length) {
+    const out = runScript(run.world, run.inventory, run.spirit.spirit, `dialogue:${dialogueId}`, choice.script)
+    run2 = { ...run, world: out.world, inventory: out.inventory }
+    const sp = withSpirit(run2, out.spiritEvents)
+    run2 = sp.run
+    events.push(...out.events, ...sp.events)
+    if (out.transition) {
+      // a transition (e.g. startCombat / goToNode) ends the conversation and fires the action
+      const cleared = latchOnce({ ...run2, world: { ...run2.world, dialogue: null } }, dialogueId, choice)
+      return applyTransition(state, cleared, out.transition, events)
+    }
+  }
+  run2 = latchOnce(run2, dialogueId, choice)
+
+  if (choice.goto) return enterDialogueNode(state, run2, dialogueId, choice.goto, events)
+  // no goto → end; the scene/map underneath is already showing, so just clear the overlay
+  run2 = { ...run2, world: { ...run2.world, dialogue: null } }
+  return ok({ ...state, run: run2 }, events)
+}
+
+function leaveDialogue(state: GameState): ReduceResult {
+  const run = state.run!
+  if (!run.world.dialogue) return reject(state, 'not-in-dialogue')
+  return ok({ ...state, run: { ...run, world: { ...run.world, dialogue: null } } }, [])
 }
 
 // ---- fireplace --------------------------------------------------------------------------

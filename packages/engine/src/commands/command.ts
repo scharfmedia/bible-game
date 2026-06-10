@@ -6,6 +6,8 @@ import type { StatId } from '../state/stats'
 import type {
   CharacterId,
   CombatantId,
+  DialogueId,
+  DialogueNodeId,
   EventId,
   GraceAbilityId,
   HotspotId,
@@ -39,6 +41,8 @@ export type Command =
   | { type: 'world/sceneInteract'; sceneId: SceneId; hotspotId: HotspotId; verb: Verb; itemId?: ItemId }
   | { type: 'world/leaveScene' }
   | { type: 'world/eventChoice'; eventId: EventId; choiceId: string }
+  | { type: 'world/dialogueChoice'; dialogueId: DialogueId; nodeId: DialogueNodeId; choiceId: string }
+  | { type: 'world/leaveDialogue' }
   | { type: 'world/fireplace'; action: 'rest' | 'pray' | 'leave' | 'study' }
   | { type: 'world/advanceWorld' }
   // ---- combat ----

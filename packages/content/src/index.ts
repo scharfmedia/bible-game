@@ -10,6 +10,7 @@ import { VERSES } from './verses'
 import { AMBUSH_TABLE, ENCOUNTERS, ITEMS, WORLD_01_MAP } from './jericho/map'
 import { SCENES } from './jericho/scenes'
 import { EVENTS } from './jericho/events'
+import { DIALOGUES } from './jericho/dialogues'
 
 const HERO_GRACE_ABILITIES = ['sight', 'mercy']
 
@@ -21,6 +22,7 @@ export function createContent(): ContentBundle {
     encounters: ENCOUNTERS,
     scenes: SCENES,
     events: EVENTS,
+    dialogues: DIALOGUES,
     items: ITEMS,
     verses: VERSES,
     worlds: {
@@ -74,6 +76,7 @@ export function validateContent(b: ContentBundle): void {
       if ((fe.kind === 'combat' || fe.kind === 'boss') && !b.encounters[fe.encounter]) err(`node "${node.id}" references missing encounter "${fe.encounter}"`)
       if (fe.kind === 'scene' && !b.scenes[fe.sceneId]) err(`node "${node.id}" references missing scene "${fe.sceneId}"`)
       if (fe.kind === 'event' && !b.events[fe.eventId]) err(`node "${node.id}" references missing event "${fe.eventId}"`)
+      if (fe.kind === 'dialogue' && !b.dialogues[fe.dialogueId]) err(`node "${node.id}" references missing dialogue "${fe.dialogueId}"`)
     }
 
     // edges reference existing nodes; adjacency is symmetric
@@ -103,6 +106,47 @@ export function validateContent(b: ContentBundle): void {
       if (!seen.has(map.bossId)) err(`world "${worldId}" boss is unreachable from entry "${start}"`)
     }
   }
+
+  // Dialogue integrity: start nodes + choice `goto`s resolve within their dialogue, and every
+  // `startDialogue` reference (in scenes, events, or dialogues themselves) points at a real dialogue.
+  const walkScript = (script: unknown, visit: (cmd: Record<string, unknown>) => void): void => {
+    if (!Array.isArray(script)) return
+    for (const cmd of script) {
+      if (cmd && typeof cmd === 'object') {
+        visit(cmd as Record<string, unknown>)
+        walkScript((cmd as { then?: unknown }).then, visit)
+        walkScript((cmd as { else?: unknown }).else, visit)
+      }
+    }
+  }
+  const checkStartDialogue = (script: unknown, where: string): void =>
+    walkScript(script, (cmd) => {
+      if ('startDialogue' in cmd && !b.dialogues[cmd.startDialogue as string]) {
+        err(`${where} references missing dialogue "${String(cmd.startDialogue)}"`)
+      }
+    })
+
+  for (const scene of Object.values(b.scenes)) {
+    checkStartDialogue(scene.onEnter, `scene "${scene.id}" onEnter`)
+    for (const h of scene.hotspots) {
+      for (const [verb, inter] of Object.entries(h.interactions)) {
+        checkStartDialogue(inter?.script, `scene "${scene.id}" hotspot "${h.id}" ${verb}`)
+      }
+    }
+  }
+  for (const ev of Object.values(b.events)) {
+    for (const c of ev.choices) checkStartDialogue(c.script, `event "${ev.id}" choice "${c.id}"`)
+  }
+  for (const dlg of Object.values(b.dialogues)) {
+    if (!dlg.nodes[dlg.start]) err(`dialogue "${dlg.id}" start node "${dlg.start}" missing`)
+    for (const node of Object.values(dlg.nodes)) {
+      checkStartDialogue(node.onEnter, `dialogue "${dlg.id}" node "${node.id}" onEnter`)
+      for (const c of node.choices) {
+        if (c.goto && !dlg.nodes[c.goto]) err(`dialogue "${dlg.id}" choice "${c.id}" goto "${c.goto}" missing`)
+        checkStartDialogue(c.script, `dialogue "${dlg.id}" choice "${c.id}"`)
+      }
+    }
+  }
 }
 
 export { CARDS, HERO_START_DECK } from './cards'
@@ -110,3 +154,4 @@ export { VERSES } from './verses'
 export { ENCOUNTERS, ITEMS, WORLD_01_MAP, AMBUSH_TABLE } from './jericho/map'
 export { SCENES } from './jericho/scenes'
 export { EVENTS } from './jericho/events'
+export { DIALOGUES } from './jericho/dialogues'

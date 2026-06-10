@@ -1,5 +1,7 @@
 import type {
   AssetRef,
+  DialogueId,
+  DialogueNodeId,
   EdgeId,
   EncounterId,
   EventId,
@@ -41,6 +43,7 @@ export type ScriptCmd =
   | { startCombat: EncounterId }
   | { startEvent: EventId }
   | { changeScene: SceneId }
+  | { startDialogue: DialogueId } // open a conversation overlay (world reducer resolves the start node)
   | { markTaken: string }
   | { if: GateExpr; then: ScriptCmd[]; else?: ScriptCmd[] }
 
@@ -84,4 +87,52 @@ export interface MoralEvent {
   titleKey: I18nKey
   bodyKey: I18nKey
   choices: MoralEventChoice[]
+}
+
+// ---- branching dialogue (Monkey-Island-style conversations) -------------------------------
+// A Dialogue is a graph of nodes; each node is an NPC's lines + a list of player response choices.
+// Picking a choice runs its declarative Script (reusing runScript) and either advances to `goto`
+// or — when `goto` is omitted — ends the conversation. A single scene may host many talkable
+// hotspots, each launching its own Dialogue; only one is active at a time (WorldState.dialogue).
+
+/** A player response option within a dialogue node. */
+export interface DialogueChoice {
+  id: string
+  /** the player's response text (the menu label) */
+  textKey: I18nKey
+  /** gate this option against flags/items/spirit (reuses evalGate); unmet → disabled or hidden */
+  requires?: GateExpr
+  /** when `requires` is unmet: hide the option entirely (default: show it disabled) */
+  hideWhenLocked?: boolean
+  /** the option vanishes after being chosen once (latched via a world flag) */
+  once?: boolean
+  /** side-effects when chosen: setFlag/giveItem/addSpirit/revealNode/unlockEdge/startCombat/… */
+  script?: Script
+  /** next node; OMIT to end the conversation */
+  goto?: DialogueNodeId
+}
+
+/** One step in a conversation: the speaker's line(s) followed by the player's response options. */
+export interface DialogueNode {
+  id: DialogueNodeId
+  /** i18n key for the speaker's name on this node; defaults to Dialogue.speakerNameKey */
+  speaker?: I18nKey
+  /** the NPC's speech; the UI steps through these, then reveals the choices */
+  lines: I18nKey[]
+  /** optional side-effects run when this node is reached */
+  onEnter?: Script
+  choices: DialogueChoice[]
+}
+
+/** A whole conversation with one talkable entity (a person, animal, or object). */
+export interface Dialogue {
+  id: DialogueId
+  start: DialogueNodeId
+  /** default speaker name for nodes that don't override it */
+  speakerNameKey?: I18nKey
+  /** optional portrait (art TBD; the overlay shows the name + a placeholder when absent) */
+  portraitAsset?: AssetRef
+  /** optional backdrop, only used when a conversation is launched off the map (not from a scene) */
+  bgAsset?: AssetRef
+  nodes: Record<DialogueNodeId, DialogueNode>
 }

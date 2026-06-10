@@ -371,3 +371,21 @@ body {
 .panel.verse { width: min(560px, 92vw); }
 .verse-text { font-style: italic; line-height: 1.6; background: rgba(0,0,0,0.3); border-left: 3px solid var(--gold); padding: 0.8rem 1rem; border-radius: 4px; }
 .verse-inputs { display: flex; flex-wrap: wrap; justify-content: center; }
+
+/* ---------- dialogue overlay (Monkey-Island-style conversations) ---------- */
+/* Additive overlay: a soft bottom gradient keeps the scene visible; the panel is bottom-anchored.
+   The whole layer captures clicks (advancing lines), which also blocks the scene underneath. */
+.dialogue-overlay { position: absolute; inset: 0; z-index: 22; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 1.6rem; background: linear-gradient(0deg, rgba(0,0,0,0.6), rgba(0,0,0,0.12) 34%, transparent 56%); cursor: pointer; }
+.dialogue-bg { position: absolute; inset: 0; background-size: cover; background-position: center; z-index: -1; }
+.dialogue-panel { display: flex; gap: 1rem; align-items: flex-start; width: min(720px, 94vw); background: rgba(12, 14, 9, 0.95); border: 1px solid var(--gold); border-radius: 14px; padding: 1.1rem 1.3rem; box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0,0,0,0.4); backdrop-filter: blur(4px); cursor: default; }
+/* while a conversation is open, hide the scene's own Leave button so there's only one exit */
+.app.dialogue-open .scene-leave { display: none; }
+.dialogue-portrait { flex: 0 0 auto; width: 84px; height: 84px; border-radius: 10px; border: 1px solid var(--panel-edge); background: rgba(0,0,0,0.35); display: grid; place-items: center; overflow: hidden; }
+.dialogue-portrait-img { display: block; width: 100%; height: 100%; background-size: cover; background-position: center; }
+.dialogue-silhouette { font-size: 2.6rem; filter: grayscale(0.4) opacity(0.85); }
+.dialogue-body { flex: 1 1 auto; display: flex; flex-direction: column; gap: 0.55rem; min-width: 0; }
+.dialogue-speaker { color: var(--gold-bright); font-weight: 700; font-size: 0.95rem; letter-spacing: 0.02em; }
+.dialogue-line { margin: 0; color: var(--ink); font-size: 1.05rem; line-height: 1.5; min-height: 3em; }
+.dialogue-next { align-self: flex-end; }
+.dialogue-choices { margin-top: 0.2rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.dialogue-leave { align-self: center; width: auto; margin-top: 0.15rem; opacity: 0.82; }

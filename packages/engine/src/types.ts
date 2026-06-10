@@ -17,6 +17,8 @@ export type EventId = string
 export type EncounterId = string
 export type ItemId = string
 export type GraceAbilityId = string
+export type DialogueId = string
+export type DialogueNodeId = string
 
 export type Locale = 'en' | 'de'
 export const LOCALES: readonly Locale[] = ['en', 'de']

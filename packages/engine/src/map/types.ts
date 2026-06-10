@@ -1,4 +1,4 @@
-import type { AssetRef, EdgeId, EncounterId, EventId, I18nKey, NodeId, SceneId } from '../types'
+import type { AssetRef, DialogueId, DialogueNodeId, EdgeId, EncounterId, EventId, I18nKey, NodeId, SceneId } from '../types'
 
 export type NodeType =
   | 'entrance'
@@ -36,6 +36,7 @@ export type FixedEvent =
   | { kind: 'boss'; encounter: EncounterId }
   | { kind: 'scene'; sceneId: SceneId }
   | { kind: 'event'; eventId: EventId }
+  | { kind: 'dialogue'; dialogueId: DialogueId }
   | { kind: 'fireplace' }
   | { kind: 'shop' }
 
@@ -87,6 +88,13 @@ export interface SceneRuntimeState {
   dialogueSeen: string[]
 }
 
+/** An in-progress conversation overlay. Additive state: the scene/map underneath stays mounted,
+ *  so there is no movement/screen change while talking — only this cursor and the active id. */
+export interface ActiveDialogue {
+  dialogueId: DialogueId
+  node: DialogueNodeId
+}
+
 /** The movement/interaction state machine. */
 export type MovementPhase =
   | { kind: 'idle' }
@@ -107,6 +115,8 @@ export interface WorldState {
   flags: Record<string, string | number | boolean>
   sceneStates: Record<SceneId, SceneRuntimeState>
   movement: MovementPhase
+  /** the active conversation overlay, if any (rendered on top of the current scene/map) */
+  dialogue: ActiveDialogue | null
   /** dedicated cursor for the revisit-ambush RNG sub-stream */
   ambushCursor: number
   bossDefeated: boolean
@@ -122,6 +132,7 @@ export const initialWorldState = (worldId: string, entrance: NodeId): WorldState
   flags: {},
   sceneStates: {},
   movement: { kind: 'idle' },
+  dialogue: null,
   ambushCursor: 0,
   bossDefeated: false,
 })

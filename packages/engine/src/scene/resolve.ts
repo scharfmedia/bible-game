@@ -7,13 +7,14 @@ import type { WorldState } from '../map/types'
 import { itemCount, type InventoryState } from '../inventory/types'
 import type { GameEvent } from '../events/event'
 import type { SpiritEvent } from '../spirit/spirit'
-import type { EncounterId, EventId, NodeId, SceneId } from '../types'
+import type { DialogueId, EncounterId, EventId, NodeId, SceneId } from '../types'
 import type { Scene, Script, Verb } from './types'
 
 export type SceneTransition =
   | { kind: 'combat'; id: EncounterId }
   | { kind: 'event'; id: EventId }
   | { kind: 'scene'; id: SceneId }
+  | { kind: 'dialogue'; id: DialogueId } // open a conversation overlay (the world reducer resolves it)
   | { kind: 'goto'; id: NodeId } // reveal a hidden node and relocate the pilgrim onto it
 
 export interface ScriptOutcome {
@@ -82,6 +83,8 @@ export function runScript(
       transition = { kind: 'event', id: cmd.startEvent }
     } else if ('changeScene' in cmd) {
       transition = { kind: 'scene', id: cmd.changeScene }
+    } else if ('startDialogue' in cmd) {
+      transition = { kind: 'dialogue', id: cmd.startDialogue }
     } else if ('if' in cmd) {
       const pass = evalGate(cmd.if, { inventory: inv, spirit, world: w })
       const branch = pass ? cmd.then : cmd.else
