@@ -236,10 +236,19 @@ body {
 
 .map-legend {
   position: absolute; bottom: 54px; left: 12px; z-index: 5; width: 208px; pointer-events: none; /* info-only — never block a node behind it */
-  padding: 0.7rem 0.8rem; border: 1px solid var(--panel-edge); border-radius: 9px;
+  padding: 0.55rem 0.8rem; border: 1px solid var(--panel-edge); border-radius: 9px;
   background: rgba(20,24,18,0.9); box-shadow: 0 4px 14px rgba(0,0,0,0.5); backdrop-filter: blur(2px);
 }
-.lg-title { font-size: 0.78rem; font-weight: 700; color: var(--gold-bright); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; }
+.map-legend.collapsed { width: auto; min-width: 132px; }
+/* the title doubles as the collapse toggle — it's the one interactive bit of the info panel */
+.lg-title {
+  display: flex; align-items: center; gap: 0.4rem; width: 100%;
+  border: none; background: none; padding: 0; cursor: pointer; pointer-events: auto;
+  font-size: 0.78rem; font-weight: 700; color: var(--gold-bright); text-transform: uppercase; letter-spacing: 0.06em;
+  margin-bottom: 0.5rem; font-family: inherit; text-align: left;
+}
+.map-legend.collapsed .lg-title { margin-bottom: 0; }
+.lg-chevron { font-size: 0.66rem; line-height: 1; opacity: 0.8; }
 .lg-rows { display: flex; flex-direction: column; gap: 0.28rem; }
 .lg-row { display: flex; align-items: center; gap: 0.55rem; font-size: 0.72rem; line-height: 1.1; }
 .lg-glyph { width: 18px; flex: none; text-align: center; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
@@ -253,6 +262,7 @@ body {
 .lg-label { color: var(--ink); }
 .lg-divider { height: 1px; background: var(--panel-edge); margin: 0.45rem 0; }
 .lg-progress { margin-top: 0.5rem; padding-top: 0.45rem; border-top: 1px solid var(--panel-edge); font-size: 0.66rem; color: var(--muted); text-align: center; letter-spacing: 0.04em; }
+.map-legend.collapsed .lg-progress { margin-top: 0; padding-top: 0; border-top: none; }
 
 .map-compass { position: absolute; bottom: 56px; right: 16px; z-index: 5; pointer-events: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.45)); }
 .reflect { font-style: italic; }

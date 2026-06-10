@@ -88,6 +88,7 @@ export function MapScreen() {
   const currentRef = useRef<HTMLButtonElement | null>(null)
   const [travel, setTravel] = useState<Travel | null>(null)
   const [confirmAbandon, setConfirmAbandon] = useState(false)
+  const [legendOpen, setLegendOpen] = useState(false) // the legend key starts collapsed to save space
   // a transient line of feedback (e.g. "this battle bars the way") that fades after a moment
   const [notice, setNotice] = useState<string | null>(null)
   useEffect(() => {
@@ -243,28 +244,35 @@ export function MapScreen() {
         </div>
       </div>
 
-      {/* legend key — node types + trail kinds + journey progress (fixed above the footer) */}
-      <aside className="map-legend">
-        <div className="lg-title">{t('ui.map.legendTitle')}</div>
-        <div className="lg-rows">
-          {NODE_LEGEND.map((r) => (
-            <div className="lg-row" key={r.key}>
-              <span className={`lg-glyph ${r.cls}`}>{r.glyph}</span>
-              <span className="lg-label">{t(r.key)}</span>
+      {/* legend key — node types + trail kinds + journey progress (collapsed by default to save space) */}
+      <aside className={`map-legend${legendOpen ? '' : ' collapsed'}`}>
+        <button className="lg-title" onClick={() => setLegendOpen((o) => !o)} aria-expanded={legendOpen}>
+          <span className="lg-chevron">{legendOpen ? '▾' : '▸'}</span>
+          {t('ui.map.legendTitle')}
+        </button>
+        {legendOpen && (
+          <div className="lg-body">
+            <div className="lg-rows">
+              {NODE_LEGEND.map((r) => (
+                <div className="lg-row" key={r.key}>
+                  <span className={`lg-glyph ${r.cls}`}>{r.glyph}</span>
+                  <span className="lg-label">{t(r.key)}</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <div className="lg-divider" />
-        <div className="lg-rows">
-          {TRAIL_LEGEND.map((r) => (
-            <div className="lg-row" key={r.key}>
-              <svg className="lg-line" viewBox="0 0 40 6" width="40" height="6" fill="none">
-                <path d="M2 3 H38" className={`edge ${r.kind}`} />
-              </svg>
-              <span className="lg-label">{t(r.key)}</span>
+            <div className="lg-divider" />
+            <div className="lg-rows">
+              {TRAIL_LEGEND.map((r) => (
+                <div className="lg-row" key={r.key}>
+                  <svg className="lg-line" viewBox="0 0 40 6" width="40" height="6" fill="none">
+                    <path d="M2 3 H38" className={`edge ${r.kind}`} />
+                  </svg>
+                  <span className="lg-label">{t(r.key)}</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        )}
         <div className="lg-progress">{t('ui.map.progress', { visited, total: view.nodes.length })}</div>
       </aside>
 
