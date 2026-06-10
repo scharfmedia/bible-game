@@ -170,7 +170,7 @@ export {
 } from './content/bundle'
 
 // ---- world / map / scene ----
-export { canMove, isQuiet, edgeBetween, nodeVisible, type Visit, type MoveCheck } from './map/movement'
+export { canMove, isQuiet, edgeBetween, nodeVisible, mapEntrances, type Visit, type MoveCheck } from './map/movement'
 export { evalGate, type GateContext } from './map/gate'
 export {
   resolveInteraction,

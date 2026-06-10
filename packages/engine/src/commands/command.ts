@@ -33,6 +33,7 @@ export type Command =
   // ---- leveling ----
   | { type: 'allocateStat'; memberId: MemberId; stat: StatId }
   // ---- world / adventure ----
+  | { type: 'world/chooseEntry'; nodeId: NodeId }
   | { type: 'world/move'; target: NodeId }
   | { type: 'world/enter' }
   | { type: 'world/sceneInteract'; sceneId: SceneId; hotspotId: HotspotId; verb: Verb; itemId?: ItemId }

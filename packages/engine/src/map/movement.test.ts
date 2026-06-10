@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { emptyInventory } from '../inventory/types'
 import { testContent } from '../testing/fixtures'
 import { evalGate } from './gate'
-import { canMove } from './movement'
+import { canMove, mapEntrances } from './movement'
 import { initialWorldState } from './types'
 
 const map = testContent().worlds['world-01']!.map
@@ -52,5 +52,35 @@ describe('canMove', () => {
     const w = { ...world(), current: 'n2', visited: ['n0', 'n1', 'n2'] }
     const back = canMove(map, w, { ...ctx(), world: w }, 'n1')
     expect(back.ok && back.visit).toBe('revisit')
+  })
+
+  it('rejects moving while still unplaced (no entry chosen yet)', () => {
+    const w = { ...world(), current: '', visited: [] }
+    expect(canMove(map, w, { ...ctx(), world: w }, 'n1')).toEqual({ ok: false, reason: 'unplaced' })
+  })
+})
+
+describe('mapEntrances', () => {
+  it('defaults to [entrance] when no entrances are declared', () => {
+    expect(mapEntrances(map)).toEqual(['n0'])
+  })
+})
+
+describe('advance-block: an uncleared battle bars the way onward', () => {
+  // the test mesh n2 is a combat node; standing on it uncleared, you cannot push on to a NEW node…
+  it('blocks stepping past an uncleared combat node to an unvisited node', () => {
+    const w = { ...world(), current: 'n2', visited: ['n0', 'n1', 'n2'] }
+    expect(canMove(map, w, { ...ctx(), world: w }, 'n3')).toEqual({ ok: false, reason: 'blocked' })
+  })
+  // …but you may always RETREAT to a node you've already visited and try another route…
+  it('still allows retreating to an already-visited node', () => {
+    const w = { ...world(), current: 'n2', visited: ['n0', 'n1', 'n2'] }
+    const back = canMove(map, w, { ...ctx(), world: w }, 'n1')
+    expect(back.ok && back.visit).toBe('revisit')
+  })
+  // …and once the battle is won, the way onward opens.
+  it('opens the way once the battle is cleared', () => {
+    const w = { ...world(), current: 'n2', visited: ['n0', 'n1', 'n2'], cleared: ['n2'] }
+    expect(canMove(map, w, { ...ctx(), world: w }, 'n3').ok).toBe(true)
   })
 })

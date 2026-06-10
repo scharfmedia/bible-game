@@ -4,6 +4,7 @@ import {
   evalGate,
   gappedDisplay,
   getLocaleData,
+  mapEntrances,
   memberMaxHp,
   nodeVisible,
   type GameState,
@@ -95,11 +96,15 @@ export interface MapNodeView {
   movable: boolean
   /** the node the figure stands on, and it still has something to resolve (click to enter) */
   enterable: boolean
+  /** a chooseable starting point — used to render "Start here" markers while the pilgrim is unplaced */
+  entry: boolean
   visit?: Visit
   bgAsset?: string
 }
 
-export type EdgeKind = 'gold' | 'gated' | 'trodden' | 'untrodden'
+// 'sealed' = an onward route barred by an uncleared battle the pilgrim is standing on (can't pass
+// until it's won; fleeing never opens it). Distinct from 'gated' (an edge gate that unlocks in play).
+export type EdgeKind = 'gold' | 'gated' | 'sealed' | 'trodden' | 'untrodden'
 export interface MapEdgeView {
   id: string
   a: { x: number; y: number }
@@ -111,6 +116,8 @@ export interface MapView {
   nodes: MapNodeView[]
   edges: MapEdgeView[]
   bounds: { w: number; h: number }
+  /** the pilgrim has not yet picked a starting point — the UI shows entry markers, hides the figure */
+  unplaced: boolean
 }
 
 export function selectMap(state: GameState): MapView | null {
@@ -119,12 +126,15 @@ export function selectMap(state: GameState): MapView | null {
   const map = run.content.worlds[run.worldId]?.map
   if (!map) return null
   const ctx = { inventory: run.inventory, spirit: run.spirit.spirit, world: run.world }
+  const current = run.world.current
+  const unplaced = !current
+  const entrySet = new Set(mapEntrances(map))
 
   const nodes: MapNodeView[] = Object.values(map.nodes)
     .filter((n) => nodeVisible(map, run.world, ctx, n.id))
     .map((n) => {
       const chk = canMove(map, run.world, ctx, n.id)
-      const isCurrent = run.world.current === n.id
+      const isCurrent = current === n.id
       const cleared = run.world.cleared.includes(n.id)
       // combat/event nodes are one-shot; rest/scene nodes can always be re-entered
       const oneShot = n.type === 'combat' || n.type === 'elite' || n.type === 'boss' || n.type === 'event'
@@ -138,12 +148,12 @@ export function selectMap(state: GameState): MapView | null {
         current: isCurrent,
         movable: chk.ok,
         enterable: isCurrent && !(oneShot && cleared),
+        entry: unplaced && entrySet.has(n.id),
         visit: chk.ok ? chk.visit : undefined,
         bgAsset: n.bgAsset,
       }
     })
 
-  const current = run.world.current
   const visible = (id: string) => nodeVisible(map, run.world, ctx, id)
   const edges: MapEdgeView[] = Object.values(map.edges)
     .filter((e) => visible(e.a) && visible(e.b))
@@ -154,8 +164,16 @@ export function selectMap(state: GameState): MapView | null {
         kind = 'gated'
       } else if (e.a === current || e.b === current) {
         const other = e.a === current ? e.b : e.a
-        // an edge from where you stand to a place you can step is "open to you"
-        kind = canMove(map, run.world, ctx, other).ok ? 'gold' : run.world.visited.includes(other) ? 'trodden' : 'untrodden'
+        const chk = canMove(map, run.world, ctx, other)
+        // an edge from where you stand to a place you can step is "open to you"; an onward edge barred
+        // by the uncleared battle underfoot reads as "sealed"; otherwise it's a known/unknown trail.
+        kind = chk.ok
+          ? 'gold'
+          : !chk.ok && chk.reason === 'blocked'
+            ? 'sealed'
+            : run.world.visited.includes(other)
+              ? 'trodden'
+              : 'untrodden'
       } else if (run.world.visited.includes(e.a) && run.world.visited.includes(e.b)) {
         kind = 'trodden'
       } else {
@@ -166,7 +184,7 @@ export function selectMap(state: GameState): MapView | null {
 
   const xs = Object.values(map.nodes).map((n) => n.pos.x)
   const ys = Object.values(map.nodes).map((n) => n.pos.y)
-  return { nodes, edges, bounds: { w: Math.max(...xs) + 1, h: Math.max(...ys) + 1 } }
+  return { nodes, edges, bounds: { w: Math.max(...xs) + 1, h: Math.max(...ys) + 1 }, unplaced }
 }
 
 export interface CombatantView {

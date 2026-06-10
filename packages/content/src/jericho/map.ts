@@ -96,6 +96,9 @@ export const WORLD_01_MAP: WorldMap = {
   worldId: 'world-01',
   seed: 'jericho-road',
   entrance: 'road',
+  // Two ways onto the Jericho road: the dusty highway (a robber ambush) or the lower potter's field
+  // (a quiet waypoint). The pilgrim picks one on the map when the run begins.
+  entrances: ['road', 'pottersField'],
   bossId: 'boss',
   nodes: NODES,
   edges: graph.edges,
@@ -137,7 +140,9 @@ export const ENCOUNTERS: Record<string, EncounterDef> = {
       { id: 'thief', archetype: 'thief', nameKey: 'enemy.thief', isHuman: true, revealsId: 'greed', scaling: { baseHp: 8, baseAtk: 2, hpLevelExp: 1, atkLevelExp: 1 } },
       { id: 'greed', archetype: 'demon', nameKey: 'enemy.greed', isHuman: false, isDemon: true, hidden: true, boundToId: 'thief', dread: 5, fleshDamageCap: 1, scaling: { baseHp: 5, baseAtk: 1, hpLevelExp: 1, atkLevelExp: 1 } },
     ],
-    flags: { mandatory: false, allowFlee: true, isBoss: false },
+    // The Spirit of Greed binds you to the spot — once joined, there is no fleeing the rocky pass.
+    // (You may still avoid the pass entirely by routing around it on the map.)
+    flags: { mandatory: true, allowFlee: false, isBoss: false },
     winCondition: { kind: 'allDemonsDestroyed' },
     rewardOptions: [{ id: 'money', kind: 'money', amount: 45 }, { id: 'relic', kind: 'relic', defId: 'veil_lifted' }],
     rewardXp: 35,

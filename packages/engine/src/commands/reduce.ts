@@ -65,6 +65,7 @@ export function reduce(state: GameState, cmd: Command): ReduceResult {
       return allocateStat(state, cmd.memberId, cmd.stat)
 
     // ---- delegated to internal sub-reducers (own state.combat / state.run.world) ----
+    case 'world/chooseEntry':
     case 'world/move':
     case 'world/enter':
     case 'world/sceneInteract':
@@ -173,15 +174,15 @@ function startRun(
     content,
     party: [hero],
     heroMemberId: hero.memberId,
-    world: initialWorldState(worldId, world.map.entrance),
+    // Begin UNPLACED: the map opens with the entry points marked, and the player chooses where to
+    // start (world/chooseEntry) — then clicks that node to enter it (usually the intro combat).
+    world: { ...initialWorldState(worldId, world.map.entrance), current: '', visited: [] },
     inventory: emptyInventory(),
     spirit: initialSpiritState(),
     deckByMember: { [hero.memberId]: startDeck },
     depth: world.map.nodes[world.map.entrance]?.depth ?? 0,
     baseGrace: 1,
   }
-  // Begin on the map, standing on the entrance. The player clicks the starting node to enter it
-  // (usually the intro combat) — the adventure no longer drops straight into a fight.
   const base: GameState = { ...state, run, combat: null, prompt: null, screen: 'map' }
   return { state: base, events: [{ type: 'runStarted', worldId }] }
 }

@@ -65,6 +65,9 @@ export function validateContent(b: ContentBundle): void {
     const map = world.map
     if (!map.nodes[map.entrance]) err(`world "${worldId}" entrance "${map.entrance}" missing`)
     if (!map.nodes[map.bossId]) err(`world "${worldId}" boss "${map.bossId}" missing`)
+    // Every chooseable entry point must exist (defaults to [entrance] when unset).
+    const entrances = map.entrances && map.entrances.length > 0 ? map.entrances : [map.entrance]
+    for (const e of entrances) if (!map.nodes[e]) err(`world "${worldId}" entry "${e}" missing`)
 
     for (const node of Object.values(map.nodes)) {
       const fe = node.fixedEvent
@@ -81,21 +84,24 @@ export function validateContent(b: ContentBundle): void {
       }
     }
 
-    // boss reachable from the entrance (ignoring gates — they unlock during play)
-    const seen = new Set<string>([map.entrance])
-    const queue = [map.entrance]
-    while (queue.length) {
-      const cur = queue.shift()!
-      for (const eid of map.adjacency[cur] ?? []) {
-        const e = map.edges[eid]!
-        const next = e.a === cur ? e.b : e.a
-        if (!seen.has(next)) {
-          seen.add(next)
-          queue.push(next)
+    // boss reachable from every entry point (ignoring gates — they unlock during play), so no
+    // chosen start can strand the pilgrim short of the boss.
+    for (const start of entrances) {
+      const seen = new Set<string>([start])
+      const queue = [start]
+      while (queue.length) {
+        const cur = queue.shift()!
+        for (const eid of map.adjacency[cur] ?? []) {
+          const e = map.edges[eid]!
+          const next = e.a === cur ? e.b : e.a
+          if (!seen.has(next)) {
+            seen.add(next)
+            queue.push(next)
+          }
         }
       }
+      if (!seen.has(map.bossId)) err(`world "${worldId}" boss is unreachable from entry "${start}"`)
     }
-    if (!seen.has(map.bossId)) err(`world "${worldId}" boss is unreachable from the entrance`)
   }
 }
 

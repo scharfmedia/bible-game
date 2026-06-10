@@ -151,6 +151,8 @@ body {
 .edge.untrodden { stroke: rgba(74,72,48,0.45); stroke-width: 3; stroke-dasharray: 1.5 9; }
 .edge.trodden   { stroke: rgba(70,60,42,0.62); stroke-width: 3.5; }
 .edge.gated     { stroke: rgba(150,66,60,0.7); stroke-width: 3; stroke-dasharray: 9 7; }
+/* sealed = an onward route barred by the uncleared battle underfoot — a bold crimson barrier */
+.edge.sealed    { stroke: rgba(206,74,62,0.9); stroke-width: 4.5; stroke-dasharray: 3 6; filter: drop-shadow(0 0 5px rgba(206,74,62,0.55)); }
 .edge.gold      { stroke: var(--gold); stroke-width: 5; filter: drop-shadow(0 0 5px rgba(216,185,98,0.65)); }
 
 .map-node {
@@ -191,6 +193,25 @@ body {
 .map-node.current { --ring: var(--gold-bright); z-index: 3; }
 .map-node.current .node-disc { filter: none; }
 .map-node.current .node-label { background: rgba(54,42,12,0.9); color: var(--gold-bright); }
+/* entry = a chooseable starting point (only while unplaced) — a vivid "begin here" marker */
+.map-node.entry { --ring: #7fe6a6; z-index: 4; cursor: pointer; }
+.map-node.entry .node-disc { filter: saturate(1) brightness(1.04); box-shadow: inset 0 0 12px rgba(0,0,0,0.4), 0 0 18px rgba(127,230,166,0.6), 0 4px 10px rgba(40,36,20,0.45); }
+.node-entry-pin {
+  position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  white-space: nowrap; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: #0f2417; background: #7fe6a6; padding: 2px 9px; border-radius: 9px; pointer-events: none;
+  box-shadow: 0 2px 7px rgba(0,0,0,0.5);
+}
+.node-entry-pin::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #7fe6a6; }
+
+/* guidance + transient feedback banners, centred just under the title cartouche */
+.map-banner {
+  position: absolute; top: 104px; left: 50%; transform: translateX(-50%); z-index: 6; pointer-events: none; white-space: nowrap;
+  padding: 0.34rem 1.1rem; border-radius: 9px; font-size: 0.82rem; font-weight: 600; letter-spacing: 0.03em;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+}
+.map-banner.guide { background: rgba(20,46,32,0.92); border: 1px solid #7fe6a6; color: #b6f4cf; }
+.map-banner.notice { background: rgba(54,20,18,0.94); border: 1px solid rgba(206,74,62,0.9); color: #f4c4be; }
 .map-footer { position: absolute; bottom: 0; left: 0; right: 0; z-index: 5; display: flex; justify-content: flex-end; align-items: center; padding: 0.5rem 1.1rem; background: linear-gradient(0deg, rgba(20,22,14,0.78), transparent); }
 
 /* the pilgrim's figure — a board-game pawn standing on the current node, walking the trail on travel */

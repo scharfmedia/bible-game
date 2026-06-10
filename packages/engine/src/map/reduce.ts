@@ -14,7 +14,7 @@ import { fork } from '../rng/rng'
 import { resolveInteraction, runScript, type SceneTransition } from '../scene/resolve'
 import type { NodeId } from '../types'
 import { COMBAT_TYPES, type MapNode, type WorldMap } from './types'
-import { canMove } from './movement'
+import { canMove, mapEntrances } from './movement'
 import { evalGate } from './gate'
 
 const reject = (state: GameState, reason: string): ReduceResult => ({ state, events: [{ type: 'rejected', reason }] })
@@ -47,6 +47,8 @@ const clearNode = (run: RunState, nodeId: NodeId): RunState =>
 export function reduceWorld(state: GameState, cmd: Command): ReduceResult {
   if (!state.run) return reject(state, 'no-run')
   switch (cmd.type) {
+    case 'world/chooseEntry':
+      return chooseEntry(state, cmd.nodeId)
     case 'world/move':
       return move(state, cmd.target)
     case 'world/enter':
@@ -64,6 +66,24 @@ export function reduceWorld(state: GameState, cmd: Command): ReduceResult {
     default:
       return reject(state, 'unknown-world-command')
   }
+}
+
+// ---- entry / movement / enter -----------------------------------------------------------
+
+/** Place the pilgrim at a chosen entry point to begin the run (only while still unplaced). */
+function chooseEntry(state: GameState, nodeId: NodeId): ReduceResult {
+  const run = state.run!
+  if (run.world.current) return reject(state, 'chooseEntry:already-placed')
+  const map = mapOf(run)
+  if (!mapEntrances(map).includes(nodeId)) return reject(state, 'chooseEntry:not-an-entry')
+  const node = map.nodes[nodeId]
+  if (!node) return reject(state, 'chooseEntry:no-such-node')
+  const run2: RunState = {
+    ...run,
+    depth: Math.max(run.depth, node.depth),
+    world: { ...run.world, current: nodeId, visited: [nodeId] },
+  }
+  return ok({ ...state, run: run2 }, [{ type: 'moved', from: nodeId, to: nodeId, visit: 'first' }])
 }
 
 // ---- movement (relocate) + enter (resolve) ----------------------------------------------

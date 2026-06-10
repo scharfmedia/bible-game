@@ -7,6 +7,11 @@ import type { NodeId } from '../types'
 import { evalGate, type GateContext } from './gate'
 import { COMBAT_TYPES, REST_TYPES, type MapEdge, type MapNode, type WorldMap, type WorldState } from './types'
 
+/** Nodes where a run may begin (the player picks one on the map). Defaults to [entrance]. */
+export function mapEntrances(map: WorldMap): NodeId[] {
+  return map.entrances && map.entrances.length > 0 ? map.entrances : [map.entrance]
+}
+
 export function edgeBetween(map: WorldMap, from: NodeId, to: NodeId): MapEdge | undefined {
   for (const edgeId of map.adjacency[from] ?? []) {
     const e = map.edges[edgeId]
@@ -33,11 +38,12 @@ export type Visit = 'first' | 'revisit'
 
 export type MoveCheck =
   | { ok: true; visit: Visit; edge: MapEdge }
-  | { ok: false; reason: 'no-edge' | 'gated' | 'not-one-way' | 'hidden' | 'busy' }
+  | { ok: false; reason: 'no-edge' | 'gated' | 'not-one-way' | 'hidden' | 'busy' | 'blocked' | 'unplaced' }
 
 /** Whether the hero may step from world.current to `target` right now. */
 export function canMove(map: WorldMap, world: WorldState, ctx: GateContext, target: NodeId): MoveCheck {
   if (world.movement.kind !== 'idle') return { ok: false, reason: 'busy' }
+  if (!world.current) return { ok: false, reason: 'unplaced' } // figure not placed yet — choose an entry first
   const edge = edgeBetween(map, world.current, target)
   if (!edge) return { ok: false, reason: 'no-edge' }
   if (edge.oneWay && edge.oneWay !== target) return { ok: false, reason: 'not-one-way' }
@@ -45,6 +51,14 @@ export function canMove(map: WorldMap, world: WorldState, ctx: GateContext, targ
 
   const latched = world.edgesUnlocked.includes(edge.id)
   if (!latched && !evalGate(edge.gate, ctx)) return { ok: false, reason: 'gated' }
+
+  // An uncleared BATTLE node bars passage onward: you may retreat to a node you've already visited
+  // (and try another route), but cannot push on to a new node until the battle is cleared. Fleeing
+  // never opens the way.
+  const here = map.nodes[world.current]
+  if (here && COMBAT_TYPES.includes(here.type) && !world.cleared.includes(here.id) && !world.visited.includes(target)) {
+    return { ok: false, reason: 'blocked' }
+  }
 
   return { ok: true, visit: world.visited.includes(target) ? 'revisit' : 'first', edge }
 }

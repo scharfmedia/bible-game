@@ -9,6 +9,7 @@ const dispatch = (s: GameState, cmd: Command): GameState => reduce(s, cmd).state
 function boot(seed = 'jericho-1'): GameState {
   let s = dispatch(newGame(), { type: 'createHero', id: 'h1', name: 'Cleophas' })
   s = dispatch(s, { type: 'startRun', characterId: 'h1', worldId: 'world-01', seed, content })
+  s = dispatch(s, { type: 'world/chooseEntry', nodeId: 'road' }) // begins unplaced; step onto the dusty road
   return s
 }
 
@@ -129,6 +130,30 @@ describe('Jericho Road — content & integration', () => {
       run: { ...run, world: { ...run.world, current: 'narrowSteps', visited: [...run.world.visited, 'inn', 'narrowSteps'], movement: { kind: 'idle' } } },
     }
     expect(reduce(atSteps, { type: 'world/move', target: 'boss' }).events).toContainEqual({ type: 'rejected', reason: 'move:gated' })
+  })
+
+  it('offers two entry points; the pilgrim may begin at either', () => {
+    const map = content.worlds['world-01']!.map
+    expect(map.entrances).toEqual(['road', 'pottersField'])
+    let s = dispatch(newGame(), { type: 'createHero', id: 'h2', name: 'Mary' })
+    s = dispatch(s, { type: 'startRun', characterId: 'h2', worldId: 'world-01', seed: 'pf', content })
+    expect(s.run!.world.current).toBe('') // begins unplaced
+    s = dispatch(s, { type: 'world/chooseEntry', nodeId: 'pottersField' })
+    expect(s.run!.world.current).toBe('pottersField')
+  })
+
+  it('an uncleared battle bars the onward route until it is won', () => {
+    const s = boot() // standing on the road — an uncleared combat node
+    expect(reduce(s, { type: 'world/move', target: 'oliveGrove' }).events).toContainEqual({ type: 'rejected', reason: 'move:blocked' })
+    const won = resolveStop(dispatch(s, { type: 'world/enter' })) // fight & clear the road robbers
+    expect(won.run!.world.cleared).toContain('road')
+    expect(reduce(won, { type: 'world/move', target: 'oliveGrove' }).events).toContainEqual({ type: 'moved', from: 'road', to: 'oliveGrove', visit: 'first' })
+  })
+
+  it('marks the rocky pass (Spirit of Greed) as a mandatory, unfleeable battle', () => {
+    const greed = content.encounters.thiefGreed!
+    expect(greed.flags.mandatory).toBe(true)
+    expect(greed.flags.allowFlee).toBe(false)
   })
 })
 

@@ -39,6 +39,7 @@ function winCombat(start: GameState): GameState {
 function startedRun(): GameState {
   let s = apply(newGame(), { type: 'createHero', id: 'h0', name: 'Gideon' })
   s = apply(s, { type: 'startRun', characterId: 'h0', worldId: 'world-01', seed: 'persist-seed', content })
+  s = apply(s, { type: 'world/chooseEntry', nodeId: 'road' }) // begins unplaced; step onto the road
   s = apply(s, { type: 'world/enter' }) // click the entrance → road robbers combat
   s = winCombat(s) // → reward → map boundary (combat null)
   return s

@@ -14,6 +14,7 @@ const lightCard = `${HERO}#2`
 const bootstrap = (seed = 'run-1'): Command[] => [
   { type: 'createHero', id: 'h1', name: 'Gideon' },
   { type: 'startRun', characterId: 'h1', worldId: 'world-01', seed, content },
+  { type: 'world/chooseEntry', nodeId: 'n0' }, // a run begins unplaced; pick the entry to stand on n0
 ]
 
 // The full vertical slice with the board-game travel model: each step is move (walk the trail) then
@@ -136,6 +137,42 @@ describe('board-game travel (move = relocate, enter = resolve)', () => {
     ])
     expect(res.log.at(-1)!.events).toContainEqual({ type: 'sceneEntered', sceneId: 'forestHouse' })
     expect(res.state.screen).toBe('scene')
+  })
+})
+
+describe('choosing an entry point', () => {
+  const justStarted: Command[] = [
+    { type: 'createHero', id: 'h1', name: 'Gideon' },
+    { type: 'startRun', characterId: 'h1', worldId: 'world-01', seed: 'entry', content },
+  ]
+
+  it('a run begins UNPLACED — no figure on the map until an entry is chosen', () => {
+    const res = simulate(newGame(), justStarted)
+    expect(res.state.screen).toBe('map')
+    expect(res.state.run!.world.current).toBe('')
+    expect(res.state.run!.world.visited).toEqual([])
+  })
+
+  it('chooseEntry places the figure on the chosen node', () => {
+    const res = simulate(newGame(), [...justStarted, { type: 'world/chooseEntry', nodeId: 'n0' }])
+    expect(res.state.run!.world.current).toBe('n0')
+    expect(res.state.run!.world.visited).toEqual(['n0'])
+    expect(sawEvent(res, 'rejected')).toBe(false)
+  })
+
+  it('rejects choosing a node that is not an entry point', () => {
+    const res = simulate(newGame(), [...justStarted, { type: 'world/chooseEntry', nodeId: 'n2' }])
+    expect(res.state.run!.world.current).toBe('') // still unplaced
+    expect(res.log.at(-1)!.events).toContainEqual({ type: 'rejected', reason: 'chooseEntry:not-an-entry' })
+  })
+
+  it('rejects choosing again once already placed', () => {
+    const res = simulate(newGame(), [
+      ...justStarted,
+      { type: 'world/chooseEntry', nodeId: 'n0' },
+      { type: 'world/chooseEntry', nodeId: 'n0' },
+    ])
+    expect(res.log.at(-1)!.events).toContainEqual({ type: 'rejected', reason: 'chooseEntry:already-placed' })
   })
 })
 

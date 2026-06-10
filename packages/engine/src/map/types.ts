@@ -70,7 +70,10 @@ export interface MapEdge {
 export interface WorldMap {
   worldId: string
   seed: string
+  /** primary entry node (fallback when `entrances` is unset) */
   entrance: NodeId
+  /** all places the pilgrim may START a run; the player picks one on the map. Defaults to [entrance]. */
+  entrances?: NodeId[]
   bossId: NodeId
   nodes: Record<NodeId, MapNode>
   edges: Record<EdgeId, MapEdge>

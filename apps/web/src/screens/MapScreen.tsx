@@ -51,8 +51,8 @@ const ctrlOf = (a: { x: number; y: number }, b: { x: number; y: number }, id: st
   return { x: mx + (-dy / len) * k, y: my + (dx / len) * k }
 }
 
-// gold (open to you) draws last, on top of the trodden/untrodden web
-const EDGE_Z: Record<string, number> = { untrodden: 0, trodden: 1, gated: 2, gold: 3 }
+// gold (open to you) draws last, on top of the trodden/untrodden web; sealed/gated sit above trails
+const EDGE_Z: Record<string, number> = { untrodden: 0, trodden: 1, gated: 2, sealed: 2.5, gold: 3 }
 
 // legend key: node-type glyphs (colour from the .lg-glyph.t-* rules) + the four trail kinds
 const NODE_LEGEND = [
@@ -68,6 +68,7 @@ const TRAIL_LEGEND = [
   { kind: 'trodden', key: 'ui.map.legend.trodden' },
   { kind: 'untrodden', key: 'ui.map.legend.untrodden' },
   { kind: 'gated', key: 'ui.map.legend.gated' },
+  { kind: 'sealed', key: 'ui.map.legend.sealed' },
 ] as const
 // faint region names painted on the parchment (grid coords, in the empty band above the nodes)
 const REGIONS = [
@@ -87,12 +88,21 @@ export function MapScreen() {
   const currentRef = useRef<HTMLButtonElement | null>(null)
   const [travel, setTravel] = useState<Travel | null>(null)
   const [confirmAbandon, setConfirmAbandon] = useState(false)
+  // a transient line of feedback (e.g. "this battle bars the way") that fades after a moment
+  const [notice, setNotice] = useState<string | null>(null)
+  useEffect(() => {
+    if (!notice) return
+    const id = window.setTimeout(() => setNotice(null), 3200)
+    return () => window.clearTimeout(id)
+  }, [notice])
 
-  // center the current node when the map opens / the hero arrives somewhere new
+  // center the focus node when the map opens / the hero arrives somewhere new. Before placement we
+  // focus the first entry marker so the player sees where they can begin.
   const currentId = view?.nodes.find((n) => n.current)?.id
+  const focusId = currentId ?? view?.nodes.find((n) => n.entry)?.id
   useEffect(() => {
     if (!travel) currentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
-  }, [currentId, travel])
+  }, [focusId, travel])
 
   // A TIMER — not the animation callback — commits the move once the figure has walked the trail.
   // This is the single source of truth, so a missed/duplicated framer onAnimationComplete (StrictMode
@@ -138,13 +148,25 @@ export function MapScreen() {
     return { x: [0, c.x - fromPx.x, toPx.x - fromPx.x], y: [0, c.y - fromPx.y, toPx.y - fromPx.y] }
   })()
 
+  // a sealed edge (onward route barred by the uncleared battle underfoot) touches the current node;
+  // its id is the two endpoint ids joined — so we can tell whether a click target sits behind one.
+  const sealedToward = (id: string) => view.edges.some((e) => e.kind === 'sealed' && e.id.split('__').includes(id))
+
   const onNodeClick = (n: (typeof view.nodes)[number]) => {
     if (travel) return
+    // before placement, the only legal action is choosing one of the marked entry points
+    if (view.unplaced) {
+      if (n.entry) dispatch({ type: 'world/chooseEntry', nodeId: n.id })
+      return
+    }
     if (n.current) {
       if (n.enterable) dispatch({ type: 'world/enter' })
       return
     }
-    if (!n.movable || !currentId) return
+    if (!n.movable || !currentId) {
+      if (sealedToward(n.id)) setNotice(t('ui.map.sealedNotice'))
+      return
+    }
     setTravel({ from: currentId, to: n.id, firstVisit: !n.visited })
   }
 
@@ -156,6 +178,10 @@ export function MapScreen() {
 
       {/* title cartouche (world name), fixed under the HUD */}
       <div className="map-cartouche">{t('ui.worldSelect.world01.title')}</div>
+
+      {/* guidance + transient feedback banners (centred under the cartouche) */}
+      {view.unplaced && <div className="map-banner guide">{t('ui.map.chooseEntry')}</div>}
+      {notice && <div className="map-banner notice">{notice}</div>}
 
       <div className="map-scroll">
         <div className={`map-canvas${travel ? ' traveling' : ''}`} style={{ width: W, height: H, '--map-tile': bgUrl('bg-map-parchment.png') } as CSSProperties}>
@@ -175,24 +201,29 @@ export function MapScreen() {
 
           {view.nodes.map((n) => {
             const p = px(n.pos)
-            const clickable = !travel && (n.movable || n.enterable)
-            // mutually-exclusive ring state: current (gold) wins, else travel target (teal), else locked
-            const stateClass = n.current ? 'current' : n.movable && !travel ? 'movable' : 'locked'
+            const actionable = !travel && (n.movable || n.enterable || n.entry)
+            // a barred node isn't reachable, but stays clickable so a tap explains *why* (sealed notice)
+            const clickable = actionable || (!travel && sealedToward(n.id))
+            // mutually-exclusive ring state: current (gold) wins, then an entry marker, then a travel
+            // target (teal), else locked
+            const stateClass = n.current ? 'current' : n.entry ? 'entry' : n.movable && !travel ? 'movable' : 'locked'
+            const pulse = (n.enterable || n.entry) && !travel
             return (
               <motion.button
                 key={n.id}
-                ref={n.current ? currentRef : undefined}
+                ref={n.id === focusId ? currentRef : undefined}
                 className={['map-node', `t-${n.type}`, stateClass, n.cleared ? 'cleared' : ''].join(' ')}
                 style={{ left: p.x - NODE / 2, top: p.y - NODE / 2 }}
                 onClick={() => onNodeClick(n)}
                 disabled={!clickable}
-                whileHover={clickable ? { scale: 1.09 } : undefined}
-                animate={n.enterable && !travel ? { boxShadow: ['0 0 0 0 rgba(244,231,161,0)', '0 0 22px 5px rgba(244,231,161,0.55)', '0 0 0 0 rgba(244,231,161,0)'] } : {}}
-                transition={n.enterable && !travel ? { repeat: Infinity, duration: 2.4 } : { duration: 0.2 }}
+                whileHover={actionable ? { scale: 1.09 } : undefined}
+                animate={pulse ? { boxShadow: ['0 0 0 0 rgba(244,231,161,0)', '0 0 22px 5px rgba(244,231,161,0.55)', '0 0 0 0 rgba(244,231,161,0)'] } : {}}
+                transition={pulse ? { repeat: Infinity, duration: 2.4 } : { duration: 0.2 }}
               >
                 <span className="node-disc" style={{ backgroundImage: assetBg(n.bgAsset) }} />
                 <span className="node-glyph">{NODE_GLYPH[n.type] ?? '•'}</span>
                 <span className="node-label">{t(n.nameKey)}</span>
+                {n.entry && <span className="node-entry-pin">{t('ui.map.startHere')}</span>}
               </motion.button>
             )
           })}
