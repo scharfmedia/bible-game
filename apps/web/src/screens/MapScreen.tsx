@@ -1,6 +1,7 @@
-import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
+import { type CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
+import type { GameEvent } from '@bible/engine'
 import { assetBg } from '@bible/assets'
 import { bgUrl } from '../asset'
 import { useGame } from '../store/gameStore'
@@ -78,6 +79,9 @@ const REGIONS = [
 ] as const
 
 type Travel = { from: string; to: string; firstVisit: boolean }
+// a one-shot arrival the player did NOT click: a scene's "Go to" already relocated the pilgrim here,
+// so we replay the walk (or a fade-in) for feedback without dispatching anything.
+type Arrival = { from: string; to: string }
 
 export function MapScreen() {
   const { t } = useTranslation()
@@ -85,8 +89,11 @@ export function MapScreen() {
   const view = useMemo(() => selectMap(state), [state])
   const dispatch = useGame((s) => s.dispatch)
   const abandon = useGame((s) => s.abandon)
+  const lastEvents = useGame((s) => s.lastEvents)
+  const tick = useGame((s) => s.tick)
   const currentRef = useRef<HTMLButtonElement | null>(null)
   const [travel, setTravel] = useState<Travel | null>(null)
+  const [arrival, setArrival] = useState<Arrival | null>(null)
   const [confirmAbandon, setConfirmAbandon] = useState(false)
   const [legendOpen, setLegendOpen] = useState(false) // the legend key starts collapsed to save space
   // a transient line of feedback (e.g. "this battle bars the way") that fades after a moment
@@ -96,6 +103,26 @@ export function MapScreen() {
     const id = window.setTimeout(() => setNotice(null), 3200)
     return () => window.clearTimeout(id)
   }, [notice])
+
+  // A scene "Go to" reveals a hidden node and relocates the pilgrim in one engine step — its event
+  // batch carries BOTH `nodeRevealed` and `moved` (normal travel never reveals). Detect that batch
+  // (once per tick, in layout phase to avoid a flash at the destination) and replay the arrival walk
+  // + flash a discovery banner. Plain `revealNode` (reveal without travel) only flashes the banner.
+  const arrivalTick = useRef(-1)
+  useLayoutEffect(() => {
+    if (arrivalTick.current === tick) return
+    arrivalTick.current = tick
+    const revealed = lastEvents.some((e) => e.type === 'nodeRevealed')
+    if (!revealed) return
+    setNotice(t('ui.map.discovered'))
+    const moved = lastEvents.find((e): e is Extract<GameEvent, { type: 'moved' }> => e.type === 'moved')
+    if (moved && moved.from !== moved.to) setArrival({ from: moved.from, to: moved.to })
+  }, [tick, lastEvents, t])
+  useEffect(() => {
+    if (!arrival) return
+    const id = window.setTimeout(() => setArrival(null), WALK_MS)
+    return () => window.clearTimeout(id)
+  }, [arrival])
 
   // center the focus node when the map opens / the hero arrives somewhere new. Before placement we
   // focus the first entry marker so the player sees where they can begin.
@@ -148,6 +175,34 @@ export function MapScreen() {
     const c = idA === currentNode.id ? ctrlOf(fromPx, toPx, `${idA}__${idB}`) : ctrlOf(toPx, fromPx, `${idA}__${idB}`)
     return { x: [0, c.x - fromPx.x, toPx.x - fromPx.x], y: [0, c.y - fromPx.y, toPx.y - fromPx.y] }
   })()
+
+  // a script-driven arrival (Go to): the figure is already AT `to`, so replay the walk in reverse —
+  // start offset at `from`, animate to 0. Only when both ends are on-screen and a trail connects them
+  // (else we fade the figure in at the destination, for a secret jump with no drawn path).
+  const arrivalWalk = (() => {
+    if (!arrival || !currentNode || currentNode.id !== arrival.to) return null
+    const [idA, idB] = [arrival.from, arrival.to].sort()
+    const a = view.nodes.find((n) => n.id === idA)
+    const b = view.nodes.find((n) => n.id === idB)
+    const hasEdge = view.edges.some((e) => e.id === `${idA}__${idB}`)
+    if (!a || !b || !hasEdge) return null
+    const aPx = px(a.pos)
+    const bPx = px(b.pos)
+    const c = ctrlOf(aPx, bPx, `${idA}__${idB}`)
+    const toPx = px(currentNode.pos)
+    const seq = arrival.from === idA ? [aPx, c, bPx] : [bPx, c, aPx] // traverse the bezier from→to
+    return { x: seq.map((p) => p.x - toPx.x), y: seq.map((p) => p.y - toPx.y) }
+  })()
+
+  const walkTween = { duration: WALK_MS / 1000 - 0.04, ease: 'easeInOut' as const, times: [0, 0.5, 1] }
+  // one place that decides how the pawn renders this frame: click-walk, arrival-walk, arrival-fade, idle
+  const figure = walk
+    ? { key: 'pawn', initial: false as const, animate: { x: walk.x, y: walk.y }, transition: walkTween }
+    : arrivalWalk
+      ? { key: `arr-${arrival!.to}`, initial: { x: arrivalWalk.x[0], y: arrivalWalk.y[0] }, animate: { x: arrivalWalk.x, y: arrivalWalk.y }, transition: walkTween }
+      : arrival
+        ? { key: `arr-${arrival.to}`, initial: { opacity: 0, scale: 0.5 }, animate: { opacity: 1, scale: 1, x: 0, y: 0 }, transition: { duration: 0.45 } }
+        : { key: 'pawn', initial: false as const, animate: { x: 0, y: 0 }, transition: { duration: 0 } }
 
   // a sealed edge (onward route barred by the uncleared battle underfoot) touches the current node;
   // its id is the two endpoint ids joined — so we can tell whether a click target sits behind one.
@@ -232,11 +287,12 @@ export function MapScreen() {
           {/* the pilgrim's figure — a board-game pawn that walks the trail */}
           {currentNode && (
             <motion.div
+              key={figure.key}
               className="player-token"
               style={{ left: base.x - TOKEN / 2, top: base.y - TOKEN / 2 }}
-              initial={false}
-              animate={walk ? { x: walk.x, y: walk.y } : { x: 0, y: 0 }}
-              transition={walk ? { duration: WALK_MS / 1000 - 0.04, ease: 'easeInOut', times: [0, 0.5, 1] } : { duration: 0 }}
+              initial={figure.initial}
+              animate={figure.animate}
+              transition={figure.transition}
             >
               <span className="player-pawn">♟</span>
             </motion.div>

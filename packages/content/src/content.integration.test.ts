@@ -58,8 +58,8 @@ const step = (s: GameState, target: string, opts: { eventChoice?: string } = {})
   resolveStop(dispatch(dispatch(s, { type: 'world/move', target }), { type: 'world/enter' }), opts)
 
 describe('Jericho Road — content & integration', () => {
-  it('is referentially valid (createContent did not throw) with 22 nodes', () => {
-    expect(Object.keys(content.worlds['world-01']!.map.nodes)).toHaveLength(22)
+  it('is referentially valid (createContent did not throw) with 23 nodes', () => {
+    expect(Object.keys(content.worlds['world-01']!.map.nodes)).toHaveLength(23)
     expect(content.worlds['world-01']!.map.entrance).toBe('road')
   })
 
@@ -154,6 +154,23 @@ describe('Jericho Road — content & integration', () => {
     const greed = content.encounters.thiefGreed!
     expect(greed.flags.mandatory).toBe(true)
     expect(greed.flags.allowFlee).toBe(false)
+  })
+
+  it('a scene "Go to" discovers a hidden node and walks the pilgrim onto it', () => {
+    let s = boot()
+    s = resolveStop(dispatch(s, { type: 'world/enter' })) // clear the road robbers → map
+    // the Hidden Hollow is invisible until discovered
+    expect(content.worlds['world-01']!.map.nodes.hollow?.reveal).toBeDefined()
+    expect(s.run!.world.revealed).not.toContain('hollow')
+    // walk to the Olive Grove and open its scene
+    s = dispatch(dispatch(s, { type: 'world/move', target: 'oliveGrove' }), { type: 'world/enter' })
+    expect(s.screen).toBe('scene')
+    // pick "Go to" on the thin trail → reveal the hollow and relocate onto it, back on the map
+    s = dispatch(s, { type: 'world/sceneInteract', sceneId: 'oliveGrove', hotspotId: 'trail', verb: 'goTo' })
+    expect(s.screen).toBe('map')
+    expect(s.run!.world.revealed).toContain('hollow')
+    expect(s.run!.world.current).toBe('hollow')
+    expect(s.run!.world.visited).toContain('hollow')
   })
 })
 

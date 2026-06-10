@@ -14,6 +14,7 @@ const ICON: Record<Verb, string> = {
   close: '🔒',
   push: '👉',
   pull: '👈',
+  goTo: '🧭',
 }
 
 export function VerbFan({ x, y, onPick }: { x: number; y: number; onPick: (v: Verb) => void }) {

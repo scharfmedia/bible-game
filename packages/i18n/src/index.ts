@@ -72,6 +72,7 @@ export const en: Messages = {
   'ui.map.chooseEntry': 'Choose where your journey begins',
   'ui.map.startHere': 'Start here',
   'ui.map.sealedNotice': 'This battle bars the way — clear it, or find another path.',
+  'ui.map.discovered': 'You found a hidden path!',
   'ui.combat.endTurn': 'End Turn',
   'ui.combat.flee': 'Flee',
   'ui.combat.energy': 'Energy',
@@ -209,6 +210,7 @@ export const en: Messages = {
   'verb.close': 'Close',
   'verb.push': 'Push',
   'verb.pull': 'Pull',
+  'verb.goTo': 'Go to',
 
   // -- verb refusals (generic point-and-click) --
   'verb.refusal.observe': 'Nothing more to see here.',
@@ -219,6 +221,7 @@ export const en: Messages = {
   'verb.refusal.pull': 'It won’t budge.',
   'verb.refusal.open': 'It won’t open.',
   'verb.refusal.close': 'It’s already shut.',
+  'verb.refusal.goTo': 'There’s no path here.',
 }
 
 export const de: Messages = {
@@ -284,6 +287,7 @@ export const de: Messages = {
   'ui.map.chooseEntry': 'Wähle, wo deine Reise beginnt',
   'ui.map.startHere': 'Hier starten',
   'ui.map.sealedNotice': 'Dieser Kampf versperrt den Weg — bestehe ihn oder finde einen anderen Pfad.',
+  'ui.map.discovered': 'Du hast einen verborgenen Pfad entdeckt!',
   'ui.combat.endTurn': 'Zug beenden',
   'ui.combat.flee': 'Fliehen',
   'ui.combat.energy': 'Energie',
@@ -412,6 +416,7 @@ export const de: Messages = {
   'verb.close': 'Schließen',
   'verb.push': 'Drücken',
   'verb.pull': 'Ziehen',
+  'verb.goTo': 'Hingehen',
 
   'verb.refusal.observe': 'Hier gibt es nichts weiter zu sehen.',
   'verb.refusal.take': 'Das kannst du nicht nehmen.',
@@ -421,6 +426,7 @@ export const de: Messages = {
   'verb.refusal.pull': 'Es rührt sich nicht.',
   'verb.refusal.open': 'Es lässt sich nicht öffnen.',
   'verb.refusal.close': 'Es ist bereits geschlossen.',
+  'verb.refusal.goTo': 'Hier führt kein Weg entlang.',
 }
 
 export const resources = {

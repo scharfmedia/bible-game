@@ -218,6 +218,26 @@ function applyTransition(state: GameState, run: RunState, t: SceneTransition, pr
     const run2 = { ...run, world: { ...run.world, movement: { kind: 'inEvent' as const, eventId: t.id, node: run.world.current } } }
     return ok({ ...state, run: run2, screen: 'event' }, [...pre, { type: 'screenChanged', screen: 'event' }])
   }
+  if (t.kind === 'goto') {
+    // a discovered secret path: leave the scene (clearing the origin node, like leaveScene) and
+    // relocate onto the newly-revealed node — bypassing canMove, since the path need not be an edge.
+    const from = run.world.current
+    const node = mapOf(run).nodes[t.id]
+    if (!node) return reject(state, 'goto:no-node')
+    const firstVisit = !run.world.visited.includes(t.id)
+    let run2 = clearNode(run, from)
+    const visited = firstVisit ? [...run2.world.visited, t.id] : run2.world.visited
+    run2 = {
+      ...run2,
+      depth: Math.max(run2.depth, node.depth),
+      world: { ...run2.world, movement: { kind: 'idle' as const }, current: t.id, visited },
+    }
+    return ok({ ...state, run: run2, screen: 'map' }, [
+      ...pre,
+      { type: 'moved', from, to: t.id, visit: firstVisit ? 'first' : 'revisit' },
+      { type: 'screenChanged', screen: 'map' },
+    ])
+  }
   // changeScene
   const run2 = { ...run, world: { ...run.world, movement: { kind: 'inScene' as const, sceneId: t.id } } }
   return ok({ ...state, run: run2, screen: 'scene' }, [...pre, { type: 'sceneEntered', sceneId: t.id }])
@@ -245,6 +265,9 @@ function eventChoice(state: GameState, eventId: string, choiceId: string): Reduc
 
   if (outcome.transition?.kind === 'combat') {
     return startCombatNode(state, run2, run.world.current, outcome.transition.id, backward, events)
+  }
+  if (outcome.transition?.kind === 'goto') {
+    return applyTransition(state, run2, outcome.transition, events)
   }
 
   // event resolved → back to the map. Fixed event nodes are cleared; backward events are not.

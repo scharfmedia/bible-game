@@ -61,6 +61,23 @@ const house: Scene = {
   ],
 }
 
+// --- the olive grove: a waypoint hiding a secret trail to a quiet hollow ---
+// Picking "Go to" on the trail reveals the Hidden Hollow node and walks the pilgrim onto it.
+const oliveGrove: Scene = {
+  id: 'oliveGrove',
+  bgAsset: 'bg-waypoint-olive-grove',
+  hotspots: [
+    hs('oliveGrove', 'road', [0.36, 0.62, 0.28, 0.22]),
+    hs('oliveGrove', 'tracks', [0.1, 0.68, 0.22, 0.18]),
+    hs('oliveGrove', 'horizon', [0.55, 0.22, 0.34, 0.18]),
+    hs('oliveGrove', 'olives', [0.08, 0.32, 0.2, 0.34]),
+    hs('oliveGrove', 'trail', [0.74, 0.5, 0.16, 0.3], {
+      // say runs first; goToNode sets a transition (which ends the script), reveals the hollow + walks there
+      goTo: { script: [{ say: 'scene.oliveGrove.trail.goto', speaker: 'hero' }, { goToNode: 'hollow' }] },
+    }),
+  ],
+}
+
 // --- shops (flavor only for now) ---
 const marketplace: Scene = {
   id: 'marketplace',
@@ -82,7 +99,7 @@ const merchant: Scene = {
 }
 
 export const SCENES: Record<string, Scene> = {
-  oliveGrove: waypoint('oliveGrove', 'bg-waypoint-olive-grove', 'olives', [0.08, 0.32, 0.2, 0.34]),
+  oliveGrove,
   pottersField: waypoint('pottersField', 'bg-waypoint-potters-field', 'shards', [0.62, 0.6, 0.24, 0.2]),
   lowerWell: waypoint('lowerWell', 'bg-waypoint-lower-well', 'well', [0.4, 0.5, 0.2, 0.3]),
   marketFork: waypoint('marketFork', 'bg-waypoint-market-fork', 'signpost', [0.46, 0.34, 0.12, 0.34]),

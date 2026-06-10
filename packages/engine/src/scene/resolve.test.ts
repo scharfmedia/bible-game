@@ -65,4 +65,11 @@ describe('runScript', () => {
     expect(out.transition).toEqual({ kind: 'combat', id: 'thief' })
     expect(itemCount(out.inventory, 'key')).toBe(0)
   })
+
+  it('goToNode reveals the hidden node and yields a `goto` transition', () => {
+    const out = runScript(world(), emptyInventory(), 100, 's', [{ goToNode: 'n3' }])
+    expect(out.world.revealed).toContain('n3')
+    expect(out.events).toContainEqual({ type: 'nodeRevealed', node: 'n3' })
+    expect(out.transition).toEqual({ kind: 'goto', id: 'n3' })
+  })
 })

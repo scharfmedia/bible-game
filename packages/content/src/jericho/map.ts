@@ -8,7 +8,8 @@ type Conns = Record<string, string[]>
 
 const CONNECTIONS: Conns = {
   road: ['oliveGrove', 'dryWash'],
-  oliveGrove: ['road', 'house', 'cistern'],
+  oliveGrove: ['road', 'house', 'cistern', 'hollow'],
+  hollow: ['oliveGrove'], // a secret trail off the olive grove (hidden until discovered)
   dryWash: ['road', 'pottersField'],
   pottersField: ['dryWash', 'lowerWell', 'shepherdsTrack'],
   house: ['oliveGrove', 'lowerWell', 'cistern'],
@@ -62,12 +63,18 @@ const REVEAL_HIDDEN: GateExpr = {
   any: [{ flag: 'helpedTraveler' }, { spiritAtLeast: 130 }, { flag: 'familyPrayer' }],
 }
 
+// Never passively visible — discovered ONLY by an explicit reveal (a `revealNode`/`goToNode` script
+// adds it to world.revealed). `evalGate` returns false, so visibility comes solely from that array.
+const SECRET_ONLY: GateExpr = { not: { always: true } }
+
 // node id → [type, fixedEvent, bgAsset, pos, depth, (reveal?)]
 const nameKey = (id: string) => `node.jericho.${id}`
 
 const NODES: Record<string, MapNode> = {
   road: { id: 'road', type: 'combat', nameKey: nameKey('road'), pos: { x: 0, y: 3 }, depth: 0, fixedEvent: { kind: 'combat', encounter: 'roadRobbers' }, bgAsset: 'bg-road-dusty-road', tags: ['entrance'] },
   oliveGrove: { id: 'oliveGrove', type: 'waypoint', nameKey: nameKey('oliveGrove'), pos: { x: 1, y: 2 }, depth: 1, fixedEvent: { kind: 'scene', sceneId: 'oliveGrove' }, sceneId: 'oliveGrove', bgAsset: 'bg-waypoint-olive-grove', tags: [] },
+  // A secret resting hollow, hidden until the "thin trail" in the olive-grove scene is taken (Go to).
+  hollow: { id: 'hollow', type: 'rest', nameKey: nameKey('hollow'), pos: { x: 0.35, y: 0.75 }, depth: 1, fixedEvent: { kind: 'fireplace' }, bgAsset: 'bg-rest-quiet-cave', reveal: SECRET_ONLY, tags: ['hidden', 'secret'] },
   dryWash: { id: 'dryWash', type: 'combat', nameKey: nameKey('dryWash'), pos: { x: 1, y: 4 }, depth: 1, fixedEvent: { kind: 'combat', encounter: 'roadAmbush' }, bgAsset: 'bg-combat-dry-wash', tags: [] },
   house: { id: 'house', type: 'explore', nameKey: nameKey('house'), pos: { x: 2, y: 1 }, depth: 2, fixedEvent: { kind: 'scene', sceneId: 'house' }, sceneId: 'house', bgAsset: 'bg-explore-poor-family-house', tags: [] },
   cistern: { id: 'cistern', type: 'rest', nameKey: nameKey('cistern'), pos: { x: 2, y: 2.6 }, depth: 2, fixedEvent: { kind: 'fireplace' }, bgAsset: 'bg-rest-old-cistern', tags: [] },
