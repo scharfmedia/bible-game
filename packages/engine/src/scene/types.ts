@@ -9,6 +9,7 @@ import type {
   ItemId,
   NodeId,
   SceneId,
+  StoryId,
 } from '../types'
 import type { GateExpr } from '../map/types'
 
@@ -44,6 +45,7 @@ export type ScriptCmd =
   | { startEvent: EventId }
   | { changeScene: SceneId }
   | { startDialogue: DialogueId } // open a conversation overlay (world reducer resolves the start node)
+  | { startStory: StoryId } // open a scrolling story/narration overlay
   | { markTaken: string }
   | { if: GateExpr; then: ScriptCmd[]; else?: ScriptCmd[] }
 
@@ -135,4 +137,24 @@ export interface Dialogue {
   /** optional backdrop, only used when a conversation is launched off the map (not from a scene) */
   bgAsset?: AssetRef
   nodes: Record<DialogueNodeId, DialogueNode>
+}
+
+// ---- long-form narration (a Diablo-style scrolling story) --------------------------------
+// A Story is a big, centered, slowly-scrolling passage shown when the game wants to tell a longer
+// tale — read from an object (a scroll), branched into from a dialogue choice, or fired by a
+// trigger such as the boss-victory outro. Text reveals character-by-character and the box scrolls
+// down to follow it. Dismissing it runs the optional `onEnd` script (set a flag, unlock, advance…).
+
+export interface Story {
+  id: StoryId
+  /** optional heading shown above the passage */
+  titleKey?: I18nKey
+  /** the passage, one i18n key per paragraph; revealed in order, scrolling down */
+  paragraphs: I18nKey[]
+  /** optional full-bleed backdrop behind the panel */
+  bgAsset?: AssetRef
+  /** optional speaker/attribution shown beneath the passage (e.g. a narrator or teller) */
+  attributionKey?: I18nKey
+  /** side-effects when the story is dismissed (setFlag/unlockEdge/advanceWorld via script…) */
+  onEnd?: Script
 }

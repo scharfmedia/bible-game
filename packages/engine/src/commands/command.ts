@@ -43,6 +43,7 @@ export type Command =
   | { type: 'world/eventChoice'; eventId: EventId; choiceId: string }
   | { type: 'world/dialogueChoice'; dialogueId: DialogueId; nodeId: DialogueNodeId; choiceId: string }
   | { type: 'world/leaveDialogue' }
+  | { type: 'world/dismissStory' }
   | { type: 'world/fireplace'; action: 'rest' | 'pray' | 'leave' | 'study' }
   | { type: 'world/advanceWorld' }
   // ---- combat ----

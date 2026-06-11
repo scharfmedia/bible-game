@@ -8,10 +8,10 @@ import type { CardDef } from '../cards/types'
 import type { CombatFlags, FormationLayout, RewardOption, Row, Side, WinCondition } from '../combat/types'
 import type { WorldMap } from '../map/types'
 import type { EnemyScalingDef } from '../leveling/scaling'
-import type { Dialogue, MoralEvent, Scene } from '../scene/types'
+import type { Dialogue, MoralEvent, Scene, Story } from '../scene/types'
 import type { ItemDef } from '../inventory/types'
 import type { VerseChallenge } from '../verse/types'
-import type { AssetRef, CardDefId, DialogueId, EncounterId, EventId, GraceAbilityId, I18nKey, ItemId, SceneId } from '../types'
+import type { AssetRef, CardDefId, DialogueId, EncounterId, EventId, GraceAbilityId, I18nKey, ItemId, SceneId, StoryId } from '../types'
 
 /** A content-side enemy template; the encounter builder scales it to the hero's level/depth. */
 export interface EnemyTemplate {
@@ -68,6 +68,7 @@ export interface ContentBundle {
   scenes: Record<SceneId, Scene>
   events: Record<EventId, MoralEvent>
   dialogues: Record<DialogueId, Dialogue>
+  stories: Record<StoryId, Story>
   items: Record<ItemId, ItemDef>
   verses: Record<string, VerseChallenge>
   worlds: Record<string, WorldContent>

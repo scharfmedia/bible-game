@@ -107,6 +107,8 @@ export const WORLD_01_MAP: WorldMap = {
   // (a quiet waypoint). The pilgrim picks one on the map when the run begins.
   entrances: ['road', 'pottersField'],
   bossId: 'boss',
+  // closing narration shown once the Accuser is defeated
+  outroStoryId: 'jerichoOutro',
   nodes: NODES,
   edges: graph.edges,
   adjacency: graph.adjacency,

@@ -94,6 +94,24 @@ export function selectDialogue(state: GameState): DialogueView | null {
   }
 }
 
+export interface StoryView {
+  storyId: string
+  titleKey?: string
+  paragraphs: string[]
+  bgAsset?: string
+  attributionKey?: string
+}
+
+/** The active story/narration overlay (null when none is open). */
+export function selectStory(state: GameState): StoryView | null {
+  const run = state.run
+  const active = run?.world.story
+  if (!run || !active) return null
+  const story = run.content.stories?.[active.storyId]
+  if (!story) return null
+  return { storyId: story.id, titleKey: story.titleKey, paragraphs: story.paragraphs, bgAsset: story.bgAsset, attributionKey: story.attributionKey }
+}
+
 export interface RewardOptionView { id: string; kind: string; label: string }
 export interface RewardView { options: RewardOptionView[]; righteous: boolean; peacefulBonus: boolean; rewardBg?: string }
 

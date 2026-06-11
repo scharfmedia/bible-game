@@ -15,6 +15,7 @@ import { FireplaceScreen } from './screens/FireplaceScreen'
 import { GameOverScreen } from './screens/GameOverScreen'
 import { VerseModal } from './components/VerseModal'
 import { DialogueOverlay } from './components/DialogueOverlay'
+import { StoryScroll } from './components/StoryScroll'
 
 const SCREENS: Record<ScreenId, ComponentType> = {
   start: StartScreen,
@@ -34,10 +35,11 @@ export function App() {
   const screen = useGame((s) => s.state.screen)
   const prompt = useGame((s) => s.state.prompt)
   const dialogueActive = useGame((s) => Boolean(s.state.run?.world.dialogue))
+  const storyActive = useGame((s) => Boolean(s.state.run?.world.story))
   const Screen = SCREENS[screen] ?? StartScreen
 
   return (
-    <div className={`app${dialogueActive ? ' dialogue-open' : ''}`}>
+    <div className={`app${dialogueActive ? ' dialogue-open' : ''}${storyActive ? ' story-open' : ''}`}>
       {/* EXACTLY ONE screen is mounted at a time — a keyed fade-in (the key change remounts it).
           Deliberately NOT AnimatePresence: overlapping enter/exit layers were leaving an invisible
           outgoing layer on top of the map (worst after the two combat→reward→map transitions),
@@ -49,6 +51,7 @@ export function App() {
 
       {prompt?.kind === 'verseChallenge' && <VerseModal challengeId={prompt.challengeId} />}
       {dialogueActive && <DialogueOverlay />}
+      {storyActive && <StoryScroll />}
     </div>
   )
 }

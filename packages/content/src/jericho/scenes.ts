@@ -78,6 +78,19 @@ const oliveGrove: Scene = {
   ],
 }
 
+// --- the Samaritan road: a wayside shrine whose inscription tells the parable (a long story) ---
+const samaritanRoad: Scene = {
+  id: 'samaritanRoad',
+  bgAsset: 'bg-waypoint-samaritan-road',
+  hotspots: [
+    hs('samaritanRoad', 'road', [0.36, 0.62, 0.28, 0.22]),
+    hs('samaritanRoad', 'tracks', [0.1, 0.68, 0.22, 0.18]),
+    hs('samaritanRoad', 'horizon', [0.55, 0.22, 0.34, 0.18]),
+    // reading the shrine opens the scrolling narration of the Good Samaritan
+    hs('samaritanRoad', 'shrine', [0.66, 0.42, 0.18, 0.28], { observe: { script: [{ startStory: 'goodSamaritan' }] } }),
+  ],
+}
+
 // --- shops (flavor only for now) ---
 const marketplace: Scene = {
   id: 'marketplace',
@@ -107,7 +120,7 @@ export const SCENES: Record<string, Scene> = {
   pottersField: waypoint('pottersField', 'bg-waypoint-potters-field', 'shards', [0.62, 0.6, 0.24, 0.2]),
   lowerWell: waypoint('lowerWell', 'bg-waypoint-lower-well', 'well', [0.4, 0.5, 0.2, 0.3]),
   marketFork: waypoint('marketFork', 'bg-waypoint-market-fork', 'signpost', [0.46, 0.34, 0.12, 0.34]),
-  samaritanRoad: waypoint('samaritanRoad', 'bg-waypoint-samaritan-road', 'shrine', [0.66, 0.42, 0.18, 0.28]),
+  samaritanRoad,
   watchtower: waypoint('watchtower', 'bg-waypoint-ruined-watchtower', 'tower', [0.58, 0.2, 0.22, 0.45]),
   narrowSteps: waypoint('narrowSteps', 'bg-waypoint-narrow-steps', 'steps', [0.4, 0.4, 0.22, 0.4]),
   house,

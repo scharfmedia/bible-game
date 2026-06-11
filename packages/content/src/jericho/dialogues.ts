@@ -91,6 +91,8 @@ const roadTraveler: Dialogue = {
       id: 'story',
       lines: ['dialogue.roadTraveler.story.line1', 'dialogue.roadTraveler.story.line2'],
       choices: [
+        // ask him to tell the whole of it → the scrolling Good Samaritan narration
+        { id: 'whole', textKey: 'dialogue.roadTraveler.choice.whole', script: [{ startStory: 'goodSamaritan' }] },
         { id: 'back', textKey: 'dialogue.roadTraveler.choice.back', goto: 'greet' },
         { id: 'bye', textKey: 'dialogue.roadTraveler.choice.bye' },
       ],

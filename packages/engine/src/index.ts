@@ -146,6 +146,7 @@ export type {
   MovementPhase,
   SceneRuntimeState,
   ActiveDialogue,
+  ActiveStory,
 } from './map/types'
 export { initialWorldState } from './map/types'
 export type {
@@ -159,6 +160,7 @@ export type {
   Dialogue,
   DialogueNode,
   DialogueChoice,
+  Story,
 } from './scene/types'
 export { M1_VERBS, VERBS } from './scene/types'
 export type { InventoryState, ItemDef, ItemKind } from './inventory/types'
@@ -212,6 +214,7 @@ export type {
   ItemId,
   DialogueId,
   DialogueNodeId,
+  StoryId,
   GraceAbilityId,
   Locale,
 } from './types'

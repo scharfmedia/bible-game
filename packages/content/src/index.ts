@@ -11,6 +11,7 @@ import { AMBUSH_TABLE, ENCOUNTERS, ITEMS, WORLD_01_MAP } from './jericho/map'
 import { SCENES } from './jericho/scenes'
 import { EVENTS } from './jericho/events'
 import { DIALOGUES } from './jericho/dialogues'
+import { STORIES } from './jericho/stories'
 
 const HERO_GRACE_ABILITIES = ['sight', 'mercy']
 
@@ -23,6 +24,7 @@ export function createContent(): ContentBundle {
     scenes: SCENES,
     events: EVENTS,
     dialogues: DIALOGUES,
+    stories: STORIES,
     items: ITEMS,
     verses: VERSES,
     worlds: {
@@ -67,6 +69,7 @@ export function validateContent(b: ContentBundle): void {
     const map = world.map
     if (!map.nodes[map.entrance]) err(`world "${worldId}" entrance "${map.entrance}" missing`)
     if (!map.nodes[map.bossId]) err(`world "${worldId}" boss "${map.bossId}" missing`)
+    if (map.outroStoryId && !b.stories[map.outroStoryId]) err(`world "${worldId}" outro story "${map.outroStoryId}" missing`)
     // Every chooseable entry point must exist (defaults to [entrance] when unset).
     const entrances = map.entrances && map.entrances.length > 0 ? map.entrances : [map.entrance]
     for (const e of entrances) if (!map.nodes[e]) err(`world "${worldId}" entry "${e}" missing`)
@@ -77,6 +80,7 @@ export function validateContent(b: ContentBundle): void {
       if (fe.kind === 'scene' && !b.scenes[fe.sceneId]) err(`node "${node.id}" references missing scene "${fe.sceneId}"`)
       if (fe.kind === 'event' && !b.events[fe.eventId]) err(`node "${node.id}" references missing event "${fe.eventId}"`)
       if (fe.kind === 'dialogue' && !b.dialogues[fe.dialogueId]) err(`node "${node.id}" references missing dialogue "${fe.dialogueId}"`)
+      if (fe.kind === 'story' && !b.stories[fe.storyId]) err(`node "${node.id}" references missing story "${fe.storyId}"`)
     }
 
     // edges reference existing nodes; adjacency is symmetric
@@ -119,33 +123,40 @@ export function validateContent(b: ContentBundle): void {
       }
     }
   }
-  const checkStartDialogue = (script: unknown, where: string): void =>
+  const checkScriptRefs = (script: unknown, where: string): void =>
     walkScript(script, (cmd) => {
       if ('startDialogue' in cmd && !b.dialogues[cmd.startDialogue as string]) {
         err(`${where} references missing dialogue "${String(cmd.startDialogue)}"`)
       }
+      if ('startStory' in cmd && !b.stories[cmd.startStory as string]) {
+        err(`${where} references missing story "${String(cmd.startStory)}"`)
+      }
     })
 
   for (const scene of Object.values(b.scenes)) {
-    checkStartDialogue(scene.onEnter, `scene "${scene.id}" onEnter`)
+    checkScriptRefs(scene.onEnter, `scene "${scene.id}" onEnter`)
     for (const h of scene.hotspots) {
       for (const [verb, inter] of Object.entries(h.interactions)) {
-        checkStartDialogue(inter?.script, `scene "${scene.id}" hotspot "${h.id}" ${verb}`)
+        checkScriptRefs(inter?.script, `scene "${scene.id}" hotspot "${h.id}" ${verb}`)
       }
     }
   }
   for (const ev of Object.values(b.events)) {
-    for (const c of ev.choices) checkStartDialogue(c.script, `event "${ev.id}" choice "${c.id}"`)
+    for (const c of ev.choices) checkScriptRefs(c.script, `event "${ev.id}" choice "${c.id}"`)
   }
   for (const dlg of Object.values(b.dialogues)) {
     if (!dlg.nodes[dlg.start]) err(`dialogue "${dlg.id}" start node "${dlg.start}" missing`)
     for (const node of Object.values(dlg.nodes)) {
-      checkStartDialogue(node.onEnter, `dialogue "${dlg.id}" node "${node.id}" onEnter`)
+      checkScriptRefs(node.onEnter, `dialogue "${dlg.id}" node "${node.id}" onEnter`)
       for (const c of node.choices) {
         if (c.goto && !dlg.nodes[c.goto]) err(`dialogue "${dlg.id}" choice "${c.id}" goto "${c.goto}" missing`)
-        checkStartDialogue(c.script, `dialogue "${dlg.id}" choice "${c.id}"`)
+        checkScriptRefs(c.script, `dialogue "${dlg.id}" choice "${c.id}"`)
       }
     }
+  }
+  for (const story of Object.values(b.stories)) {
+    if (story.paragraphs.length === 0) err(`story "${story.id}" has no paragraphs`)
+    checkScriptRefs(story.onEnd, `story "${story.id}" onEnd`)
   }
 }
 
@@ -155,3 +166,4 @@ export { ENCOUNTERS, ITEMS, WORLD_01_MAP, AMBUSH_TABLE } from './jericho/map'
 export { SCENES } from './jericho/scenes'
 export { EVENTS } from './jericho/events'
 export { DIALOGUES } from './jericho/dialogues'
+export { STORIES } from './jericho/stories'

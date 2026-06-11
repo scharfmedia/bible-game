@@ -7,7 +7,7 @@ import type { CardDef } from '../cards/types'
 import type { ContentBundle } from '../content/bundle'
 import type { WorldMap } from '../map/types'
 import type { Scene } from '../scene/types'
-import type { Dialogue, MoralEvent } from '../scene/types'
+import type { Dialogue, MoralEvent, Story } from '../scene/types'
 
 const cards: Record<string, CardDef> = {
   strike: { id: 'strike', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: 'card.strike.name', textKey: 'card.strike.text', effects: [{ kind: 'damage', amount: 6, damageType: 'physical' }] },
@@ -61,6 +61,7 @@ const wanderer: Dialogue = {
       choices: [
         { id: 'ask', textKey: 'dialogue.wanderer.ask', goto: 'tale' },
         { id: 'unlock', textKey: 'dialogue.wanderer.unlock', requires: { hasItem: 'key' }, script: [{ setFlag: 'wandererToldSecret', value: true }, { revealNode: 'n3' }], goto: 'tale' },
+        { id: 'story', textKey: 'dialogue.wanderer.storyChoice', script: [{ startStory: 'forestTale' }] }, // branches into a story
         { id: 'provoke', textKey: 'dialogue.wanderer.provoke', script: [{ startCombat: 'beast' }] },
         { id: 'bye', textKey: 'dialogue.wanderer.bye' }, // no goto → ends the conversation
       ],
@@ -75,6 +76,14 @@ const wanderer: Dialogue = {
       ],
     },
   },
+}
+
+// A short narration the wanderer can recite (and a flag-setting onEnd) — exercises the story engine.
+const forestTale: Story = {
+  id: 'forestTale',
+  titleKey: 'story.forestTale.title',
+  paragraphs: ['story.forestTale.p1', 'story.forestTale.p2'],
+  onEnd: [{ setFlag: 'heardForestTale', value: true }],
 }
 
 const traveler: MoralEvent = {
@@ -147,6 +156,7 @@ export function testContent(): ContentBundle {
     scenes: { forestHouse },
     events: { traveler },
     dialogues: { wanderer },
+    stories: { forestTale },
     items: {
       key: { id: 'key', kind: 'key', nameKey: 'item.key.name', descKey: 'item.key.desc', icon: 'item/key', stackable: false, usableInScene: true },
       coin: { id: 'coin', kind: 'currency', nameKey: 'item.coin.name', descKey: 'item.coin.desc', icon: 'item/coin', stackable: true, usableInScene: false },

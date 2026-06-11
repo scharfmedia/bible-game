@@ -73,6 +73,7 @@ export function reduce(state: GameState, cmd: Command): ReduceResult {
     case 'world/eventChoice':
     case 'world/dialogueChoice':
     case 'world/leaveDialogue':
+    case 'world/dismissStory':
     case 'world/fireplace':
     case 'world/advanceWorld':
       return reduceWorld(state, cmd)

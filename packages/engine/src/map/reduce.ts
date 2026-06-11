@@ -64,6 +64,8 @@ export function reduceWorld(state: GameState, cmd: Command): ReduceResult {
       return dialogueChoice(state, cmd.dialogueId, cmd.nodeId, cmd.choiceId)
     case 'world/leaveDialogue':
       return leaveDialogue(state)
+    case 'world/dismissStory':
+      return dismissStory(state)
     case 'world/fireplace':
       return fireplace(state, cmd.action)
     case 'world/advanceWorld':
@@ -98,7 +100,7 @@ function chooseEntry(state: GameState, nodeId: NodeId): ReduceResult {
  *  next click, on a revisit) to actually resolve the node. */
 function move(state: GameState, target: NodeId): ReduceResult {
   const run = state.run!
-  if (run.world.dialogue) return reject(state, 'busy-dialogue')
+  if (run.world.dialogue || run.world.story) return reject(state, 'busy-overlay')
   const map = mapOf(run)
   const ctx = { inventory: run.inventory, spirit: run.spirit.spirit, world: run.world }
   const chk = canMove(map, run.world, ctx, target)
@@ -120,7 +122,7 @@ function move(state: GameState, target: NodeId): ReduceResult {
  *  run start (click the starting node to begin). */
 function enter(state: GameState): ReduceResult {
   const run = state.run!
-  if (run.world.dialogue) return reject(state, 'busy-dialogue')
+  if (run.world.dialogue || run.world.story) return reject(state, 'busy-overlay')
   if (run.world.movement.kind !== 'idle') return reject(state, 'enter:busy')
   const node = mapOf(run).nodes[run.world.current]
   if (!node) return reject(state, 'enter:no-node')
@@ -157,6 +159,12 @@ function triggerFixed(state: GameState, run: RunState, node: MapNode, pre: GameE
       const dlg = (run.content.dialogues ?? {})[ev.dialogueId]
       if (!dlg) return reject(state, 'no-such-dialogue')
       return enterDialogueNode(state, clearNode(run, node.id), ev.dialogueId, dlg.start, pre)
+    }
+    case 'story': {
+      // A map node that tells a story: resolve the node now and open the story overlay over the map.
+      if (!(run.content.stories ?? {})[ev.storyId]) return reject(state, 'no-such-story')
+      const cleared = clearNode(run, node.id)
+      return ok({ ...state, run: { ...cleared, world: { ...cleared.world, story: { storyId: ev.storyId } } } }, pre)
     }
     case 'fireplace':
       return ok({ ...state, run, screen: 'fireplace' }, [...pre, { type: 'screenChanged', screen: 'fireplace' }])
@@ -199,7 +207,7 @@ function startCombatNode(
 
 function sceneInteract(state: GameState, cmd: Extract<Command, { type: 'world/sceneInteract' }>): ReduceResult {
   const run = state.run!
-  if (run.world.dialogue) return reject(state, 'busy-dialogue')
+  if (run.world.dialogue || run.world.story) return reject(state, 'busy-overlay')
   if (run.world.movement.kind !== 'inScene') return reject(state, 'not-in-scene')
   const scene = run.content.scenes[cmd.sceneId]
   if (!scene) return reject(state, 'no-such-scene')
@@ -239,6 +247,11 @@ function applyTransition(state: GameState, run: RunState, t: SceneTransition, pr
     const dlg = (run.content.dialogues ?? {})[t.id]
     if (!dlg) return reject(state, 'no-such-dialogue')
     return enterDialogueNode(state, run, t.id, dlg.start, pre)
+  }
+  if (t.kind === 'story') {
+    // Open a story/narration overlay (additive, like a dialogue).
+    if (!(run.content.stories ?? {})[t.id]) return reject(state, 'no-such-story')
+    return ok({ ...state, run: { ...run, world: { ...run.world, story: { storyId: t.id } } } }, pre)
   }
   if (t.kind === 'goto') {
     // a discovered secret path: leave the scene (clearing the origin node, like leaveScene) and
@@ -373,6 +386,27 @@ function leaveDialogue(state: GameState): ReduceResult {
   const run = state.run!
   if (!run.world.dialogue) return reject(state, 'not-in-dialogue')
   return ok({ ...state, run: { ...run, world: { ...run.world, dialogue: null } } }, [])
+}
+
+// ---- story / narration ------------------------------------------------------------------
+
+/** Dismiss the story overlay (the "Continue" button). Clears it, then runs the story's optional
+ *  onEnd script (which may set flags, unlock things, or transition onward). */
+function dismissStory(state: GameState): ReduceResult {
+  const run = state.run!
+  if (!run.world.story) return reject(state, 'not-in-story')
+  const story = (run.content.stories ?? {})[run.world.story.storyId]
+  let run2: RunState = { ...run, world: { ...run.world, story: null } }
+  const events: GameEvent[] = []
+  if (story?.onEnd && story.onEnd.length) {
+    const out = runScript(run2.world, run2.inventory, run2.spirit.spirit, `story:${story.id}`, story.onEnd)
+    run2 = { ...run2, world: out.world, inventory: out.inventory }
+    const sp = withSpirit(run2, out.spiritEvents)
+    run2 = sp.run
+    events.push(...out.events, ...sp.events)
+    if (out.transition) return applyTransition(state, run2, out.transition, events)
+  }
+  return ok({ ...state, run: run2 }, events)
 }
 
 // ---- fireplace --------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-import type { AssetRef, DialogueId, DialogueNodeId, EdgeId, EncounterId, EventId, I18nKey, NodeId, SceneId } from '../types'
+import type { AssetRef, DialogueId, DialogueNodeId, EdgeId, EncounterId, EventId, I18nKey, NodeId, SceneId, StoryId } from '../types'
 
 export type NodeType =
   | 'entrance'
@@ -37,6 +37,7 @@ export type FixedEvent =
   | { kind: 'scene'; sceneId: SceneId }
   | { kind: 'event'; eventId: EventId }
   | { kind: 'dialogue'; dialogueId: DialogueId }
+  | { kind: 'story'; storyId: StoryId }
   | { kind: 'fireplace' }
   | { kind: 'shop' }
 
@@ -76,6 +77,8 @@ export interface WorldMap {
   /** all places the pilgrim may START a run; the player picks one on the map. Defaults to [entrance]. */
   entrances?: NodeId[]
   bossId: NodeId
+  /** optional closing narration shown once the boss is defeated (the map's outro story) */
+  outroStoryId?: StoryId
   nodes: Record<NodeId, MapNode>
   edges: Record<EdgeId, MapEdge>
   adjacency: Record<NodeId, EdgeId[]>
@@ -93,6 +96,11 @@ export interface SceneRuntimeState {
 export interface ActiveDialogue {
   dialogueId: DialogueId
   node: DialogueNodeId
+}
+
+/** An open story/narration overlay (additive, like a dialogue). */
+export interface ActiveStory {
+  storyId: StoryId
 }
 
 /** The movement/interaction state machine. */
@@ -117,6 +125,8 @@ export interface WorldState {
   movement: MovementPhase
   /** the active conversation overlay, if any (rendered on top of the current scene/map) */
   dialogue: ActiveDialogue | null
+  /** the active story/narration overlay, if any */
+  story: ActiveStory | null
   /** dedicated cursor for the revisit-ambush RNG sub-stream */
   ambushCursor: number
   bossDefeated: boolean
@@ -133,6 +143,7 @@ export const initialWorldState = (worldId: string, entrance: NodeId): WorldState
   sceneStates: {},
   movement: { kind: 'idle' },
   dialogue: null,
+  story: null,
   ambushCursor: 0,
   bossDefeated: false,
 })

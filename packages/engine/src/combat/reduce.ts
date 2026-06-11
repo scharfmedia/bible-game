@@ -159,11 +159,16 @@ function chooseReward(state: GameState, optionId: string): ReduceResult {
   let world = run.world
   if (mv.kind === 'inCombat') {
     const clearsNode = !mv.backward
+    const bossJustDefeated = clearsNode && combat.flags.isBoss && !run.world.bossDefeated
+    // when the boss falls, open the map's closing narration (if the world defines one)
+    const outroId = run.content.worlds[run.worldId]?.map.outroStoryId
+    const outro = bossJustDefeated && outroId && (run.content.stories ?? {})[outroId] ? { storyId: outroId } : run.world.story
     world = {
       ...run.world,
       movement: { kind: 'idle' as const },
       cleared: clearsNode && !run.world.cleared.includes(combat.nodeId) ? [...run.world.cleared, combat.nodeId] : run.world.cleared,
       bossDefeated: clearsNode && combat.flags.isBoss ? true : run.world.bossDefeated,
+      story: outro,
     }
   }
 
