@@ -13,15 +13,18 @@ import { EventScreen } from './screens/EventScreen'
 import { RewardScreen } from './screens/RewardScreen'
 import { FireplaceScreen } from './screens/FireplaceScreen'
 import { GameOverScreen } from './screens/GameOverScreen'
+import { SettingsScreen } from './screens/SettingsScreen'
 import { VerseModal } from './components/VerseModal'
 import { DialogueOverlay } from './components/DialogueOverlay'
 import { StoryScroll } from './components/StoryScroll'
+import { MusicController } from './components/MusicController'
 
 const SCREENS: Record<ScreenId, ComponentType> = {
   start: StartScreen,
   heroSelect: HeroSelectScreen,
   heroCreation: HeroCreation,
   worldSelect: WorldSelect,
+  settings: SettingsScreen,
   map: MapScreen,
   combat: CombatScreen,
   scene: SceneScreen,
@@ -40,6 +43,10 @@ export function App() {
 
   return (
     <div className={`app${dialogueActive ? ' dialogue-open' : ''}${storyActive ? ' story-open' : ''}`}>
+      {/* Persistent, screen-agnostic background-music driver (renders nothing). Outside the keyed
+          screen layer so it never remounts on a screen change. */}
+      <MusicController />
+
       {/* EXACTLY ONE screen is mounted at a time — a keyed fade-in (the key change remounts it).
           Deliberately NOT AnimatePresence: overlapping enter/exit layers were leaving an invisible
           outgoing layer on top of the map (worst after the two combat→reward→map transitions),

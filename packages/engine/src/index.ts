@@ -21,6 +21,7 @@ export {
   type ProfileState,
   type CharacterSlot,
   type Settings,
+  type AudioMode,
   type ScreenId,
 } from './state/gameState'
 export {

@@ -14,6 +14,7 @@ export type ScreenId =
   | 'heroSelect'
   | 'heroCreation'
   | 'worldSelect'
+  | 'settings'
   | 'map'
   | 'scene'
   | 'event'
@@ -22,15 +23,28 @@ export type ScreenId =
   | 'fireplace'
   | 'gameOver'
 
+/** Tri-state audio toggle cycled from the HUD: full → music off (sfx only) → fully muted. */
+export type AudioMode = 'on' | 'sfxOnly' | 'off'
+
 export interface Settings {
   locale: Locale
+  /** reserved for future SFX volume */
   audioVolume: number
+  /** master music volume (0–1); per-context levels are multipliers of this */
+  musicVolume: number
+  /** which audio is playing: 'on' = music + sfx, 'sfxOnly' = no music, 'off' = silent */
+  audioMode: AudioMode
+  /** when false, music plays at a flat volume (the slider value) instead of ducking/boosting per context */
+  dynamicMusic: boolean
   reducedMotion: boolean
 }
 
 export const defaultSettings = (): Settings => ({
   locale: 'en',
   audioVolume: 0.7,
+  musicVolume: 0.5,
+  audioMode: 'on',
+  dynamicMusic: true,
   reducedMotion: false,
 })
 

@@ -92,7 +92,7 @@ const NODES: Record<string, MapNode> = {
   tollGate: { id: 'tollGate', type: 'combat', nameKey: nameKey('tollGate'), pos: { x: 7, y: 2 }, depth: 7, fixedEvent: { kind: 'combat', encounter: 'roadRobbers' }, bgAsset: 'bg-combat-broken-toll-gate', tags: [] },
   rocky: { id: 'rocky', type: 'combat', nameKey: nameKey('rocky'), pos: { x: 8, y: 2.6 }, depth: 8, fixedEvent: { kind: 'combat', encounter: 'thiefGreed' }, bgAsset: 'bg-combat-rocky-pass', tags: [] },
   watchtower: { id: 'watchtower', type: 'waypoint', nameKey: nameKey('watchtower'), pos: { x: 8, y: 1.5 }, depth: 8, fixedEvent: { kind: 'scene', sceneId: 'watchtower' }, sceneId: 'watchtower', bgAsset: 'bg-waypoint-ruined-watchtower', tags: [] },
-  inn: { id: 'inn', type: 'rest', nameKey: nameKey('inn'), pos: { x: 9, y: 2 }, depth: 9, fixedEvent: { kind: 'fireplace' }, bgAsset: 'bg-rest-jericho-inn', tags: [] },
+  inn: { id: 'inn', type: 'rest', nameKey: nameKey('inn'), pos: { x: 9, y: 2 }, depth: 9, fixedEvent: { kind: 'fireplace' }, bgAsset: 'bg-rest-jericho-inn', musicKey: 'music/inn', tags: [] },
   narrowSteps: { id: 'narrowSteps', type: 'waypoint', nameKey: nameKey('narrowSteps'), pos: { x: 10, y: 2 }, depth: 10, fixedEvent: { kind: 'scene', sceneId: 'narrowSteps' }, sceneId: 'narrowSteps', bgAsset: 'bg-waypoint-narrow-steps', tags: [] },
   boss: { id: 'boss', type: 'boss', nameKey: nameKey('boss'), pos: { x: 11, y: 2 }, depth: 11, fixedEvent: { kind: 'boss', encounter: 'accuser' }, bgAsset: 'bg-boss-narrow-gate', tags: [] },
 }
@@ -109,6 +109,8 @@ export const WORLD_01_MAP: WorldMap = {
   bossId: 'boss',
   // closing narration shown once the Accuser is defeated
   outroStoryId: 'jerichoOutro',
+  // overworld music for the Jericho road
+  musicKey: 'music/map',
   nodes: NODES,
   edges: graph.edges,
   adjacency: graph.adjacency,

@@ -1,8 +1,11 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { potencyTier } from '@bible/engine'
+import { potencyTier, type AudioMode } from '@bible/engine'
 import { useGame } from '../store/gameStore'
 import { heroSummary } from '../selectors'
+
+// The 3-state audio toggle cycled from the HUD: music+sfx → sfx only → silent.
+const AUDIO_ICON: Record<AudioMode, string> = { on: '🎵', sfxOnly: '🔊', off: '🔇' }
 
 // The hidden Spirit is surfaced ONLY diegetically: a small orb whose hue/glow follows the potency
 // tier. No number is ever shown — the gradient is felt, not read.
@@ -19,6 +22,8 @@ export function Hud() {
   const state = useGame((s) => s.state)
   const summary = useMemo(() => heroSummary(state), [state])
   const spirit = state.run?.spirit.spirit ?? 0
+  const audioMode = useGame((s) => s.state.profile.settings.audioMode)
+  const cycleAudioMode = useGame((s) => s.cycleAudioMode)
   if (!summary) return null
   const tier = potencyTier(spirit)
   const hpPct = Math.max(0, Math.min(100, (summary.hp / summary.maxHp) * 100))
@@ -42,7 +47,17 @@ export function Hud() {
         </div>
       </div>
       <div className="hud-right">
-        <span className="coin">🪙 {summary.gold}</span>
+        <div className="hud-right-row">
+          <button
+            className="hud-icon-btn"
+            onClick={() => cycleAudioMode()}
+            title={t(`ui.audio.mode.${audioMode}`)}
+            aria-label={t('ui.settings.audio')}
+          >
+            {AUDIO_ICON[audioMode]}
+          </button>
+          <span className="coin">🪙 {summary.gold}</span>
+        </div>
       </div>
     </header>
   )

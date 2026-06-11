@@ -9,7 +9,11 @@ export const CURRENT_SCHEMA_VERSION = 1
 
 const SettingsSchema = z.object({
   locale: z.enum(['en', 'de']),
-  audioVolume: z.number(),
+  audioVolume: z.number().default(0.7),
+  // .default() so saves written before these fields existed still validate (load uses .parse()).
+  musicVolume: z.number().default(0.5),
+  audioMode: z.enum(['on', 'sfxOnly', 'off']).default('on'),
+  dynamicMusic: z.boolean().default(true),
   reducedMotion: z.boolean(),
 })
 

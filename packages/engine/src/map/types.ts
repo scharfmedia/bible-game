@@ -55,6 +55,8 @@ export interface MapNode {
   reveal?: GateExpr
   /** background for non-combat node screens (rest/fireplace) + map thumbnail */
   bgAsset?: AssetRef
+  /** optional dedicated music track for this node; when unset the map music plays (ducked) */
+  musicKey?: AssetRef
   tags: string[]
 }
 
@@ -79,6 +81,8 @@ export interface WorldMap {
   bossId: NodeId
   /** optional closing narration shown once the boss is defeated (the map's outro story) */
   outroStoryId?: StoryId
+  /** the adventure's overworld music track (played on the map; ducked/boosted by context) */
+  musicKey?: AssetRef
   nodes: Record<NodeId, MapNode>
   edges: Record<EdgeId, MapEdge>
   adjacency: Record<NodeId, EdgeId[]>

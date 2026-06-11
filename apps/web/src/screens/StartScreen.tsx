@@ -25,8 +25,7 @@ export function StartScreen() {
         <button className={'btn block' + (canContinue ? '' : ' primary')} onClick={() => dispatch({ type: 'navigate', screen: 'heroSelect' })}>
           {t('ui.start.enter')}
         </button>
-        {/* placeholder — settings menu not wired up yet */}
-        <button className="btn block" onClick={() => {}}>
+        <button className="btn block" onClick={() => dispatch({ type: 'navigate', screen: 'settings' })}>
           {t('ui.start.settings')}
         </button>
       </div>

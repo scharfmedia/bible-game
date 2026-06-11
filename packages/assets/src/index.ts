@@ -57,6 +57,10 @@ const REGISTRY: Record<string, string> = {
   'battlefield/crossroads': '004-battlefield-open-crossroads.png',
   'battlefield/seaside': '004-battlefield-seaside.png',
   'battlefield/open-road': '005-battlefield-open-road.png',
+  // Background music (looping tracks). Resolved to URLs the same way as images.
+  'music/startscreen': 'bg-music-startscreen.mp3',
+  'music/map': 'bg-music-map.mp3',
+  'music/inn': 'bg-music-inn.mp3',
   // Jericho road — every bg by stem
   ...Object.fromEntries(JERICHO_BG.map((stem) => [stem, `${stem}.png`])),
 }

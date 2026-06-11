@@ -45,6 +45,8 @@ export interface EncounterDef {
   /** background shown during the battle (sideview) and on the reward screen */
   battleBg?: AssetRef
   rewardBg?: AssetRef
+  /** optional dedicated battle music; when unset the map music plays (boosted) */
+  battleMusic?: AssetRef
 }
 
 /** Revisit-ambush table (probabilities; remainder = nothing). */

@@ -35,6 +35,9 @@ interface GameStore {
   abandon: () => Promise<void>
   deleteHero: (characterId: string) => void
   setLocale: (locale: Locale) => void
+  setMusicVolume: (volume: number) => void
+  /** cycle the HUD audio toggle: music+sfx → sfx only → silent → … */
+  cycleAudioMode: () => void
 }
 
 export const useGame = create<GameStore>((set, get) => ({
@@ -109,5 +112,16 @@ export const useGame = create<GameStore>((set, get) => ({
   setLocale: (locale) => {
     get().dispatch({ type: 'updateSettings', settings: { locale } })
     void i18n.changeLanguage(locale)
+  },
+
+  setMusicVolume: (volume) => {
+    const clamped = volume < 0 ? 0 : volume > 1 ? 1 : volume
+    get().dispatch({ type: 'updateSettings', settings: { musicVolume: clamped } })
+  },
+
+  cycleAudioMode: () => {
+    const next = { on: 'sfxOnly', sfxOnly: 'off', off: 'on' } as const
+    const cur = get().state.profile.settings.audioMode
+    get().dispatch({ type: 'updateSettings', settings: { audioMode: next[cur] } })
   },
 }))
