@@ -63,11 +63,11 @@ export const TUTORIAL_MAP: WorldMap = {
 // Wolves are beasts (isHuman:false) → spirit-neutral kills that never surface the hidden system. The
 // UI names enemies by archetype (`enemy.<archetype>`), so archetype must be `wolf` (→ "Gaunt Wolf").
 // Flat scaling (level exps 0) keeps difficulty fixed regardless of hero level. `strayWolf` is the easy
-// teaching fight; `loneWolf` is the boss — bigger but still gentle (≈50 HP, ~6 dmg).
+// teaching fight (8 HP, 4 dmg); `loneWolf` is the boss — bigger and with real bite (50 HP, 12 dmg).
 export const TUTORIAL_ENCOUNTERS: Record<string, EncounterDef> = {
   strayWolf: {
     id: 'strayWolf',
-    enemies: [{ id: 'wolf', archetype: 'wolf', nameKey: 'enemy.wolf', isHuman: false, scaling: { baseHp: 8, baseAtk: 2, hpLevelExp: 0, atkLevelExp: 0 } }],
+    enemies: [{ id: 'wolf', archetype: 'wolf', nameKey: 'enemy.wolf', isHuman: false, scaling: { baseHp: 8, baseAtk: 4, hpLevelExp: 0, atkLevelExp: 0 } }],
     flags: { mandatory: false, allowFlee: true, isBoss: false },
     winCondition: { kind: 'allEnemiesDefeated' },
     rewardOptions: [{ id: 'money', kind: 'money', amount: 8 }],
@@ -77,7 +77,7 @@ export const TUTORIAL_ENCOUNTERS: Record<string, EncounterDef> = {
   },
   loneWolf: {
     id: 'loneWolf',
-    enemies: [{ id: 'wolf', archetype: 'wolf', nameKey: 'enemy.wolf', isHuman: false, scaling: { baseHp: 50, baseAtk: 6, hpLevelExp: 0, atkLevelExp: 0 } }],
+    enemies: [{ id: 'wolf', archetype: 'wolf', nameKey: 'enemy.wolf', isHuman: false, scaling: { baseHp: 50, baseAtk: 12, hpLevelExp: 0, atkLevelExp: 0 } }],
     flags: { mandatory: false, allowFlee: true, isBoss: true },
     winCondition: { kind: 'allEnemiesDefeated' },
     rewardOptions: [{ id: 'money', kind: 'money', amount: 10 }],
