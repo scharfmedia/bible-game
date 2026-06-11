@@ -60,7 +60,12 @@ const REGISTRY: Record<string, string> = {
   // Background music (looping tracks). Resolved to URLs the same way as images.
   'music/startscreen': 'bg-music-startscreen.mp3',
   'music/map': 'bg-music-map.mp3',
+  'music/map-tutorial': 'bg-music-map-tutorial.mp3',
   'music/inn': 'bg-music-inn.mp3',
+  // Registered + available; not yet assigned to any node/encounter (wire later as needed).
+  'music/battle-intense': 'bg-music-battle-intense.mp3',
+  'music/battle-calm': 'bg-music-battle-calm.mp3',
+  'music/prayer': 'bg-music-prayer.mp3',
   // Jericho road — every bg by stem
   ...Object.fromEntries(JERICHO_BG.map((stem) => [stem, `${stem}.png`])),
 }

@@ -71,13 +71,6 @@ const TRAIL_LEGEND = [
   { kind: 'gated', key: 'ui.map.legend.gated' },
   { kind: 'sealed', key: 'ui.map.legend.sealed' },
 ] as const
-// faint region names painted on the parchment (grid coords, in the empty band above the nodes)
-const REGIONS = [
-  { key: 'ui.map.region.departure', pos: { x: 1, y: -0.05 } },
-  { key: 'ui.map.region.midway', pos: { x: 5, y: -0.05 } },
-  { key: 'ui.map.region.ascent', pos: { x: 9.5, y: -0.05 } },
-] as const
-
 type Travel = { from: string; to: string; firstVisit: boolean }
 // a one-shot arrival the player did NOT click: a scene's "Go to" already relocated the pilgrim here,
 // so we replay the walk (or a fade-in) for feedback without dispatching anything.
@@ -87,6 +80,11 @@ export function MapScreen() {
   const { t } = useTranslation()
   const state = useGame((s) => s.state)
   const view = useMemo(() => selectMap(state), [state])
+  // faint region bands are per-map content (short maps like the tutorial define none)
+  const regions = useMemo(() => {
+    const m = state.run ? state.run.content.worlds[state.run.worldId]?.map : undefined
+    return m?.regions ?? []
+  }, [state])
   const dispatch = useGame((s) => s.dispatch)
   const abandon = useGame((s) => s.abandon)
   const lastEvents = useGame((s) => s.lastEvents)
@@ -232,8 +230,8 @@ export function MapScreen() {
     <div className="screen map">
       <Hud />
 
-      {/* title cartouche (world name), fixed under the HUD */}
-      <div className="map-cartouche">{t('ui.worldSelect.world01.title')}</div>
+      {/* title cartouche (world name), fixed under the HUD — keyed off the active world */}
+      <div className="map-cartouche">{t(`ui.worldSelect.${(state.run?.worldId ?? 'world-01').replace('-', '')}.title`)}</div>
 
       {/* guidance + transient feedback banners (centred under the cartouche) */}
       {view.unplaced && <div className="map-banner guide">{t('ui.map.chooseEntry')}</div>}
@@ -248,8 +246,8 @@ export function MapScreen() {
           </svg>
 
           {/* faint region names on the parchment (scroll with the map, behind the nodes) */}
-          {REGIONS.map((r) => {
-            const p = px(r.pos)
+          {regions.map((r) => {
+            const p = px({ x: r.x, y: -0.05 })
             return (
               <span key={r.key} className="map-region" style={{ left: p.x, top: p.y }}>{t(r.key)}</span>
             )

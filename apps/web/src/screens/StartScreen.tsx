@@ -35,6 +35,11 @@ export function StartScreen() {
         <button className={'btn small' + (locale === 'en' ? ' active' : '')} onClick={() => setLocale('en')}>EN</button>
         <button className={'btn small' + (locale === 'de' ? ' active' : '')} onClick={() => setLocale('de')}>DE</button>
       </div>
+
+      {/* subtle nod to the game's composer — bottom-centered, deliberately understated */}
+      <a className="support-link" href="https://buymeacoffee.com/missellelive" target="_blank" rel="noopener noreferrer">
+        {t('ui.start.support')}
+      </a>
     </div>
   )
 }

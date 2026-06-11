@@ -26,7 +26,7 @@ interface GameStore {
   resumableIds: string[]
   dispatch: (cmd: Command) => void
   createHero: (name: string) => void
-  startRun: (characterId: string) => void
+  startRun: (characterId: string, worldId?: string) => void
   hydrate: () => Promise<void>
   resume: (characterId: string) => Promise<void>
   /** resume the most-recent in-progress run (for the title "Continue") */
@@ -38,6 +38,8 @@ interface GameStore {
   setMusicVolume: (volume: number) => void
   /** cycle the HUD audio toggle: music+sfx → sfx only → silent → … */
   cycleAudioMode: () => void
+  /** dismiss the story overlay; if it's the world's outro, finish the run and return to the title */
+  dismissStory: () => void
 }
 
 export const useGame = create<GameStore>((set, get) => ({
@@ -57,8 +59,8 @@ export const useGame = create<GameStore>((set, get) => ({
 
   createHero: (name) => get().dispatch({ type: 'createHero', id: randomId(), name }),
 
-  startRun: (characterId) => {
-    get().dispatch({ type: 'startRun', characterId, worldId: 'world-01', seed: `${characterId}-${randomId()}`, content })
+  startRun: (characterId, worldId = 'world-01') => {
+    get().dispatch({ type: 'startRun', characterId, worldId, seed: `${characterId}-${randomId()}`, content })
     set((s) => ({ resumableIds: s.resumableIds.includes(characterId) ? s.resumableIds : [...s.resumableIds, characterId] }))
   },
 
@@ -123,5 +125,18 @@ export const useGame = create<GameStore>((set, get) => ({
     const next = { on: 'sfxOnly', sfxOnly: 'off', off: 'on' } as const
     const cur = get().state.profile.settings.audioMode
     get().dispatch({ type: 'updateSettings', settings: { audioMode: next[cur] } })
+  },
+
+  dismissStory: async () => {
+    const before = get().state
+    const run = before.run
+    const isOutro =
+      !!run && run.world.story != null && run.content.worlds[run.worldId]?.map.outroStoryId === run.world.story.storyId
+    const heroId = runHeroId(before)
+    // The outro ends the run. Clear the saved run FIRST (so the post-dispatch autosave can't
+    // re-persist it), then dismiss — the engine returns to the title with run === null.
+    if (isOutro && heroId) await saveStore.clearRun(heroId)
+    get().dispatch({ type: 'world/dismissStory' })
+    if (isOutro && heroId) set((s) => ({ resumableIds: s.resumableIds.filter((x) => x !== heroId) }))
   },
 }))

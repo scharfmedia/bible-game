@@ -20,7 +20,7 @@ export function StoryScroll() {
   const { t } = useTranslation()
   const state = useGame((s) => s.state)
   const view = useMemo(() => selectStory(state), [state])
-  const dispatch = useGame((s) => s.dispatch)
+  const dismissStory = useGame((s) => s.dismissStory)
   const bodyRef = useRef<HTMLDivElement>(null)
 
   // join paragraphs with blank lines; white-space:pre-wrap turns the breaks into paragraphs
@@ -88,7 +88,7 @@ export function StoryScroll() {
           <div className="story-spacer" style={{ height: Math.round(pad * 0.4) }} aria-hidden />
         </div>
         <div className="story-actions">
-          <button className="btn primary" onClick={() => dispatch({ type: 'world/dismissStory' })}>
+          <button className="btn primary" onClick={() => dismissStory()}>
             {t('ui.story.continue')}
           </button>
         </div>

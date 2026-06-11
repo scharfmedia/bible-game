@@ -70,6 +70,12 @@ export interface MapEdge {
   oneWay?: NodeId
 }
 
+/** A faint region name painted across the parchment at grid x (y sits in the band above the nodes). */
+export interface MapRegion {
+  key: I18nKey
+  x: number
+}
+
 /** Immutable for a run (regenerable from seed). Lives in content; never serialized in the save. */
 export interface WorldMap {
   worldId: string
@@ -83,6 +89,8 @@ export interface WorldMap {
   outroStoryId?: StoryId
   /** the adventure's overworld music track (played on the map; ducked/boosted by context) */
   musicKey?: AssetRef
+  /** optional faint region labels painted on the parchment (omit for short maps like the tutorial) */
+  regions?: MapRegion[]
   nodes: Record<NodeId, MapNode>
   edges: Record<EdgeId, MapEdge>
   adjacency: Record<NodeId, EdgeId[]>

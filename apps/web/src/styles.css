@@ -138,6 +138,10 @@ body {
 /* painted parchment tile across the whole canvas + region colour-washes so it never reads as a flat repeat */
 .map-canvas {
   position: relative;
+  /* fill the scroll viewport even when the map (e.g. the short tutorial) is smaller, so the
+     parchment never stops partway and leave the dark page showing on the right / below */
+  min-width: 100%;
+  min-height: 100%;
   background-color: #b6ad84;
   background-image:
     radial-gradient(ellipse 65% 55% at 28% 18%, rgba(222,210,160,0.45), transparent 60%),
@@ -389,8 +393,9 @@ body {
 
 /* the wheel — wide enough that radial options never get width-clipped by the container edge */
 .dialogue-wheel { position: relative; width: min(760px, 96vw); height: 400px; }
-.wheel-rim { position: absolute; left: 50%; top: 50%; width: 304px; height: 304px; transform: translate(-50%, -50%); border-radius: 50%; border: 1px dashed rgba(216,185,98,0.3); box-shadow: inset 0 0 70px rgba(0,0,0,0.55); }
-.wheel-hub { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle at 50% 38%, rgba(64,54,26,0.96), rgba(18,16,9,0.96)); border: 1px solid var(--gold); box-shadow: 0 0 16px rgba(0,0,0,0.6); z-index: 2; }
+/* rim/hub are centred via Framer x/y:'-50%' (they animate scale, which would clobber a CSS transform) */
+.wheel-rim { position: absolute; left: 50%; top: 50%; width: 304px; height: 304px; border-radius: 50%; border: 1px dashed rgba(216,185,98,0.3); box-shadow: inset 0 0 70px rgba(0,0,0,0.55); }
+.wheel-hub { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; border-radius: 50%; background: radial-gradient(circle at 50% 38%, rgba(64,54,26,0.96), rgba(18,16,9,0.96)); border: 1px solid var(--gold); box-shadow: 0 0 16px rgba(0,0,0,0.6); z-index: 2; }
 .wheel-needle { position: absolute; left: 50%; top: 50%; width: 62px; height: 4px; margin-top: -2px; transform-origin: 0 50%; background: linear-gradient(90deg, rgba(244,231,161,0.15), var(--gold-bright)); border-radius: 0 2px 2px 0; }
 .wheel-needle::after { content: ''; position: absolute; right: -11px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-left: 13px solid var(--gold-bright); filter: drop-shadow(0 0 5px rgba(216,185,98,0.7)); }
 .wheel-slot { position: absolute; }
@@ -437,3 +442,22 @@ input[type='range']::-moz-range-thumb:hover { background: var(--gold-bright); }
 /* ---- HUD audio toggle ---- */
 .hud-icon-btn { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(180deg, #2a3326, #1a2016); border: 1px solid var(--panel-edge); color: var(--ink); font-size: 1.05rem; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.12s, box-shadow 0.2s, border-color 0.2s; }
 .hud-icon-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.4); border-color: var(--gold-bright); }
+
+/* ---- start-screen support link (subtle, bottom-centered) ---- */
+.support-link { position: absolute; bottom: 0.7rem; left: 50%; transform: translateX(-50%); font-size: 0.76rem; color: var(--muted); opacity: 0.5; text-decoration: none; white-space: nowrap; transition: opacity 0.2s, color 0.2s; }
+.support-link:hover { opacity: 0.95; color: var(--gold); }
+
+/* ---- world select cards ---- */
+.panel.world-panel { width: min(760px, 94vw); max-height: 88vh; overflow-y: auto; }
+/* side by side, scroll horizontally if they overflow */
+.world-cards { display: flex; gap: 1rem; overflow-x: auto; padding: 0.25rem 0 0.6rem; }
+.world-cards .world-card { flex: 0 0 300px; height: 200px; margin: 0; }
+.world-card-body .btn { margin-top: 0.5rem; }
+.world-card.locked { filter: grayscale(0.65) brightness(0.7); }
+.world-tag { display: inline-block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gold-bright); border: 1px solid var(--panel-edge); border-radius: 6px; padding: 0.1rem 0.45rem; margin-bottom: 0.35rem; background: rgba(0,0,0,0.45); }
+/* small screens: stack into a single-column list */
+@media (max-width: 680px) {
+  .panel.world-panel { width: min(440px, 92vw); }
+  .world-cards { flex-direction: column; overflow-x: visible; }
+  .world-cards .world-card { flex: 0 0 auto; width: 100%; }
+}

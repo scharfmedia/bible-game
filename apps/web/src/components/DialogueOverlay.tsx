@@ -126,8 +126,10 @@ function DialogueWheel({ choices, exiting, onPick, onLeave }: { choices: Dialogu
       transition={{ duration: WHEEL_EXIT_MS / 1000, ease: 'easeIn' }}
       style={{ pointerEvents: exiting ? 'none' : 'auto' }}
     >
-      <motion.div className="wheel-rim" initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.3 }} />
-      <motion.div className="wheel-hub" initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.05, type: 'spring', stiffness: 420, damping: 22 }}>
+      {/* x/y:'-50%' centre the rim/hub INSIDE Framer's transform — these animate `scale`, so a CSS
+          `transform: translate(-50%,-50%)` would be overridden (same trap as the caption above). */}
+      <motion.div className="wheel-rim" initial={{ x: '-50%', y: '-50%', scale: 0.7, opacity: 0 }} animate={{ x: '-50%', y: '-50%', scale: 1, opacity: 1 }} transition={{ duration: 0.3 }} />
+      <motion.div className="wheel-hub" initial={{ x: '-50%', y: '-50%', scale: 0, opacity: 0 }} animate={{ x: '-50%', y: '-50%', scale: 1, opacity: 1 }} transition={{ delay: 0.05, type: 'spring', stiffness: 420, damping: 22 }}>
         <motion.div className="wheel-needle" animate={{ rotate: degFor(focus) }} transition={{ type: 'spring', stiffness: 420, damping: 26 }} />
       </motion.div>
       {choices.map((c, i) => {

@@ -35,6 +35,8 @@ export const ProfileSchema = z.object({
   settings: SettingsSchema,
   lastSelectedId: z.string().nullable(),
   nextCreateSeq: z.number(),
+  // .default([]) so saves written before world-gating existed still validate (load uses .parse()).
+  completedWorlds: z.array(z.string()).default([]),
 })
 
 // Run snapshots: validate just enough to trust the envelope; the body is engine-produced and

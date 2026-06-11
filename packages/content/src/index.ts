@@ -12,6 +12,9 @@ import { SCENES } from './jericho/scenes'
 import { EVENTS } from './jericho/events'
 import { DIALOGUES } from './jericho/dialogues'
 import { STORIES } from './jericho/stories'
+import { TUTORIAL_AMBUSH_TABLE, TUTORIAL_ENCOUNTERS, TUTORIAL_MAP } from './tutorial/map'
+import { TUTORIAL_DIALOGUES } from './tutorial/dialogues'
+import { TUTORIAL_STORIES } from './tutorial/stories'
 
 const HERO_GRACE_ABILITIES = ['sight', 'mercy']
 
@@ -20,14 +23,15 @@ export function createContent(): ContentBundle {
     heroStartDeck: HERO_START_DECK,
     heroGraceAbilities: HERO_GRACE_ABILITIES,
     cards: CARDS,
-    encounters: ENCOUNTERS,
+    encounters: { ...ENCOUNTERS, ...TUTORIAL_ENCOUNTERS },
     scenes: SCENES,
     events: EVENTS,
-    dialogues: DIALOGUES,
-    stories: STORIES,
+    dialogues: { ...DIALOGUES, ...TUTORIAL_DIALOGUES },
+    stories: { ...STORIES, ...TUTORIAL_STORIES },
     items: ITEMS,
     verses: VERSES,
     worlds: {
+      'world-02': { map: TUTORIAL_MAP, ambushTable: TUTORIAL_AMBUSH_TABLE },
       'world-01': { map: WORLD_01_MAP, ambushTable: AMBUSH_TABLE },
     },
   }
@@ -167,3 +171,6 @@ export { SCENES } from './jericho/scenes'
 export { EVENTS } from './jericho/events'
 export { DIALOGUES } from './jericho/dialogues'
 export { STORIES } from './jericho/stories'
+export { TUTORIAL_MAP, TUTORIAL_ENCOUNTERS, TUTORIAL_AMBUSH_TABLE } from './tutorial/map'
+export { TUTORIAL_DIALOGUES } from './tutorial/dialogues'
+export { TUTORIAL_STORIES } from './tutorial/stories'

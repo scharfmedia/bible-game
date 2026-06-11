@@ -163,6 +163,10 @@ function chooseReward(state: GameState, optionId: string): ReduceResult {
     // when the boss falls, open the map's closing narration (if the world defines one)
     const outroId = run.content.worlds[run.worldId]?.map.outroStoryId
     const outro = bossJustDefeated && outroId && (run.content.stories ?? {})[outroId] ? { storyId: outroId } : run.world.story
+    // mark the world complete in the (persistent) profile — gates later adventures
+    if (bossJustDefeated && !profile.completedWorlds.includes(run.worldId)) {
+      profile = { ...profile, completedWorlds: [...profile.completedWorlds, run.worldId] }
+    }
     world = {
       ...run.world,
       movement: { kind: 'idle' as const },

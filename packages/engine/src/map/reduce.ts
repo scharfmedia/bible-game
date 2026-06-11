@@ -395,7 +395,8 @@ function leaveDialogue(state: GameState): ReduceResult {
 function dismissStory(state: GameState): ReduceResult {
   const run = state.run!
   if (!run.world.story) return reject(state, 'not-in-story')
-  const story = (run.content.stories ?? {})[run.world.story.storyId]
+  const storyId = run.world.story.storyId
+  const story = (run.content.stories ?? {})[storyId]
   let run2: RunState = { ...run, world: { ...run.world, story: null } }
   const events: GameEvent[] = []
   if (story?.onEnd && story.onEnd.length) {
@@ -405,6 +406,11 @@ function dismissStory(state: GameState): ReduceResult {
     run2 = sp.run
     events.push(...out.events, ...sp.events)
     if (out.transition) return applyTransition(state, run2, out.transition, events)
+  }
+  // The world's closing narration ends the run — return to the title screen. (The store clears the
+  // now-finished saved run so it isn't resumable.)
+  if (run.content.worlds[run.worldId]?.map.outroStoryId === storyId) {
+    return ok({ ...state, run: null, combat: null, prompt: null, screen: 'start' }, [...events, { type: 'screenChanged', screen: 'start' }])
   }
   return ok({ ...state, run: run2 }, events)
 }

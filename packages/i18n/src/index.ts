@@ -4,6 +4,7 @@
 // match exactly what the gap-fill checks).
 
 import { jerichoDe, jerichoEn } from './jericho'
+import { tutorialDe, tutorialEn } from './tutorial'
 
 export type Locale = 'en' | 'de'
 export type Messages = Record<string, string>
@@ -17,6 +18,7 @@ export const en: Messages = {
   'ui.start.enter': 'Around the Fire',
   'ui.start.characters': 'Characters',
   'ui.start.settings': 'Settings',
+  'ui.start.support': 'Music by Misselle — buy them a coffee ☕',
   'ui.start.empty': 'No heroes yet. Create one to begin your pilgrimage.',
   'ui.heroSelect.title': 'Around the Fire',
   'ui.heroSelect.flavor': 'Your pilgrims rest by the fire. Choose who walks the road.',
@@ -36,6 +38,10 @@ export const en: Messages = {
   'ui.worldSelect.begin': 'Enter',
   'ui.worldSelect.world01.title': 'The Road to Jericho',
   'ui.worldSelect.world01.subtitle': 'From Jerusalem down to Jericho — the road of the Good Samaritan.',
+  'ui.worldSelect.world02.title': 'Beside Still Waters',
+  'ui.worldSelect.world02.subtitle': 'A short, gentle walk to learn the way.',
+  'ui.worldSelect.tutorialTag': 'Tutorial — Start Here',
+  'ui.worldSelect.locked': 'Finish the tutorial to unlock this road.',
   'ui.common.back': 'Back',
   'ui.common.cancel': 'Cancel',
   'ui.common.delete': 'Delete',
@@ -242,6 +248,7 @@ export const de: Messages = {
   'ui.start.enter': 'Am Feuer',
   'ui.start.characters': 'Helden',
   'ui.start.settings': 'Einstellungen',
+  'ui.start.support': 'Musik von Misselle — spendier einen Kaffee ☕',
   'ui.start.empty': 'Noch keine Helden. Erschaffe einen, um deine Pilgerreise zu beginnen.',
   'ui.heroSelect.title': 'Am Feuer',
   'ui.heroSelect.flavor': 'Deine Pilger ruhen am Feuer. Wähle, wer den Weg geht.',
@@ -261,6 +268,10 @@ export const de: Messages = {
   'ui.worldSelect.begin': 'Betreten',
   'ui.worldSelect.world01.title': 'Die Straße nach Jericho',
   'ui.worldSelect.world01.subtitle': 'Von Jerusalem hinab nach Jericho — der Weg des barmherzigen Samariters.',
+  'ui.worldSelect.world02.title': 'An stillen Wassern',
+  'ui.worldSelect.world02.subtitle': 'Ein kurzer, sanfter Gang, um den Weg zu lernen.',
+  'ui.worldSelect.tutorialTag': 'Einführung — Hier starten',
+  'ui.worldSelect.locked': 'Schließe die Einführung ab, um diesen Weg freizuschalten.',
   'ui.common.back': 'Zurück',
   'ui.common.cancel': 'Abbrechen',
   'ui.common.delete': 'Löschen',
@@ -450,6 +461,6 @@ export const de: Messages = {
 }
 
 export const resources = {
-  en: { translation: { ...en, ...jerichoEn } },
-  de: { translation: { ...de, ...jerichoDe } },
+  en: { translation: { ...en, ...jerichoEn, ...tutorialEn } },
+  de: { translation: { ...de, ...jerichoDe, ...tutorialDe } },
 } as const

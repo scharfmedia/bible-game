@@ -111,6 +111,12 @@ export const WORLD_01_MAP: WorldMap = {
   outroStoryId: 'jerichoOutro',
   // overworld music for the Jericho road
   musicKey: 'music/map',
+  // faint region bands painted across the parchment
+  regions: [
+    { key: 'ui.map.region.departure', x: 1 },
+    { key: 'ui.map.region.midway', x: 5 },
+    { key: 'ui.map.region.ascent', x: 9.5 },
+  ],
   nodes: NODES,
   edges: graph.edges,
   adjacency: graph.adjacency,

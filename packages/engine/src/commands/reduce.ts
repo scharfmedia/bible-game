@@ -26,6 +26,7 @@ export function newGame(): GameState {
     settings: defaultSettings(),
     lastSelectedId: null,
     nextCreateSeq: 1,
+    completedWorlds: [],
   }
   return { version: GAME_STATE_VERSION, screen: 'start', profile, run: null, combat: null, prompt: null }
 }

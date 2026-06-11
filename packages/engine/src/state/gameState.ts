@@ -59,6 +59,8 @@ export interface ProfileState {
   lastSelectedId: CharacterId | null
   /** monotonic counter for stable character creation order */
   nextCreateSeq: number
+  /** worlds whose boss has been defeated — persistent across runs; gates later adventures */
+  completedWorlds: string[]
 }
 
 /** The active adventure. The persistent deck is `deckByMember`; combat derives its pool from it. */
