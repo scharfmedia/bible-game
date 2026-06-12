@@ -5,6 +5,7 @@ import {
   gappedDisplay,
   getLocaleData,
   mapEntrances,
+  MAX_VERSE_ATTEMPTS,
   memberMaxHp,
   nodeVisible,
   type GameState,
@@ -12,7 +13,14 @@ import {
   type Visit,
 } from '@bible/engine'
 
-export interface VerseView { reference: string; gapped: string; blanks: number }
+export interface VerseView { reference: string; gapped: string; blanks: number; attemptsLeft: number; maxAttempts: number }
+
+/** The active run's hero character — verse ownership, losses, and attempt counts all live here. */
+function heroCharacter(state: GameState) {
+  const run = state.run
+  const characterId = run?.party.find((m) => m.memberId === run.heroMemberId)?.characterId
+  return state.profile.slots.find((s) => s.id === characterId)?.character
+}
 
 export function selectVerse(state: GameState, challengeId: string): VerseView | null {
   const run = state.run
@@ -20,7 +28,15 @@ export function selectVerse(state: GameState, challengeId: string): VerseView | 
   const challenge = run.content.verses[challengeId]
   if (!challenge) return null
   const data = getLocaleData(challenge, state.profile.settings.locale)
-  return { reference: data.reference, gapped: gappedDisplay(data), blanks: blankCount(data) }
+  // attempts persist on the hero's character (not the prompt), so the count survives cancel/re-study
+  const attempts = heroCharacter(state)?.verseAttempts[challenge.cardDefId] ?? 0
+  return {
+    reference: data.reference,
+    gapped: gappedDisplay(data),
+    blanks: blankCount(data),
+    attemptsLeft: MAX_VERSE_ATTEMPTS - attempts,
+    maxAttempts: MAX_VERSE_ATTEMPTS,
+  }
 }
 
 export interface HotspotView { id: string; nameKey: string; rect?: { x: number; y: number; w: number; h: number } }
@@ -346,14 +362,17 @@ export function selectFireplace(state: GameState): RestView | null {
   if (!run) return null
   const node = run.content.worlds[run.worldId]?.map.nodes[run.world.current]
   if (!node) return null
-  const heroVerseOwned = new Set(state.profile.slots.flatMap((s) => s.character.ownedVerseCardIds))
+  // scope to the CURRENT hero (matches the engine's per-hero study action) — not unioned across slots
+  const hero = heroCharacter(state)
+  const heroVerseOwned = new Set(hero?.ownedVerseCardIds ?? [])
+  const heroVerseLost = new Set(hero?.lostVerseCardIds ?? [])
   return {
     nameKey: node.nameKey,
     bgAsset: node.bgAsset,
     reflectKey: `${node.nameKey}.reflect`,
     rested: Boolean(run.world.flags[`fireplace:${node.id}:rested`]),
     prayed: Boolean(run.world.flags[`fireplace:${node.id}:prayed`]),
-    verseAvailable: Object.values(run.content.verses).some((v) => !heroVerseOwned.has(v.cardDefId)),
+    verseAvailable: Object.values(run.content.verses).some((v) => !heroVerseOwned.has(v.cardDefId) && !heroVerseLost.has(v.cardDefId)),
   }
 }
 

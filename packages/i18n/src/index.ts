@@ -111,7 +111,9 @@ export const en: Messages = {
   'ui.verse.title': 'Fill the Gaps',
   'ui.verse.instructions': 'Open a Bible and write the missing words.',
   'ui.verse.submit': 'Offer it up',
-  'ui.verse.wrong': 'Not quite — read it again, and try once more.',
+  'ui.verse.cancel': 'Close the book',
+  'ui.verse.wrong': 'Not quite — read it again, and try again.',
+  'ui.verse.triesLeft': 'Attempts left: {{n}} / {{max}}',
   'ui.gameOver.title': 'The road claims you',
   'ui.gameOver.flavor': 'Yet grace remains. Rise and begin again.',
   'ui.gameOver.restart': 'Return',
@@ -221,6 +223,7 @@ export const en: Messages = {
   'fireplace.rested': 'You rest. Your wounds close.',
   'fireplace.prayed': 'You pray. A quiet strength returns.',
   'fireplace.study': 'You open the Scriptures…',
+  'fireplace.verseLost': 'The words slip away — that passage is lost to you, for now.',
   'world.nextComing': 'The boss is overcome. The next world is being prepared…',
 
   // -- verb labels --
@@ -347,7 +350,9 @@ export const de: Messages = {
   'ui.verse.title': 'Fülle die Lücken',
   'ui.verse.instructions': 'Öffne eine Bibel und schreibe die fehlenden Worte.',
   'ui.verse.submit': 'Darbringen',
-  'ui.verse.wrong': 'Noch nicht ganz — lies erneut und versuche es nochmal.',
+  'ui.verse.cancel': 'Das Buch schließen',
+  'ui.verse.wrong': 'Noch nicht ganz — lies erneut und versuche es erneut.',
+  'ui.verse.triesLeft': 'Verbleibende Versuche: {{n}} / {{max}}',
   'ui.gameOver.title': 'Der Weg verschlingt dich',
   'ui.gameOver.flavor': 'Doch Gnade bleibt. Steh auf und beginne neu.',
   'ui.gameOver.restart': 'Zurück',
@@ -449,6 +454,7 @@ export const de: Messages = {
   'fireplace.rested': 'Du rastest. Deine Wunden schließen sich.',
   'fireplace.prayed': 'Du betest. Eine stille Kraft kehrt zurück.',
   'fireplace.study': 'Du schlägst die Schrift auf…',
+  'fireplace.verseLost': 'Die Worte entgleiten dir — diese Stelle ist dir vorerst verloren.',
   'world.nextComing': 'Der Boss ist überwunden. Die nächste Welt wird vorbereitet…',
 
   'verb.observe': 'Betrachten',

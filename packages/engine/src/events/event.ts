@@ -63,7 +63,8 @@ export type GameEvent =
   // spirit / verse
   | { type: 'spiritShifted'; delta: number; reason: string }
   | { type: 'verseEarned'; cardDefId: CardDefId }
-  | { type: 'verseRejected'; challengeId: string }
+  | { type: 'verseRejected'; challengeId: string; attemptsLeft: number }
+  | { type: 'verseLost'; challengeId: string; cardDefId: CardDefId }
   // generic
   | { type: 'notice'; messageKey: I18nKey }
   | { type: 'rejected'; reason: string }

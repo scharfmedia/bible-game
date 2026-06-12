@@ -25,6 +25,9 @@ const CharacterSchema = z.object({
   allocated: z.record(z.string(), z.number()),
   unspentPoints: z.number(),
   ownedVerseCardIds: z.array(z.string()),
+  // .default(...) so saves written before verse-loss existed still validate (load uses .parse()).
+  lostVerseCardIds: z.array(z.string()).default([]),
+  verseAttempts: z.record(z.string(), z.number()).default({}),
   createdSeq: z.number(),
 })
 

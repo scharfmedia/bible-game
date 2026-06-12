@@ -16,6 +16,7 @@ export function VerseModal({ challengeId }: { challengeId: string }) {
   const wrong = lastEvents.some((e) => e.type === 'verseRejected')
   const setAt = (i: number, v: string) => setAnswers((a) => { const n = [...a]; n[i] = v; return n })
   const submit = () => dispatch({ type: 'verse/submit', challengeId, answers })
+  const cancel = () => dispatch({ type: 'verse/cancel' })
 
   return (
     <div className="modal-overlay">
@@ -37,7 +38,11 @@ export function VerseModal({ challengeId }: { challengeId: string }) {
           ))}
         </div>
         {wrong && <p className="warn">{t('ui.verse.wrong')}</p>}
-        <button className="btn primary block" onClick={submit}>{t('ui.verse.submit')}</button>
+        <p className="muted small verse-tries">{t('ui.verse.triesLeft', { n: view.attemptsLeft, max: view.maxAttempts })}</p>
+        <div className="row gap">
+          <button className="btn block" onClick={cancel}>{t('ui.verse.cancel')}</button>
+          <button className="btn primary block" onClick={submit}>{t('ui.verse.submit')}</button>
+        </div>
       </motion.div>
     </div>
   )

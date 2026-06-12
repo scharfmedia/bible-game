@@ -106,6 +106,7 @@ export {
   blankCount,
   getLocaleData,
 } from './verse/verseGapFill'
+export { MAX_VERSE_ATTEMPTS } from './verse/reduce'
 export type { VerseChallenge, VerseLocaleData, VerseRef, VerseCheckResult } from './verse/types'
 
 // ---- domain types (cards / combat / map / scene / inventory) ----

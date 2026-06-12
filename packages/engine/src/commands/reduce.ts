@@ -87,6 +87,7 @@ export function reduce(state: GameState, cmd: Command): ReduceResult {
     case 'combat/chooseReward':
       return reduceCombat(state, cmd)
     case 'verse/submit':
+    case 'verse/cancel':
       return reduceVerse(state, cmd)
 
     default: {

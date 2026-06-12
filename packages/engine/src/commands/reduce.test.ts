@@ -4,6 +4,8 @@ import { newGame, reduce } from './reduce'
 import { totalXpForLevel } from '../leveling/scaling'
 import type { GameState } from '../state/gameState'
 import { testContent } from '../testing/fixtures'
+import { MAX_VERSE_ATTEMPTS } from '../verse/reduce'
+import type { VerseChallenge } from '../verse/types'
 
 const CONTENT = testContent()
 
@@ -187,5 +189,87 @@ describe('purity & determinism', () => {
     expect(eventTypes(newGame(), { type: 'combat/endTurn' })).toEqual(['rejected'])
     expect(eventTypes(newGame(), { type: 'world/move', target: 'n1' })).toEqual(['rejected'])
     expect(eventTypes(newGame(), { type: 'verse/submit', challengeId: 'c', answers: [] })).toEqual(['rejected'])
+  })
+})
+
+describe('verse gap-fill: attempts, loss, cancel', () => {
+  const TEST_VERSE: VerseChallenge = {
+    id: 'v_test',
+    ref: { book: 'Psalms', chapter: 46, verse: 10 },
+    cardDefId: 'verse_test_card',
+    byLocale: {
+      en: { translation: 'KJV', reference: 'Psalm 46:10', fullText: 'Be still', tokens: ['Be', 'still'], blankIndices: [1] },
+      de: { translation: 'LUTHER1912', reference: 'Psalm 46,10', fullText: 'Seid stille', tokens: ['Seid', 'stille'], blankIndices: [1] },
+    },
+  }
+  const VERSE_CONTENT = { ...CONTENT, verses: { v_test: TEST_VERSE } }
+  const PROMPT = { kind: 'verseChallenge' as const, cardDefId: 'verse_test_card', challengeId: 'v_test' }
+  const wrong: Command = { type: 'verse/submit', challengeId: 'v_test', answers: ['definitely-not-it'] }
+  const heroChar = (s: GameState) => s.profile.slots[0]!.character
+
+  // a started run with one verse, study prompt already open
+  const opened = (): GameState => {
+    let s = run(newGame(), { type: 'createHero', id: 'h1', name: 'A' }).state
+    s = run(s, { type: 'startRun', characterId: 'h1', worldId: 'world-01', seed: 'seed', content: VERSE_CONTENT }).state
+    return { ...s, prompt: { ...PROMPT } }
+  }
+  // re-study: re-open the same challenge (what the fireplace "study" button does)
+  const reopen = (s: GameState): GameState => ({ ...s, prompt: { ...PROMPT } })
+
+  it('counts a wrong answer, keeps the modal open, reports attempts left', () => {
+    const r = run(opened(), wrong)
+    expect(r.events).toContainEqual({ type: 'verseRejected', challengeId: 'v_test', attemptsLeft: MAX_VERSE_ATTEMPTS - 1 })
+    expect(r.state.prompt?.kind).toBe('verseChallenge') // still open
+    expect(heroChar(r.state).verseAttempts['verse_test_card']).toBe(1)
+  })
+
+  it('cancel closes the modal but REMEMBERS the attempts (the reported bug)', () => {
+    let s = run(opened(), wrong).state // one miss
+    s = run(s, { type: 'verse/cancel' }).state
+    expect(s.prompt).toBeNull()
+    expect(heroChar(s).verseAttempts['verse_test_card']).toBe(1) // not reset
+    expect(heroChar(s).lostVerseCardIds).toEqual([]) // not lost yet
+  })
+
+  it('loses the scripture on the 3rd miss — even across cancel/re-study (no infinite retries)', () => {
+    let s = opened()
+    s = run(s, wrong).state // miss 1
+    s = run(s, { type: 'verse/cancel' }).state // cancel
+    s = run(reopen(s), wrong).state // miss 2 (count resumes from 1)
+    s = run(s, { type: 'verse/cancel' }).state // cancel
+    const r = run(reopen(s), wrong) // miss 3 → lost
+    expect(r.events).toContainEqual({ type: 'verseLost', challengeId: 'v_test', cardDefId: 'verse_test_card' })
+    expect(r.events).toContainEqual({ type: 'notice', messageKey: 'fireplace.verseLost' })
+    expect(r.state.prompt).toBeNull()
+    expect(heroChar(r.state).lostVerseCardIds).toContain('verse_test_card')
+  })
+
+  it('study no longer offers a verse the hero has lost', () => {
+    let s = opened()
+    s = run(s, wrong).state
+    s = run(reopen(s), wrong).state
+    s = run(reopen(s), wrong).state // lost (only verse in this content)
+    const r = run(s, { type: 'world/fireplace', action: 'study' })
+    expect(r.events).toEqual([{ type: 'rejected', reason: 'no-verse-available' }])
+  })
+
+  it('cancel without any wrong answer spends nothing', () => {
+    const r = run(opened(), { type: 'verse/cancel' })
+    expect(r.state.prompt).toBeNull()
+    expect(heroChar(r.state).verseAttempts).toEqual({})
+  })
+
+  it('correct answer grants the verse, clears the prompt + attempt count, and raises Spirit', () => {
+    // one miss first, so we can prove the success path also clears the dead attempt count
+    const s = run(opened(), wrong).state
+    expect(heroChar(s).verseAttempts['verse_test_card']).toBe(1)
+    const r = run({ ...s, prompt: { ...PROMPT } }, { type: 'verse/submit', challengeId: 'v_test', answers: ['still'] })
+    expect(r.events).toContainEqual({ type: 'verseEarned', cardDefId: 'verse_test_card' })
+    expect(r.events.some((e) => e.type === 'spiritShifted')).toBe(true)
+    expect(r.state.prompt).toBeNull()
+    expect(heroChar(r.state).ownedVerseCardIds).toContain('verse_test_card')
+    expect(heroChar(r.state).verseAttempts).toEqual({}) // dead entry dropped
+    const hid = r.state.run!.heroMemberId
+    expect(r.state.run!.deckByMember[hid]).toContain('verse_test_card')
   })
 })

@@ -56,5 +56,6 @@ export type Command =
   | { type: 'combat/chooseReward'; optionId: string }
   // ---- verse gap-fill ----
   | { type: 'verse/submit'; challengeId: string; answers: string[] }
+  | { type: 'verse/cancel' }
 
 export type CommandType = Command['type']

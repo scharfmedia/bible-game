@@ -14,6 +14,12 @@ export interface Character {
   unspentPoints: number
   /** verse cards permanently earned (carry across runs) */
   ownedVerseCardIds: CardDefId[]
+  /** verse cards lost by failing the gap-fill 3× — no longer offered when studying; must be
+   *  re-acquired (a future "buy/find" path). Permanent like ownedVerseCardIds. */
+  lostVerseCardIds: CardDefId[]
+  /** failed gap-fill attempts so far, per verse card. PERSISTENT (not on the transient prompt) so
+   *  cancelling the modal and re-studying resumes the count instead of resetting to a fresh 3. */
+  verseAttempts: Record<CardDefId, number>
   /** creation order, for stable slot sorting */
   createdSeq: number
 }
@@ -27,6 +33,8 @@ export function createCharacter(id: CharacterId, name: string, createdSeq: numbe
     allocated: emptyAllocation(),
     unspentPoints: 0,
     ownedVerseCardIds: [],
+    lostVerseCardIds: [],
+    verseAttempts: {},
     createdSeq,
   }
 }
