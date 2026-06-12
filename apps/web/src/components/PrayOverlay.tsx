@@ -16,6 +16,7 @@ const GOLD_BEFORE_TEXT_MS = 5500 // let the gold fade in and settle before any w
 const FADE_MS = 3500 // each psalm fades slowly in (and out)
 const HOLD_MS = 9000 // …then lingers a good while
 const GAP_MS = 2500 // …then a beat of pure gold before the next psalm
+const AMEN_DELAY_MS = 4000 // the way out appears only once the gold has settled, then eases gently in
 
 export function PrayOverlay() {
   const { t } = useTranslation()
@@ -23,11 +24,13 @@ export function PrayOverlay() {
   const setPraying = useGame((s) => s.setPraying)
   const [idx, setIdx] = useState(0)
   const [shown, setShown] = useState(false)
+  const [amenReady, setAmenReady] = useState(false)
 
   useEffect(() => {
     if (!praying) {
       setShown(false)
       setIdx(0)
+      setAmenReady(false)
       return
     }
     musicManager.setPraying(true, resolveAsset('music/prayer') ?? undefined)
@@ -46,9 +49,11 @@ export function PrayOverlay() {
       }, FADE_MS + HOLD_MS)
     }
     timer = window.setTimeout(() => { if (alive) showNext() }, GOLD_BEFORE_TEXT_MS)
+    const amenTimer = window.setTimeout(() => { if (alive) setAmenReady(true) }, AMEN_DELAY_MS)
     return () => {
       alive = false
       window.clearTimeout(timer)
+      window.clearTimeout(amenTimer)
       musicManager.setPraying(false) // amen: prayer song fades out, background music returns
     }
   }, [praying])
@@ -71,11 +76,20 @@ export function PrayOverlay() {
           )}
         </AnimatePresence>
       </div>
-      {praying && (
-        <button className="btn pray-amen" onClick={(e) => { e.stopPropagation(); setPraying(false) }}>
-          {t('ui.pray.amen')}
-        </button>
-      )}
+      <AnimatePresence>
+        {praying && amenReady && (
+          <motion.button
+            className="btn pray-amen"
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.4, ease: 'easeOut' }}
+            onClick={(e) => { e.stopPropagation(); setPraying(false) }}
+          >
+            {t('ui.pray.amen')}
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

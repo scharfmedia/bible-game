@@ -487,4 +487,8 @@ input[type='range']::-moz-range-thumb:hover { background: var(--gold-bright); }
 /* psalms stack in one centred grid cell so successive lines cross-fade in place (one comes, one goes) */
 .pray-stage { position: absolute; inset: 0; display: grid; place-items: center; padding: 2rem; }
 .pray-line { grid-area: 1 / 1; margin: 0; max-width: min(760px, 86vw); text-align: center; color: rgba(58,38,8,0.92); font-size: clamp(1.7rem, 4.2vw, 3rem); line-height: 1.7; text-shadow: 0 1px 0 rgba(255,250,224,0.5); }
-.pray-amen { position: absolute; bottom: 1.8rem; left: 0; right: 0; margin: 0 auto; width: fit-content; z-index: 1; }
+/* less "button", more a quiet invitation: large, transparent, just golden text + a thin gold ring */
+.pray-amen { position: absolute; bottom: 2.6rem; left: 0; right: 0; margin: 0 auto; width: fit-content; z-index: 1;
+  background: transparent; border: 1px solid rgba(216,185,98,0.55); color: var(--gold-bright);
+  font-size: 1.7rem; letter-spacing: 0.14em; padding: 0.7rem 3rem; border-radius: 999px; text-shadow: 0 1px 6px rgba(90,60,12,0.4); }
+.pray-amen:hover:not(:disabled) { background: transparent; transform: none; border-color: var(--gold-bright); box-shadow: 0 0 26px rgba(244,231,161,0.4); }
