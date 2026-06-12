@@ -1,5 +1,6 @@
 import type {
   AssetRef,
+  CardDefId,
   DialogueId,
   DialogueNodeId,
   EdgeId,
@@ -41,6 +42,8 @@ export type ScriptCmd =
   | { goToNode: NodeId }
   | { unlockEdge: EdgeId }
   | { addSpirit: number; reason: string }
+  | { grantCard: CardDefId; bypassLimit?: boolean } // add a card to the run deck (this run)
+  | { unlockCard: CardDefId } // permanently unlock a card into the hero's pool (all future runs)
   | { startCombat: EncounterId }
   | { startEvent: EventId }
   | { changeScene: SceneId }

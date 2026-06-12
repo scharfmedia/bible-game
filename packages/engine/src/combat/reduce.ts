@@ -4,8 +4,14 @@ import { grantXp } from '../leveling/scaling'
 import { applySpiritEvent } from '../spirit/spirit'
 import type { GameState } from '../state/gameState'
 import type { PartyMember } from '../state/character'
+import { effectivePool, sampleCards, unlocksUpToLevel } from '../cards/pool'
+import { fork } from '../rng/rng'
+import type { CardDefId } from '../types'
 import { endTurn, ensureActing, flee, playCard, reposition, useGrace, type CombatStep } from './combat'
 import type { CombatState } from './types'
+
+/** How many card-reward options to sample from the pool after a fight. */
+const CARD_REWARD_COUNT = 3
 
 /** Persist combat HP back onto the run's party members (alive → current hp, dead → 0). */
 function writebackHp(party: PartyMember[], combat: CombatState): PartyMember[] {
@@ -26,7 +32,11 @@ const reject = (state: GameState, reason: string): ReduceResult => ({
  * encounter→run reward writeback. Reads run.spirit live to scale spiritual cards.
  */
 export function reduceCombat(state: GameState, cmd: Command): ReduceResult {
-  if (cmd.type === 'combat/chooseReward') return chooseReward(state, cmd.optionId)
+  // reward-screen commands resolve against the pending combat.reward (combat outcome is over)
+  if (cmd.type === 'combat/claimSpoil') return claimSpoil(state, cmd.spoilId)
+  if (cmd.type === 'combat/takeCard') return takeCard(state, cmd.defId)
+  if (cmd.type === 'combat/skipCard') return skipCard(state)
+  if (cmd.type === 'combat/leaveReward') return leaveReward(state)
 
   if (!state.combat || !state.run) return reject(state, 'not-in-combat')
   if (state.combat.outcome !== 'ongoing') return reject(state, 'combat-over')
@@ -88,9 +98,23 @@ function applyStep(state: GameState, result: CombatStep): ReduceResult {
       break
     }
     case 'victory':
-    case 'peaceful':
+    case 'peaceful': {
       screen = 'reward' // keep combat + reward pending until the player chooses
+      // Enrich the reward (built pure over CombatState) with a card pick sampled from the hero's
+      // pool. Run-aware: needs run.rng + the profile. `fork` derives an independent, deterministic
+      // sub-stream per node, so run.rng is left untouched (mirrors the combat-rng fork pattern).
+      if (combat.reward && combat.reward.cardOptions === undefined) {
+        const heroChar = heroCharacterOf(state, run)
+        const deck = run.deckByMember[run.heroMemberId] ?? []
+        let cardOptions: CardDefId[] = []
+        if (heroChar && deck.length < run.deckLimit) {
+          const [picks] = sampleCards(effectivePool(heroChar, run.content), CARD_REWARD_COUNT, fork(run.rng, `reward:${combat.nodeId}`))
+          cardOptions = picks
+        }
+        nextCombat = { ...combat, reward: { ...combat.reward, cardOptions } }
+      }
       break
+    }
     case 'ongoing':
       break
   }
@@ -98,29 +122,71 @@ function applyStep(state: GameState, result: CombatStep): ReduceResult {
   return { state: { ...state, run, combat: nextCombat, screen }, events }
 }
 
-/** Apply the chosen reward to the run, grant XP / level-ups, clear the node, return to the map. */
-function chooseReward(state: GameState, optionId: string): ReduceResult {
+/** The persistent Character backing the run's hero (or undefined if the slot is gone). */
+function heroCharacterOf(state: GameState, run: NonNullable<GameState['run']>) {
+  const charId = run.party.find((m) => m.memberId === run.heroMemberId)?.characterId
+  return state.profile.slots.find((s) => s.id === charId)?.character
+}
+
+/** Claim one spoil (gold / relic) immediately. Idempotent per spoil; stays on the reward screen. */
+function claimSpoil(state: GameState, spoilId: string): ReduceResult {
   const combat = state.combat
   const run = state.run
   if (!combat?.reward || !run) return reject(state, 'no-reward')
-  const option = combat.reward.options.find((o) => o.id === optionId)
-  if (!option) return reject(state, 'no-such-reward-option')
+  const idx = combat.reward.spoils.findIndex((s) => s.id === spoilId)
+  if (idx < 0) return reject(state, 'no-such-spoil')
+  const spoil = combat.reward.spoils[idx]!
+  if (spoil.claimed) return reject(state, 'already-claimed')
 
-  const events: GameEvent[] = [{ type: 'rewardChosen', optionId }]
-
-  // spoils
   let inventory = run.inventory
-  let deckByMember = run.deckByMember
-  if (option.kind === 'money') {
-    inventory = { ...inventory, currency: inventory.currency + (option.amount ?? 0) }
-  } else if (option.kind === 'card' && option.defId) {
-    const heroDeck = deckByMember[run.heroMemberId] ?? []
-    deckByMember = { ...deckByMember, [run.heroMemberId]: [...heroDeck, option.defId] }
-  } else if (option.kind === 'relic' && option.defId) {
-    inventory = { ...inventory, stacks: { ...inventory.stacks, [option.defId]: (inventory.stacks[option.defId] ?? 0) + 1 } }
+  if (spoil.kind === 'money') {
+    inventory = { ...inventory, currency: inventory.currency + (spoil.amount ?? 0) }
+  } else if (spoil.kind === 'relic' && spoil.defId) {
+    inventory = { ...inventory, stacks: { ...inventory.stacks, [spoil.defId]: (inventory.stacks[spoil.defId] ?? 0) + 1 } }
   }
+  const spoils = combat.reward.spoils.map((s, i) => (i === idx ? { ...s, claimed: true } : s))
+  return {
+    state: { ...state, run: { ...run, inventory }, combat: { ...combat, reward: { ...combat.reward, spoils } } },
+    events: [{ type: 'spoilClaimed', spoilId }],
+  }
+}
 
-  // XP + level-ups (write to the permanent Character)
+/** Take one of the sampled card options into the run deck (blocked when the deck is full). */
+function takeCard(state: GameState, defId: CardDefId): ReduceResult {
+  const combat = state.combat
+  const run = state.run
+  if (!combat?.reward || !run) return reject(state, 'no-reward')
+  if (combat.reward.cardResolved) return reject(state, 'card-already-resolved')
+  if (!(combat.reward.cardOptions ?? []).includes(defId)) return reject(state, 'no-such-card-option')
+  const deck = run.deckByMember[run.heroMemberId] ?? []
+  if (deck.length >= run.deckLimit) return reject(state, 'deck-full')
+  const deckByMember = { ...run.deckByMember, [run.heroMemberId]: [...deck, defId] }
+  const reward = { ...combat.reward, cardChosen: defId, cardResolved: true }
+  return {
+    state: { ...state, run: { ...run, deckByMember }, combat: { ...combat, reward } },
+    events: [{ type: 'cardTaken', defId }],
+  }
+}
+
+/** Decline the card reward. */
+function skipCard(state: GameState): ReduceResult {
+  const combat = state.combat
+  const run = state.run
+  if (!combat?.reward || !run) return reject(state, 'no-reward')
+  const reward = { ...combat.reward, cardResolved: true }
+  return { state: { ...state, combat: { ...combat, reward } }, events: [{ type: 'cardSkipped' }] }
+}
+
+/** Commit the reward: grant XP / level-ups (which unlock pool cards), peaceful bonus, clear the node,
+ *  return to the map. Spoils + the chosen card were already applied on claim/take; unclaimed are lost. */
+function leaveReward(state: GameState): ReduceResult {
+  const combat = state.combat
+  const run = state.run
+  if (!combat?.reward || !run) return reject(state, 'no-reward')
+
+  const events: GameEvent[] = [{ type: 'rewardLeft' }]
+
+  // XP + level-ups (write to the permanent Character); newly-reached levels unlock pool cards.
   let profile = state.profile
   let party = run.party
   for (const [memberId, xp] of Object.entries(combat.reward.xpByMember)) {
@@ -129,7 +195,8 @@ function chooseReward(state: GameState, optionId: string): ReduceResult {
     const idx = profile.slots.findIndex((s) => s.id === member.characterId)
     const slot = profile.slots[idx]
     if (!slot) continue
-    const res = grantXp(slot.character.xp, slot.character.level, xp)
+    const oldLevel = slot.character.level
+    const res = grantXp(slot.character.xp, oldLevel, xp)
     const character = {
       ...slot.character,
       xp: res.totalXp,
@@ -138,7 +205,12 @@ function chooseReward(state: GameState, optionId: string): ReduceResult {
     }
     profile = { ...profile, slots: profile.slots.map((s, i) => (i === idx ? { ...s, character } : s)) }
     party = party.map((m) => (m.memberId === memberId ? { ...m, level: res.level } : m))
-    if (res.leveledUp) events.push({ type: 'leveledUp', memberId, level: res.level, points: res.levelsGained })
+    if (res.leveledUp) {
+      events.push({ type: 'leveledUp', memberId, level: res.level, points: res.levelsGained })
+      const had = new Set(unlocksUpToLevel(run.content, oldLevel))
+      const unlocked = unlocksUpToLevel(run.content, res.level).filter((id) => !had.has(id))
+      if (unlocked.length) events.push({ type: 'cardsUnlocked', memberId, cardIds: unlocked })
+    }
   }
 
   // peaceful bonus
@@ -176,7 +248,7 @@ function chooseReward(state: GameState, optionId: string): ReduceResult {
     }
   }
 
-  const newRun = { ...run, inventory, deckByMember, spirit, party, world }
+  const newRun = { ...run, spirit, party, world }
 
   // surface a level-up prompt if the hero has unspent points
   let prompt = state.prompt

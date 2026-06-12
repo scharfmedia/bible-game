@@ -1,18 +1,24 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { assetBg } from '@bible/assets'
 import { useGame } from '../store/gameStore'
-import { selectFireplace } from '../selectors'
+import { selectFireplace, selectUpgradeable } from '../selectors'
+import { CardFace } from '../components/CardFace'
 
 export function FireplaceScreen() {
   const { t } = useTranslation()
   const state = useGame((s) => s.state)
   const view = useMemo(() => selectFireplace(state), [state])
+  const upgradeable = useMemo(() => selectUpgradeable(state), [state])
   const dispatch = useGame((s) => s.dispatch)
   const setSleeping = useGame((s) => s.setSleeping)
   const setPraying = useGame((s) => s.setPraying)
   const lastEvents = useGame((s) => s.lastEvents)
+  const [picking, setPicking] = useState(false)
+  const [selIdx, setSelIdx] = useState<number | null>(null)
   if (!view) return null
+
+  const selected = selIdx != null ? (upgradeable.find((u) => u.index === selIdx) ?? null) : null
 
   // Resting = sleeping: heal, and play the fade-to-black sleep cinematic (cue + music dip).
   const rest = () => {
@@ -24,6 +30,18 @@ export function FireplaceScreen() {
     setPraying(true)
     dispatch({ type: 'world/fireplace', action: 'pray' })
   }
+  const openPicker = () => {
+    setSelIdx(null)
+    setPicking(true)
+  }
+  const closePicker = () => {
+    setSelIdx(null)
+    setPicking(false)
+  }
+  const confirmUpgrade = () => {
+    if (selected) dispatch({ type: 'world/fireplace', action: 'upgrade', cardIndex: selected.index })
+    closePicker()
+  }
 
   const notice = lastEvents.flatMap((e) => (e.type === 'notice' ? [e.messageKey] : [])).at(-1)
 
@@ -34,21 +52,60 @@ export function FireplaceScreen() {
       <div className="panel narrow">
         <h2>{t(view.nameKey)}</h2>
         <p className="muted reflect">{t(view.reflectKey)}</p>
-        {notice && <p className="muted">{t(notice)}</p>}
-        <div className="choices">
-          <button className="btn block" disabled={view.rested} onClick={rest}>
-            {t('ui.fireplace.rest')}
-          </button>
-          <button className="btn block" disabled={view.prayed} onClick={pray}>
-            {t('ui.fireplace.pray')}
-          </button>
-          <button className="btn block" disabled={!view.verseAvailable} onClick={() => dispatch({ type: 'world/fireplace', action: 'study' })}>
-            {t('ui.fireplace.study')}
-          </button>
-          <button className="btn primary block" onClick={() => dispatch({ type: 'world/fireplace', action: 'leave' })}>
-            {t('ui.fireplace.leave')}
-          </button>
-        </div>
+        {notice && !picking && <p className="muted">{t(notice)}</p>}
+
+        {!picking ? (
+          <div className="choices">
+            <button className="btn block" disabled={view.rested} onClick={rest}>
+              {t('ui.fireplace.rest')}
+            </button>
+            <button className="btn block" disabled={view.prayed} onClick={pray}>
+              {t('ui.fireplace.pray')}
+            </button>
+            <button className="btn block" disabled={!view.verseAvailable} onClick={() => dispatch({ type: 'world/fireplace', action: 'study' })}>
+              {t('ui.fireplace.study')}
+            </button>
+            <button className="btn block" disabled={view.upgraded || !view.canUpgrade} onClick={openPicker}>
+              {t('ui.fireplace.upgrade')}
+            </button>
+            <button className="btn primary block" onClick={() => dispatch({ type: 'world/fireplace', action: 'leave' })}>
+              {t('ui.fireplace.leave')}
+            </button>
+          </div>
+        ) : selected ? (
+          // chosen a card → show what it becomes, confirm or go back
+          <>
+            <h3 className="reward-card-title">{t('ui.fireplace.upgradePreviewTitle')}</h3>
+            <div className="upgrade-preview">
+              <CardFace cost={selected.cost} layer={selected.layer} nameKey={selected.nameKey} textKey={selected.textKey} verse={selected.verse} />
+              <span className="upgrade-arrow" aria-hidden>→</span>
+              <CardFace cost={selected.toCost} layer={selected.toLayer} nameKey={selected.toNameKey} textKey={selected.toTextKey} verse={selected.verse} selected />
+            </div>
+            <button className="btn primary block" onClick={confirmUpgrade}>
+              {t('ui.fireplace.upgradeConfirm')}
+            </button>
+            <button className="btn block" onClick={() => setSelIdx(null)}>
+              {t('ui.fireplace.cancel')}
+            </button>
+          </>
+        ) : (
+          // pick which card to hone — shown in their CURRENT state
+          <>
+            <h3 className="reward-card-title">{t('ui.fireplace.upgradeTitle')}</h3>
+            {upgradeable.length === 0 ? (
+              <p className="muted">{t('ui.fireplace.upgradeNone')}</p>
+            ) : (
+              <div className="card-row">
+                {upgradeable.map((u) => (
+                  <CardFace key={u.index} cost={u.cost} layer={u.layer} nameKey={u.nameKey} textKey={u.textKey} verse={u.verse} onClick={() => setSelIdx(u.index)} />
+                ))}
+              </div>
+            )}
+            <button className="btn block" onClick={closePicker}>
+              {t('ui.fireplace.cancel')}
+            </button>
+          </>
+        )}
       </div>
     </div>
   )

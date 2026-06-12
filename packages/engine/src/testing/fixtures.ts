@@ -10,10 +10,14 @@ import type { Scene } from '../scene/types'
 import type { Dialogue, MoralEvent, Story } from '../scene/types'
 
 const cards: Record<string, CardDef> = {
-  strike: { id: 'strike', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: 'card.strike.name', textKey: 'card.strike.text', effects: [{ kind: 'damage', amount: 6, damageType: 'physical' }] },
+  strike: { id: 'strike', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: 'card.strike.name', textKey: 'card.strike.text', upgradeTo: 'strike_plus', effects: [{ kind: 'damage', amount: 6, damageType: 'physical' }] },
+  strike_plus: { id: 'strike_plus', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: 'card.strike_plus.name', textKey: 'card.strike_plus.text', effects: [{ kind: 'damage', amount: 9, damageType: 'physical' }] },
   guard: { id: 'guard', type: 'skill', layer: 'flesh', cost: 1, target: 'self', nameKey: 'card.guard.name', textKey: 'card.guard.text', effects: [{ kind: 'block', amount: 5 }] },
   light: { id: 'light', type: 'spiritual', layer: 'spirit', cost: 1, target: 'enemy', nameKey: 'card.light.name', textKey: 'card.light.text', effects: [{ kind: 'damage', amount: 8, damageType: 'spiritual' }] },
   prayer: { id: 'prayer', type: 'spiritual', layer: 'spirit', cost: 1, target: 'self', nameKey: 'card.prayer.name', textKey: 'card.prayer.text', effects: [{ kind: 'block', amount: 6, layer: 'spirit' }] },
+  // pool-only cards (not in the start deck) so reward/shop sampling has something to offer in tests
+  brace: { id: 'brace', type: 'skill', layer: 'flesh', cost: 2, target: 'self', nameKey: 'card.brace.name', textKey: 'card.brace.text', effects: [{ kind: 'block', amount: 8 }] },
+  mend: { id: 'mend', type: 'skill', layer: 'flesh', cost: 1, target: 'self', nameKey: 'card.mend.name', textKey: 'card.mend.text', effects: [{ kind: 'heal', amount: 5 }] },
 }
 
 const forestHouse: Scene = {
@@ -130,6 +134,9 @@ export function testContent(): ContentBundle {
     heroStartDeck: ['strike', 'guard', 'light', 'prayer', 'strike'],
     heroGraceAbilities: ['sight', 'mercy'],
     cards,
+    cardPoolStart: ['brace', 'guard'],
+    cardUnlocksByLevel: { 2: ['mend'] },
+    deckLimit: 8,
     encounters: {
       beast: {
         id: 'beast',

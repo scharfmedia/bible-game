@@ -76,6 +76,10 @@ export function reduce(state: GameState, cmd: Command): ReduceResult {
     case 'world/leaveDialogue':
     case 'world/dismissStory':
     case 'world/fireplace':
+    case 'world/shopBuyCard':
+    case 'world/shopBuyItem':
+    case 'world/shopRemoveCard':
+    case 'world/leaveShop':
     case 'world/advanceWorld':
       return reduceWorld(state, cmd)
     case 'combat/reposition':
@@ -84,7 +88,10 @@ export function reduce(state: GameState, cmd: Command): ReduceResult {
     case 'combat/playCard':
     case 'combat/useGrace':
     case 'combat/endTurn':
-    case 'combat/chooseReward':
+    case 'combat/claimSpoil':
+    case 'combat/takeCard':
+    case 'combat/skipCard':
+    case 'combat/leaveReward':
       return reduceCombat(state, cmd)
     case 'verse/submit':
     case 'verse/cancel':
@@ -185,6 +192,7 @@ function startRun(
     inventory: emptyInventory(),
     spirit: initialSpiritState(),
     deckByMember: { [hero.memberId]: startDeck },
+    deckLimit: content.deckLimit ?? 20,
     depth: world.map.nodes[world.map.entrance]?.depth ?? 0,
     baseGrace: 1,
   }

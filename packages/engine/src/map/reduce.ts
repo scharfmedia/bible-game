@@ -11,12 +11,13 @@ import { memberMaxHp, type PartyMember } from '../state/character'
 import { applySpiritEvent, type SpiritEvent } from '../spirit/spirit'
 import type { GameState, RunState } from '../state/gameState'
 import { fork } from '../rng/rng'
-import { resolveInteraction, runScript, type SceneTransition } from '../scene/resolve'
+import { resolveInteraction, runScript, type CardGrant, type SceneTransition } from '../scene/resolve'
 import type { DialogueChoice } from '../scene/types'
-import type { NodeId } from '../types'
+import type { CardDefId, ItemId, NodeId } from '../types'
 import { COMBAT_TYPES, type MapNode, type WorldMap } from './types'
 import { canMove, mapEntrances } from './movement'
 import { evalGate } from './gate'
+import { generateShop } from './shop'
 
 const reject = (state: GameState, reason: string): ReduceResult => ({ state, events: [{ type: 'rejected', reason }] })
 const ok = (state: GameState, events: GameEvent[]): ReduceResult => ({ state, events })
@@ -32,6 +33,61 @@ function withSpirit(run: RunState, spiritEvents: SpiritEvent[]): { run: RunState
     events.push({ type: 'spiritShifted', delta: out.delta, reason: out.reason })
   }
   return { run: r, events }
+}
+
+/** Apply a script's card-grant intents: 'deck' adds to the run deck (respecting the cap unless the
+ *  grant bypasses — story/event rewards may), 'pool' permanently unlocks into the hero's Character.
+ *  Updates run.deckByMember and (for pool grants) state.profile; returns both plus log events. */
+function withCardGrants(state: GameState, run: RunState, grants: CardGrant[]): { state: GameState; run: RunState; events: GameEvent[] } {
+  if (!grants.length) return { state, run, events: [] }
+  const events: GameEvent[] = []
+  const heroId = run.heroMemberId
+
+  // deck grants
+  let deck = run.deckByMember[heroId] ?? []
+  let deckChanged = false
+  for (const g of grants) {
+    if (g.kind !== 'deck') continue
+    if (!run.content.cards[g.cardId]) {
+      events.push({ type: 'rejected', reason: 'grant-missing-card' })
+      continue
+    }
+    if (!g.bypassLimit && deck.length >= run.deckLimit) {
+      events.push({ type: 'notice', messageKey: 'deck.full' })
+      continue
+    }
+    deck = [...deck, g.cardId]
+    deckChanged = true
+    events.push({ type: 'cardGranted', cardId: g.cardId })
+  }
+  const run2 = deckChanged ? { ...run, deckByMember: { ...run.deckByMember, [heroId]: deck } } : run
+
+  // pool grants → the permanent Character on the profile
+  let profile = state.profile
+  const charId = run.party.find((m) => m.memberId === heroId)?.characterId
+  const idx = profile.slots.findIndex((s) => s.id === charId)
+  if (idx >= 0) {
+    let pool = profile.slots[idx]!.character.pool
+    let poolChanged = false
+    for (const g of grants) {
+      if (g.kind !== 'pool') continue
+      if (!run.content.cards[g.cardId]) {
+        events.push({ type: 'rejected', reason: 'grant-missing-card' })
+        continue
+      }
+      if (!pool.includes(g.cardId)) {
+        pool = [...pool, g.cardId]
+        poolChanged = true
+        events.push({ type: 'cardUnlocked', cardId: g.cardId })
+      }
+    }
+    if (poolChanged) {
+      const character = { ...profile.slots[idx]!.character, pool }
+      profile = { ...profile, slots: profile.slots.map((s, i) => (i === idx ? { ...s, character } : s)) }
+    }
+  }
+
+  return { state: { ...state, profile }, run: run2, events }
 }
 
 function heroCharacter(state: GameState) {
@@ -75,7 +131,15 @@ export function reduceWorld(state: GameState, cmd: Command): ReduceResult {
     case 'world/dismissStory':
       return dismissStory(state)
     case 'world/fireplace':
-      return fireplace(state, cmd.action)
+      return fireplace(state, cmd.action, cmd.cardIndex)
+    case 'world/shopBuyCard':
+      return shopBuyCard(state, cmd.nodeId, cmd.defId)
+    case 'world/shopBuyItem':
+      return shopBuyItem(state, cmd.nodeId, cmd.itemId)
+    case 'world/shopRemoveCard':
+      return shopRemoveCard(state, cmd.nodeId, cmd.cardIndex)
+    case 'world/leaveShop':
+      return leaveShop(state)
     case 'world/advanceWorld':
       return advanceWorld(state)
     default:
@@ -176,9 +240,16 @@ function triggerFixed(state: GameState, run: RunState, node: MapNode, pre: GameE
     }
     case 'fireplace':
       return ok({ ...state, run, screen: 'fireplace' }, [...pre, { type: 'screenChanged', screen: 'fireplace' }])
-    case 'shop':
-      // shop deferred for M1 — treat as a benign cleared node
-      return ok({ ...state, run: clearNode(run, node.id) }, pre)
+    case 'shop': {
+      // Generate the stock once (deterministic per node), persist it, open the shop. Re-enterable:
+      // the node is NOT cleared, so leaving and returning shows the same wares (sold stays sold).
+      let run2 = run
+      if (!run.world.shopStates[node.id]) {
+        const shop = generateShop(run, heroCharacter(state), node.id)
+        run2 = { ...run, world: { ...run.world, shopStates: { ...run.world.shopStates, [node.id]: shop } } }
+      }
+      return ok({ ...state, run: run2, screen: 'shop' }, [...pre, { type: 'screenChanged', screen: 'shop' }])
+    }
   }
 }
 
@@ -230,10 +301,12 @@ function sceneInteract(state: GameState, cmd: Extract<Command, { type: 'world/sc
   let run2: RunState = { ...run, world: outcome.world, inventory: outcome.inventory }
   const sp = withSpirit(run2, outcome.spiritEvents)
   run2 = sp.run
-  const events = [...outcome.events, ...sp.events]
+  const cg = withCardGrants(state, run2, outcome.cardGrants)
+  run2 = cg.run
+  const events = [...outcome.events, ...sp.events, ...cg.events]
 
-  if (outcome.transition) return applyTransition(state, run2, outcome.transition, events)
-  return ok({ ...state, run: run2 }, events)
+  if (outcome.transition) return applyTransition(cg.state, run2, outcome.transition, events)
+  return ok({ ...cg.state, run: run2 }, events)
 }
 
 function leaveScene(state: GameState): ReduceResult {
@@ -304,19 +377,22 @@ function eventChoice(state: GameState, eventId: string, choiceId: string): Reduc
   let run2: RunState = { ...run, world: outcome.world, inventory: outcome.inventory }
   const sp = withSpirit(run2, outcome.spiritEvents)
   run2 = sp.run
-  const events = [...outcome.events, ...sp.events]
+  const cg = withCardGrants(state, run2, outcome.cardGrants)
+  run2 = cg.run
+  const st = cg.state
+  const events = [...outcome.events, ...sp.events, ...cg.events]
 
   if (outcome.transition?.kind === 'combat') {
-    return startCombatNode(state, run2, run.world.current, outcome.transition.id, backward, events)
+    return startCombatNode(st, run2, run.world.current, outcome.transition.id, backward, events)
   }
   if (outcome.transition?.kind === 'goto') {
-    return applyTransition(state, run2, outcome.transition, events)
+    return applyTransition(st, run2, outcome.transition, events)
   }
 
   // event resolved → back to the map. Fixed event nodes are cleared; backward events are not.
   run2 = { ...run2, world: { ...run2.world, movement: { kind: 'idle' } } }
   if (!backward) run2 = clearNode(run2, run.world.current)
-  return ok({ ...state, run: run2, screen: 'map' }, [...events, { type: 'screenChanged', screen: 'map' }])
+  return ok({ ...st, run: run2, screen: 'map' }, [...events, { type: 'screenChanged', screen: 'map' }])
 }
 
 // ---- dialogue (branching conversations) -------------------------------------------------
@@ -338,20 +414,24 @@ function enterDialogueNode(state: GameState, run: RunState, dialogueId: string, 
   if (!dlg || !node) return reject(state, 'dialogue:no-node')
 
   let run2 = run
+  let st = state
   const events: GameEvent[] = [...pre]
   if (node.onEnter && node.onEnter.length) {
     const out = runScript(run.world, run.inventory, run.spirit.spirit, `dialogue:${dialogueId}`, node.onEnter)
     run2 = { ...run, world: out.world, inventory: out.inventory }
     const sp = withSpirit(run2, out.spiritEvents)
     run2 = sp.run
-    events.push(...out.events, ...sp.events)
+    const cg = withCardGrants(st, run2, out.cardGrants)
+    run2 = cg.run
+    st = cg.state
+    events.push(...out.events, ...sp.events, ...cg.events)
     if (out.transition) {
       const cleared = { ...run2, world: { ...run2.world, dialogue: null } }
-      return applyTransition(state, cleared, out.transition, events)
+      return applyTransition(st, cleared, out.transition, events)
     }
   }
   run2 = { ...run2, world: { ...run2.world, dialogue: { dialogueId, node: nodeId } } }
-  return ok({ ...state, run: run2 }, events)
+  return ok({ ...st, run: run2 }, events)
 }
 
 function dialogueChoice(state: GameState, dialogueId: string, nodeId: string, choiceId: string): ReduceResult {
@@ -369,25 +449,29 @@ function dialogueChoice(state: GameState, dialogueId: string, nodeId: string, ch
   if (choice.once && run.world.flags[onceFlag(dialogueId, choiceId)]) return reject(state, 'choice-spent')
 
   let run2 = run
+  let st = state
   const events: GameEvent[] = []
   if (choice.script && choice.script.length) {
     const out = runScript(run.world, run.inventory, run.spirit.spirit, `dialogue:${dialogueId}`, choice.script)
     run2 = { ...run, world: out.world, inventory: out.inventory }
     const sp = withSpirit(run2, out.spiritEvents)
     run2 = sp.run
-    events.push(...out.events, ...sp.events)
+    const cg = withCardGrants(st, run2, out.cardGrants)
+    run2 = cg.run
+    st = cg.state
+    events.push(...out.events, ...sp.events, ...cg.events)
     if (out.transition) {
       // a transition (e.g. startCombat / goToNode) ends the conversation and fires the action
       const cleared = latchOnce({ ...run2, world: { ...run2.world, dialogue: null } }, dialogueId, choice)
-      return applyTransition(state, cleared, out.transition, events)
+      return applyTransition(st, cleared, out.transition, events)
     }
   }
   run2 = latchOnce(run2, dialogueId, choice)
 
-  if (choice.goto) return enterDialogueNode(state, run2, dialogueId, choice.goto, events)
+  if (choice.goto) return enterDialogueNode(st, run2, dialogueId, choice.goto, events)
   // no goto → end; the scene/map underneath is already showing, so just clear the overlay
   run2 = { ...run2, world: { ...run2.world, dialogue: null } }
-  return ok({ ...state, run: run2 }, events)
+  return ok({ ...st, run: run2 }, events)
 }
 
 function leaveDialogue(state: GameState): ReduceResult {
@@ -406,30 +490,57 @@ function dismissStory(state: GameState): ReduceResult {
   const storyId = run.world.story.storyId
   const story = (run.content.stories ?? {})[storyId]
   let run2: RunState = { ...run, world: { ...run.world, story: null } }
+  let st = state
   const events: GameEvent[] = []
   if (story?.onEnd && story.onEnd.length) {
     const out = runScript(run2.world, run2.inventory, run2.spirit.spirit, `story:${story.id}`, story.onEnd)
     run2 = { ...run2, world: out.world, inventory: out.inventory }
     const sp = withSpirit(run2, out.spiritEvents)
     run2 = sp.run
-    events.push(...out.events, ...sp.events)
-    if (out.transition) return applyTransition(state, run2, out.transition, events)
+    const cg = withCardGrants(st, run2, out.cardGrants)
+    run2 = cg.run
+    st = cg.state
+    events.push(...out.events, ...sp.events, ...cg.events)
+    if (out.transition) return applyTransition(st, run2, out.transition, events)
   }
   // The world's closing narration ends the run — return to the title screen. (The store clears the
   // now-finished saved run so it isn't resumable.)
   if (run.content.worlds[run.worldId]?.map.outroStoryId === storyId) {
-    return ok({ ...state, run: null, combat: null, prompt: null, screen: 'start' }, [...events, { type: 'screenChanged', screen: 'start' }])
+    return ok({ ...st, run: null, combat: null, prompt: null, screen: 'start' }, [...events, { type: 'screenChanged', screen: 'start' }])
   }
-  return ok({ ...state, run: run2 }, events)
+  return ok({ ...st, run: run2 }, events)
 }
 
 // ---- fireplace --------------------------------------------------------------------------
 
-function fireplace(state: GameState, action: 'rest' | 'pray' | 'leave' | 'study'): ReduceResult {
+function fireplace(state: GameState, action: 'rest' | 'pray' | 'leave' | 'study' | 'upgrade', cardIndex?: number): ReduceResult {
   const run = state.run!
   const node = run.world.current
   const restFlag = `fireplace:${node}:rested`
   const prayFlag = `fireplace:${node}:prayed`
+  const upgradeFlag = `fireplace:${node}:upgraded`
+
+  if (action === 'upgrade') {
+    // Hone one deck card into its fixed '+' form (a run-deck slot swap). Once per fireplace node,
+    // like rest/pray. cardIndex disambiguates duplicate ids (e.g. several copies of Strike).
+    if (run.world.flags[upgradeFlag]) return reject(state, 'already-upgraded')
+    if (cardIndex == null) return reject(state, 'no-card-index')
+    const deck = run.deckByMember[run.heroMemberId] ?? []
+    const fromId = deck[cardIndex]
+    if (fromId == null) return reject(state, 'bad-card-index')
+    const toId = run.content.cards[fromId]?.upgradeTo
+    if (!toId) return reject(state, 'not-upgradeable')
+    const next = deck.map((id, i) => (i === cardIndex ? toId : id))
+    const run2: RunState = {
+      ...run,
+      deckByMember: { ...run.deckByMember, [run.heroMemberId]: next },
+      world: { ...run.world, flags: { ...run.world.flags, [upgradeFlag]: true } },
+    }
+    return ok({ ...state, run: run2 }, [
+      { type: 'cardUpgraded', from: fromId, to: toId },
+      { type: 'notice', messageKey: 'fireplace.upgraded' },
+    ])
+  }
 
   if (action === 'study') {
     // Offer the first verse the hero neither owns nor has lost (failed 3×) as a gap-fill prompt.
@@ -456,6 +567,74 @@ function fireplace(state: GameState, action: 'rest' | 'pray' | 'leave' | 'study'
   // leave
   const run2 = clearNode({ ...run, world: { ...run.world, movement: { kind: 'idle' } } }, node)
   return ok({ ...state, run: run2, screen: 'map' }, [{ type: 'screenChanged', screen: 'map' }])
+}
+
+// ---- shop --------------------------------------------------------------------------------
+
+/** Buy a card from the shop into the run deck (gold spent; blocked when the deck is at the cap). */
+function shopBuyCard(state: GameState, nodeId: NodeId, defId: CardDefId): ReduceResult {
+  const run = state.run!
+  const shop = run.world.shopStates[nodeId]
+  if (!shop) return reject(state, 'no-shop')
+  const idx = shop.cards.findIndex((o) => o.defId === defId && !o.sold)
+  if (idx < 0) return reject(state, 'no-such-offer')
+  const offer = shop.cards[idx]!
+  if (run.inventory.currency < offer.price) return reject(state, 'shop:too-poor')
+  const deck = run.deckByMember[run.heroMemberId] ?? []
+  if (deck.length >= run.deckLimit) return reject(state, 'deck-full')
+  const cards = shop.cards.map((o, i) => (i === idx ? { ...o, sold: true } : o))
+  const run2: RunState = {
+    ...run,
+    inventory: { ...run.inventory, currency: run.inventory.currency - offer.price },
+    deckByMember: { ...run.deckByMember, [run.heroMemberId]: [...deck, defId] },
+    world: { ...run.world, shopStates: { ...run.world.shopStates, [nodeId]: { ...shop, cards } } },
+  }
+  return ok({ ...state, run: run2 }, [{ type: 'shopBoughtCard', defId }])
+}
+
+/** Buy a relic/consumable from the shop into the inventory. */
+function shopBuyItem(state: GameState, nodeId: NodeId, itemId: ItemId): ReduceResult {
+  const run = state.run!
+  const shop = run.world.shopStates[nodeId]
+  if (!shop) return reject(state, 'no-shop')
+  const idx = shop.items.findIndex((o) => o.itemId === itemId && !o.sold)
+  if (idx < 0) return reject(state, 'no-such-offer')
+  const offer = shop.items[idx]!
+  if (run.inventory.currency < offer.price) return reject(state, 'shop:too-poor')
+  const items = shop.items.map((o, i) => (i === idx ? { ...o, sold: true } : o))
+  const run2: RunState = {
+    ...run,
+    inventory: {
+      ...run.inventory,
+      currency: run.inventory.currency - offer.price,
+      stacks: { ...run.inventory.stacks, [itemId]: (run.inventory.stacks[itemId] ?? 0) + 1 },
+    },
+    world: { ...run.world, shopStates: { ...run.world.shopStates, [nodeId]: { ...shop, items } } },
+  }
+  return ok({ ...state, run: run2 }, [{ type: 'shopBoughtItem', itemId }])
+}
+
+/** Pay gold to remove one card (by deck index) from the run deck. Repeatable. */
+function shopRemoveCard(state: GameState, nodeId: NodeId, cardIndex: number): ReduceResult {
+  const run = state.run!
+  const shop = run.world.shopStates[nodeId]
+  if (!shop) return reject(state, 'no-shop')
+  if (run.inventory.currency < shop.removePrice) return reject(state, 'shop:too-poor')
+  const deck = run.deckByMember[run.heroMemberId] ?? []
+  const removed = deck[cardIndex]
+  if (removed == null) return reject(state, 'bad-card-index')
+  const next = deck.filter((_, i) => i !== cardIndex)
+  const run2: RunState = {
+    ...run,
+    inventory: { ...run.inventory, currency: run.inventory.currency - shop.removePrice },
+    deckByMember: { ...run.deckByMember, [run.heroMemberId]: next },
+  }
+  return ok({ ...state, run: run2 }, [{ type: 'shopRemovedCard', defId: removed }])
+}
+
+/** Leave the shop back to the map. Re-enterable, so the node is NOT cleared. */
+function leaveShop(state: GameState): ReduceResult {
+  return ok({ ...state, screen: 'map' }, [{ type: 'screenChanged', screen: 'map' }])
 }
 
 // ---- world transition -------------------------------------------------------------------

@@ -7,7 +7,7 @@ import type { WorldState } from '../map/types'
 import { itemCount, type InventoryState } from '../inventory/types'
 import type { GameEvent } from '../events/event'
 import type { SpiritEvent } from '../spirit/spirit'
-import type { DialogueId, EncounterId, EventId, NodeId, SceneId, StoryId } from '../types'
+import type { CardDefId, DialogueId, EncounterId, EventId, NodeId, SceneId, StoryId } from '../types'
 import type { Scene, Script, Verb } from './types'
 
 export type SceneTransition =
@@ -18,11 +18,19 @@ export type SceneTransition =
   | { kind: 'story'; id: StoryId } // open a scrolling story/narration overlay
   | { kind: 'goto'; id: NodeId } // reveal a hidden node and relocate the pilgrim onto it
 
+/** A card-grant intent emitted by a script. Like spiritEvents, runScript can't reach the deck or
+ *  profile (it's pure over world/inventory), so it collects these and the world reducer applies them:
+ *  'deck' adds to the run deck (this run); 'pool' permanently unlocks into the hero's pool. */
+export type CardGrant =
+  | { kind: 'deck'; cardId: CardDefId; bypassLimit: boolean }
+  | { kind: 'pool'; cardId: CardDefId }
+
 export interface ScriptOutcome {
   world: WorldState
   inventory: InventoryState
   events: GameEvent[]
   spiritEvents: SpiritEvent[]
+  cardGrants: CardGrant[]
   transition?: SceneTransition
 }
 
@@ -42,6 +50,7 @@ export function runScript(
   let inv = inventory
   const events: GameEvent[] = []
   const spiritEvents: SpiritEvent[] = []
+  const cardGrants: CardGrant[] = []
   let transition: SceneTransition | undefined
 
   for (const cmd of script) {
@@ -73,6 +82,10 @@ export function runScript(
       events.push({ type: 'edgeUnlocked', edge: cmd.unlockEdge })
     } else if ('addSpirit' in cmd) {
       spiritEvents.push({ kind: 'moralChoice', delta: cmd.addSpirit, reason: cmd.reason })
+    } else if ('grantCard' in cmd) {
+      cardGrants.push({ kind: 'deck', cardId: cmd.grantCard, bypassLimit: cmd.bypassLimit ?? false })
+    } else if ('unlockCard' in cmd) {
+      cardGrants.push({ kind: 'pool', cardId: cmd.unlockCard })
     } else if ('markTaken' in cmd) {
       const rt = sceneRuntime(w, sceneId)
       if (!rt.takenHotspots.includes(cmd.markTaken)) {
@@ -97,12 +110,13 @@ export function runScript(
         inv = r.inventory
         events.push(...r.events)
         spiritEvents.push(...r.spiritEvents)
+        cardGrants.push(...r.cardGrants)
         if (r.transition) transition = r.transition
       }
     }
   }
 
-  return { world: w, inventory: inv, events, spiritEvents, transition }
+  return { world: w, inventory: inv, events, spiritEvents, cardGrants, transition }
 }
 
 export interface SceneIntent {
@@ -120,7 +134,7 @@ export function resolveInteraction(
   scene: Scene,
   intent: SceneIntent,
 ): ScriptOutcome {
-  const unchanged: ScriptOutcome = { world, inventory, events: [], spiritEvents: [] }
+  const unchanged: ScriptOutcome = { world, inventory, events: [], spiritEvents: [], cardGrants: [] }
   const hotspot = scene.hotspots.find((h) => h.id === intent.hotspotId)
   if (!hotspot) return { ...unchanged, events: [{ type: 'rejected', reason: 'no-such-hotspot' }] }
   if (hotspot.visibleWhen && !evalGate(hotspot.visibleWhen, { inventory, spirit, world })) {

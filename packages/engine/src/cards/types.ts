@@ -49,6 +49,9 @@ export interface CardDef {
   /** verse cards are latent until earned via gap-fill (verseChallengeId references the challenge) */
   verseChallengeId?: string
   fruitAffinity?: FruitAffinity
+  /** the fixed '+' form this card upgrades into at a fireplace (an ephemeral run-deck slot swap). The
+   *  '+' CardDef is a normal entry in the card registry but is never placed in the pool / sampled. */
+  upgradeTo?: CardDefId
 }
 
 /** A physical copy of a card within a single combat. */

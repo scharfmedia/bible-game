@@ -45,7 +45,7 @@ function resolveStop(s: GameState, opts: { eventChoice?: string } = {}): GameSta
     case 'event':
       return dispatch(s, { type: 'world/eventChoice', eventId: 'traveler', choiceId: opts.eventChoice ?? 'pray' })
     case 'reward':
-      return dispatch(s, { type: 'combat/chooseReward', optionId: 'money' })
+      return dispatch(dispatch(s, { type: 'combat/claimSpoil', spoilId: 'money' }), { type: 'combat/leaveReward' })
     case 'combat':
       return resolveStop(winCombat(s))
     default:

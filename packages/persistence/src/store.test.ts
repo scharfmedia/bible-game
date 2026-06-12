@@ -32,7 +32,10 @@ function winCombat(start: GameState): GameState {
     const card = ['subdue', 'strike', 'flurry'].map((d) => c.hand.find((h) => h.defId === d)).find(Boolean)
     s = enemy && card ? apply(s, { type: 'combat/playCard', iid: card.iid, targetId: enemy.id }) : apply(s, { type: 'combat/endTurn' })
   }
-  if (s.combat?.reward) s = apply(s, { type: 'combat/chooseReward', optionId: 'money' })
+  if (s.combat?.reward) {
+    s = apply(s, { type: 'combat/claimSpoil', spoilId: 'money' })
+    s = apply(s, { type: 'combat/leaveReward' })
+  }
   return s
 }
 

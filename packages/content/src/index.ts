@@ -5,7 +5,7 @@
 // verse blank, an unreachable boss).
 
 import type { ContentBundle } from '@bible/engine'
-import { CARDS, HERO_START_DECK } from './cards'
+import { CARDS, CARD_POOL_START, CARD_UNLOCKS_BY_LEVEL, DECK_LIMIT, HERO_START_DECK } from './cards'
 import { VERSES } from './verses'
 import { AMBUSH_TABLE, ENCOUNTERS, ITEMS, WORLD_01_MAP } from './jericho/map'
 import { SCENES } from './jericho/scenes'
@@ -23,6 +23,9 @@ export function createContent(): ContentBundle {
     heroStartDeck: HERO_START_DECK,
     heroGraceAbilities: HERO_GRACE_ABILITIES,
     cards: CARDS,
+    cardPoolStart: CARD_POOL_START,
+    cardUnlocksByLevel: CARD_UNLOCKS_BY_LEVEL,
+    deckLimit: DECK_LIMIT,
     encounters: { ...ENCOUNTERS, ...TUTORIAL_ENCOUNTERS },
     scenes: SCENES,
     events: EVENTS,
@@ -47,6 +50,15 @@ export function validateContent(b: ContentBundle): void {
 
   for (const id of b.heroStartDeck) if (!b.cards[id]) err(`start deck references missing card "${id}"`)
 
+  // card pool integrity: '+' targets and pool/unlock entries must resolve to real cards
+  for (const c of Object.values(b.cards)) {
+    if (c.upgradeTo && !b.cards[c.upgradeTo]) err(`card "${c.id}" upgradeTo references missing card "${c.upgradeTo}"`)
+  }
+  for (const id of b.cardPoolStart ?? []) if (!b.cards[id]) err(`cardPoolStart references missing card "${id}"`)
+  for (const [lvl, ids] of Object.entries(b.cardUnlocksByLevel ?? {})) {
+    for (const id of ids) if (!b.cards[id]) err(`cardUnlocksByLevel[${lvl}] references missing card "${id}"`)
+  }
+
   for (const v of Object.values(b.verses)) {
     if (!b.cards[v.cardDefId]) err(`verse "${v.id}" references missing card "${v.cardDefId}"`)
     for (const loc of ['en', 'de'] as const) {
@@ -58,7 +70,6 @@ export function validateContent(b: ContentBundle): void {
 
   for (const enc of Object.values(b.encounters)) {
     for (const o of enc.rewardOptions ?? []) {
-      if (o.kind === 'card' && o.defId && !b.cards[o.defId]) err(`encounter "${enc.id}" rewards missing card "${o.defId}"`)
       if (o.kind === 'relic' && o.defId && !b.items[o.defId]) err(`encounter "${enc.id}" rewards missing relic "${o.defId}"`)
     }
     // demons referenced by a human's revealsId must exist in the same encounter
@@ -134,6 +145,12 @@ export function validateContent(b: ContentBundle): void {
       }
       if ('startStory' in cmd && !b.stories[cmd.startStory as string]) {
         err(`${where} references missing story "${String(cmd.startStory)}"`)
+      }
+      if ('grantCard' in cmd && !b.cards[cmd.grantCard as string]) {
+        err(`${where} references missing card "${String(cmd.grantCard)}"`)
+      }
+      if ('unlockCard' in cmd && !b.cards[cmd.unlockCard as string]) {
+        err(`${where} references missing card "${String(cmd.unlockCard)}"`)
       }
     })
 

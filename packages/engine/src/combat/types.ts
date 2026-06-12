@@ -102,21 +102,38 @@ export type FormationLayout =
   | 'partyCenter_enemyBothSides'
   | 'partyRight_enemyLeft'
 
-export type RewardKind = 'money' | 'card' | 'relic'
+/** Spoils are gold + items/relics that drop from a fight. Cards are NOT spoils — the card reward is
+ *  a separate step sampled from the hero's pool. (Content still authors money/relic via RewardOption.) */
+export type RewardKind = 'money' | 'relic'
 export interface RewardOption {
   id: string
   kind: RewardKind
   amount?: number
   defId?: string
 }
+/** A claimable spoil on the reward screen — each is take-or-leave (any, all, or none). */
+export interface Spoil {
+  id: string
+  kind: RewardKind
+  amount?: number
+  defId?: string
+  claimed: boolean
+}
 export interface RewardChoice {
   xpByMember: Record<MemberId, number>
-  options: RewardOption[]
+  /** gold + item/relic drops, each individually claimable */
+  spoils: Spoil[]
+  /** the card-reward options sampled from the hero's pool. `undefined` until enriched in the
+   *  run-aware layer (applyStep); `[]` when the deck is full (card step blocked → skip only). */
+  cardOptions?: CardDefId[]
+  /** the card defId taken this reward (if any) */
+  cardChosen?: CardDefId
+  /** true once the card step has been resolved (a card taken OR skipped) */
+  cardResolved: boolean
   /** extra Spirit granted for a peaceful (no-human-killed) victory */
   peacefulSpiritBonus?: number
   /** righteous victories unlock unique loot */
   righteous: boolean
-  chosen?: string
 }
 
 /** Self-contained, serializable combat. Built by encounterBuilder; resolved by combat/reduce. */

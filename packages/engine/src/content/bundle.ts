@@ -66,6 +66,13 @@ export interface ContentBundle {
   heroStartDeck: CardDefId[]
   heroGraceAbilities: GraceAbilityId[]
   cards: Record<CardDefId, CardDef>
+  /** cards available in the pool from level 1 (reward/shop draw from here). Defaults to []. */
+  cardPoolStart?: CardDefId[]
+  /** level → cards added to the pool when the hero reaches that level. Keys serialize as strings;
+   *  coerce with Number() when reading. Defaults to {}. */
+  cardUnlocksByLevel?: Record<number, CardDefId[]>
+  /** max run-deck size; reward/shop adds are blocked at the cap. Defaults to 20. */
+  deckLimit?: number
   encounters: Record<EncounterId, EncounterDef>
   scenes: Record<SceneId, Scene>
   events: Record<EventId, MoralEvent>

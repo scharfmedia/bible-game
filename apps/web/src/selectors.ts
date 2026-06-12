@@ -8,6 +8,7 @@ import {
   MAX_VERSE_ATTEMPTS,
   memberMaxHp,
   nodeVisible,
+  type ContentBundle,
   type GameState,
   type NodeType,
   type Visit,
@@ -128,29 +129,50 @@ export function selectStory(state: GameState): StoryView | null {
   return { storyId: story.id, titleKey: story.titleKey, paragraphs: story.paragraphs, bgAsset: story.bgAsset, attributionKey: story.attributionKey }
 }
 
-export interface RewardOptionView { id: string; kind: string; label: string }
-export interface RewardView { options: RewardOptionView[]; righteous: boolean; peacefulBonus: boolean; rewardBg?: string }
+export interface SpoilView { id: string; kind: 'money' | 'relic'; label: string; claimed: boolean }
+export interface CardOfferView { defId: string; nameKey: string; textKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean }
+export interface RewardView {
+  spoils: SpoilView[]
+  cardOptions: CardOfferView[]
+  cardResolved: boolean
+  deckFull: boolean
+  righteous: boolean
+  peacefulBonus: boolean
+  rewardBg?: string
+}
+
+/** Build a card-offer view-model from a card defId (shared by reward + shop). */
+function cardOffer(content: ContentBundle, defId: string): CardOfferView {
+  const def = content.cards[defId]
+  return {
+    defId,
+    nameKey: def?.nameKey ?? defId,
+    textKey: def?.textKey ?? '',
+    cost: def?.cost ?? 0,
+    layer: def?.layer ?? 'flesh',
+    verse: def?.type === 'verse',
+  }
+}
 
 export function selectReward(state: GameState): RewardView | null {
   const c = state.combat
-  if (!c?.reward) return null
-  const content = state.run?.content
+  const run = state.run
+  if (!c?.reward || !run) return null
+  const content = run.content
+  const deck = run.deckByMember[run.heroMemberId] ?? []
   return {
     righteous: c.reward.righteous,
     peacefulBonus: (c.reward.peacefulSpiritBonus ?? 0) > 0,
     rewardBg: c.rewardBg,
-    options: c.reward.options.map((o) => ({
-      id: o.id,
-      kind: o.kind,
-      label:
-        o.kind === 'money'
-          ? `${o.amount ?? 0}`
-          : o.kind === 'card' && o.defId
-            ? (content?.cards[o.defId]?.nameKey ?? o.defId)
-            : o.kind === 'relic' && o.defId
-              ? (content?.items[o.defId]?.nameKey ?? o.defId)
-              : o.defId ?? o.kind,
+    cardResolved: c.reward.cardResolved,
+    deckFull: deck.length >= run.deckLimit,
+    spoils: c.reward.spoils.map((s) => ({
+      id: s.id,
+      kind: s.kind,
+      claimed: s.claimed,
+      label: s.kind === 'money' ? `${s.amount ?? 0}` : (s.defId ? (content.items[s.defId]?.nameKey ?? s.defId) : s.kind),
     })),
+    cardOptions: (c.reward.cardOptions ?? []).map((defId) => cardOffer(content, defId)),
   }
 }
 
@@ -355,6 +377,10 @@ export interface RestView {
   rested: boolean
   prayed: boolean
   verseAvailable: boolean
+  /** the once-per-fire upgrade has been spent here */
+  upgraded: boolean
+  /** at least one deck card can be honed (an upgrade target exists) */
+  canUpgrade: boolean
 }
 
 export function selectFireplace(state: GameState): RestView | null {
@@ -366,6 +392,7 @@ export function selectFireplace(state: GameState): RestView | null {
   const hero = heroCharacter(state)
   const heroVerseOwned = new Set(hero?.ownedVerseCardIds ?? [])
   const heroVerseLost = new Set(hero?.lostVerseCardIds ?? [])
+  const deck = run.deckByMember[run.heroMemberId] ?? []
   return {
     nameKey: node.nameKey,
     bgAsset: node.bgAsset,
@@ -373,7 +400,111 @@ export function selectFireplace(state: GameState): RestView | null {
     rested: Boolean(run.world.flags[`fireplace:${node.id}:rested`]),
     prayed: Boolean(run.world.flags[`fireplace:${node.id}:prayed`]),
     verseAvailable: Object.values(run.content.verses).some((v) => !heroVerseOwned.has(v.cardDefId) && !heroVerseLost.has(v.cardDefId)),
+    upgraded: Boolean(run.world.flags[`fireplace:${node.id}:upgraded`]),
+    canUpgrade: deck.some((id) => Boolean(run.content.cards[id]?.upgradeTo)),
   }
+}
+
+/** A run-deck card the hero may hone, with its current + upgraded faces. Index addresses the slot. */
+export interface UpgradeOption {
+  index: number
+  nameKey: string
+  textKey: string
+  cost: number
+  layer: 'flesh' | 'spirit' | 'both'
+  verse: boolean
+  toNameKey: string
+  toTextKey: string
+  toCost: number
+  toLayer: 'flesh' | 'spirit' | 'both'
+}
+
+export interface ShopCardView { defId: string; nameKey: string; textKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean; price: number; sold: boolean; affordable: boolean }
+export interface ShopItemView { itemId: string; nameKey: string; price: number; sold: boolean; affordable: boolean }
+export interface ShopDeckCardView { index: number; nameKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean }
+export interface ShopView {
+  nodeId: string
+  nameKey: string
+  bgAsset?: string
+  gold: number
+  cards: ShopCardView[]
+  items: ShopItemView[]
+  deck: ShopDeckCardView[]
+  removePrice: number
+  canRemove: boolean
+  deckFull: boolean
+}
+
+export function selectShop(state: GameState): ShopView | null {
+  const run = state.run
+  if (!run) return null
+  const nodeId = run.world.current
+  const shop = run.world.shopStates[nodeId]
+  const node = run.content.worlds[run.worldId]?.map.nodes[nodeId]
+  if (!shop || !node) return null
+  const gold = run.inventory.currency
+  const deck = run.deckByMember[run.heroMemberId] ?? []
+  const deckFull = deck.length >= run.deckLimit
+  return {
+    nodeId,
+    nameKey: node.nameKey,
+    bgAsset: node.bgAsset,
+    gold,
+    deckFull,
+    removePrice: shop.removePrice,
+    canRemove: gold >= shop.removePrice && deck.length > 0,
+    cards: shop.cards.map((o) => {
+      const def = run.content.cards[o.defId]
+      return {
+        defId: o.defId,
+        nameKey: def?.nameKey ?? o.defId,
+        textKey: def?.textKey ?? '',
+        cost: def?.cost ?? 0,
+        layer: def?.layer ?? 'flesh',
+        verse: def?.type === 'verse',
+        price: o.price,
+        sold: o.sold,
+        affordable: gold >= o.price && !deckFull,
+      }
+    }),
+    items: shop.items.map((o) => ({
+      itemId: o.itemId,
+      nameKey: run.content.items[o.itemId]?.nameKey ?? o.itemId,
+      price: o.price,
+      sold: o.sold,
+      affordable: gold >= o.price,
+    })),
+    deck: deck.map((id, index) => {
+      const def = run.content.cards[id]
+      return { index, nameKey: def?.nameKey ?? id, cost: def?.cost ?? 0, layer: def?.layer ?? 'flesh', verse: def?.type === 'verse' }
+    }),
+  }
+}
+
+export function selectUpgradeable(state: GameState): UpgradeOption[] {
+  const run = state.run
+  if (!run) return []
+  const deck = run.deckByMember[run.heroMemberId] ?? []
+  const out: UpgradeOption[] = []
+  deck.forEach((id, index) => {
+    const def = run.content.cards[id]
+    const toId = def?.upgradeTo
+    const to = toId ? run.content.cards[toId] : undefined
+    if (!def || !to) return
+    out.push({
+      index,
+      nameKey: def.nameKey,
+      textKey: def.textKey,
+      cost: def.cost,
+      layer: def.layer,
+      verse: def.type === 'verse',
+      toNameKey: to.nameKey,
+      toTextKey: to.textKey,
+      toCost: to.cost,
+      toLayer: to.layer,
+    })
+  })
+  return out
 }
 
 export const heroSummary = (state: GameState) => {

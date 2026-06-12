@@ -750,9 +750,12 @@ function buildReward(c: CombatState, peaceful: boolean): RewardChoice {
     const m = c.combatants[id]!
     if (m.alive && m.memberId) xpByMember[m.memberId] = c.rewardSpec.xp
   }
+  // Spoils are each individually claimable. cardOptions stays undefined here — it is sampled from the
+  // hero's pool in the run-aware layer (combat/reduce applyStep), which has run.rng + the profile.
   return {
     xpByMember,
-    options: c.rewardSpec.options,
+    spoils: c.rewardSpec.options.map((o) => ({ ...o, claimed: false })),
+    cardResolved: false,
     peacefulSpiritBonus: peaceful ? 20 : undefined,
     righteous: peaceful,
   }

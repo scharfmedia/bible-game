@@ -7,6 +7,7 @@ export const tutorialEn: Record<string, string> = {
   'node.tutorial.stillWaters': 'Still Waters',
   'node.tutorial.thicket': 'The Thicket',
   'node.tutorial.restingPlace': 'A Resting Place',
+  'node.tutorial.market': 'The Wayside Market',
   'node.tutorial.theFold': 'The Fold',
   // fireplace reflection line (shown on the rest screen)
   'node.tutorial.restingPlace.reflect': 'The water lies still, and for a little while, so do you.',
@@ -41,6 +42,7 @@ export const tutorialDe: Record<string, string> = {
   'node.tutorial.stillWaters': 'Stille Wasser',
   'node.tutorial.thicket': 'Das Dickicht',
   'node.tutorial.restingPlace': 'Ein Rastplatz',
+  'node.tutorial.market': 'Der Markt am Wegesrand',
   'node.tutorial.theFold': 'Der Pferch',
   'node.tutorial.restingPlace.reflect': 'Das Wasser liegt still, und für einen Augenblick liegst auch du still.',
 

@@ -21,6 +21,7 @@ export type ScreenId =
   | 'combat'
   | 'reward'
   | 'fireplace'
+  | 'shop'
   | 'gameOver'
 
 /** Tri-state audio toggle cycled from the HUD: full → music off (sfx only) → fully muted. */
@@ -79,6 +80,9 @@ export interface RunState {
   spirit: SpiritState
   /** SOURCE OF TRUTH for cards. memberId → card defs. Combat pool is derived; rewards mutate this. */
   deckByMember: Record<MemberId, CardDefId[]>
+  /** max cards the hero's run deck may hold. Reward/shop adds are blocked at the cap (story/event
+   *  grants may bypass). Set from content.deckLimit at run start. */
+  deckLimit: number
   /** run depth (deepest forward node reached); feeds enemy scaling */
   depth: number
   /** grace pool the hero brings into combats */

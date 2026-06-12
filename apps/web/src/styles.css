@@ -342,6 +342,21 @@ body {
 .card.selected { box-shadow: 0 0 0 2px var(--gold-bright), 0 12px 24px rgba(0,0,0,0.6); }
 .card.spirit { border-color: #6f93b8; }
 .card.verse { border-color: var(--gold-bright); box-shadow: 0 0 14px rgba(244,231,161,0.5); }
+/* menu card (reward / fireplace upgrade / shop): static, laid out in a flex row — not the combat fan */
+.card-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin: 0.7rem 0; }
+.card-face { position: relative; bottom: auto; left: auto; margin-left: 0; transform-origin: center; box-shadow: 0 6px 14px rgba(0,0,0,0.5); transition: transform 0.14s ease, box-shadow 0.14s ease; }
+.card-face:enabled { cursor: pointer; }
+.card-face:enabled:hover { transform: translateY(-6px); box-shadow: 0 0 0 2px var(--gold-bright), 0 12px 22px rgba(0,0,0,0.6); }
+.card-face:disabled { cursor: default; }
+.reward-card-title { margin-top: 1rem; font-size: 0.95rem; color: var(--gold-bright); }
+/* hone before→after preview */
+.upgrade-preview { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 0.8rem 0; }
+.upgrade-arrow { font-size: 1.8rem; font-weight: 700; color: var(--gold-bright); }
+/* shop */
+.shop-panel { max-width: 640px; }
+.shop-buy { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.shop-price { font-size: 0.78rem; font-weight: 700; color: var(--gold-bright); }
+.warn { color: var(--gold); }
 .card-cost { position: absolute; top: -11px; left: -11px; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #f6e08a, var(--gold)); color: #1a160c; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem; border: 2px solid #ffffff66; box-shadow: 0 2px 5px rgba(0,0,0,0.5); z-index: 2; }
 .card-art { height: 74px; border-radius: 7px; margin: 2px 0 6px; background: linear-gradient(135deg, #3a4a30, #1c2416); border: 1px solid rgba(0,0,0,0.4); }
 .card-art.spirit { background: linear-gradient(135deg, #34506a, #1c2840); }

@@ -34,8 +34,14 @@ export type GameEvent =
   | { type: 'sceneLine'; lineKey: I18nKey; speaker?: string }
   | { type: 'itemGained'; itemId: ItemId; count: number }
   | { type: 'itemUsed'; itemId: ItemId }
+  | { type: 'cardGranted'; cardId: CardDefId }
+  | { type: 'cardUnlocked'; cardId: CardDefId }
   | { type: 'nodeRevealed'; node: NodeId }
   | { type: 'edgeUnlocked'; edge: string }
+  | { type: 'cardUpgraded'; from: CardDefId; to: CardDefId }
+  | { type: 'shopBoughtCard'; defId: CardDefId }
+  | { type: 'shopBoughtItem'; itemId: ItemId }
+  | { type: 'shopRemovedCard'; defId: CardDefId }
   | { type: 'worldAdvanced'; worldId: string }
   // combat
   | { type: 'combatStarted'; encounterId: string }
@@ -59,7 +65,11 @@ export type GameEvent =
   | { type: 'roundAdvanced'; round: number }
   | { type: 'combatEnded'; outcome: Outcome }
   | { type: 'rewardOffered' }
-  | { type: 'rewardChosen'; optionId: string }
+  | { type: 'spoilClaimed'; spoilId: string }
+  | { type: 'cardTaken'; defId: CardDefId }
+  | { type: 'cardSkipped' }
+  | { type: 'rewardLeft' }
+  | { type: 'cardsUnlocked'; memberId: MemberId; cardIds: CardDefId[] }
   // spirit / verse
   | { type: 'spiritShifted'; delta: number; reason: string }
   | { type: 'verseEarned'; cardDefId: CardDefId }

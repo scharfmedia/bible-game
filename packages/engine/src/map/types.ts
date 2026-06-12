@@ -1,4 +1,4 @@
-import type { AssetRef, DialogueId, DialogueNodeId, EdgeId, EncounterId, EventId, I18nKey, NodeId, SceneId, StoryId } from '../types'
+import type { AssetRef, CardDefId, DialogueId, DialogueNodeId, EdgeId, EncounterId, EventId, I18nKey, ItemId, NodeId, SceneId, StoryId } from '../types'
 
 export type NodeType =
   | 'entrance'
@@ -103,6 +103,25 @@ export interface SceneRuntimeState {
   dialogueSeen: string[]
 }
 
+/** A shop's stock, generated once on first entry (deterministic per node) and persisted per run so
+ *  re-entry shows the same wares and sold-out items stay sold. */
+export interface ShopCardOffer {
+  defId: CardDefId
+  price: number
+  sold: boolean
+}
+export interface ShopItemOffer {
+  itemId: ItemId
+  price: number
+  sold: boolean
+}
+export interface ShopState {
+  cards: ShopCardOffer[]
+  items: ShopItemOffer[]
+  /** gold cost to remove one card from the run deck (repeatable) */
+  removePrice: number
+}
+
 /** An in-progress conversation overlay. Additive state: the scene/map underneath stays mounted,
  *  so there is no movement/screen change while talking — only this cursor and the active id. */
 export interface ActiveDialogue {
@@ -134,6 +153,8 @@ export interface WorldState {
   edgesUnlocked: EdgeId[]
   flags: Record<string, string | number | boolean>
   sceneStates: Record<SceneId, SceneRuntimeState>
+  /** per-shop-node stock, generated lazily on first entry */
+  shopStates: Record<NodeId, ShopState>
   movement: MovementPhase
   /** the active conversation overlay, if any (rendered on top of the current scene/map) */
   dialogue: ActiveDialogue | null
@@ -153,6 +174,7 @@ export const initialWorldState = (worldId: string, entrance: NodeId): WorldState
   edgesUnlocked: [],
   flags: {},
   sceneStates: {},
+  shopStates: {},
   movement: { kind: 'idle' },
   dialogue: null,
   story: null,

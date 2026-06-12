@@ -72,4 +72,16 @@ describe('runScript', () => {
     expect(out.events).toContainEqual({ type: 'nodeRevealed', node: 'n3' })
     expect(out.transition).toEqual({ kind: 'goto', id: 'n3' })
   })
+
+  it('grantCard / unlockCard collect card-grant intents (deck vs pool), even inside a branch', () => {
+    const script: Script = [
+      { grantCard: 'brace' },
+      { unlockCard: 'mend' },
+      { if: { always: true }, then: [{ grantCard: 'guard', bypassLimit: true }] },
+    ]
+    const out = runScript(world(), emptyInventory(), 100, 's', script)
+    expect(out.cardGrants).toContainEqual({ kind: 'deck', cardId: 'brace', bypassLimit: false })
+    expect(out.cardGrants).toContainEqual({ kind: 'pool', cardId: 'mend' })
+    expect(out.cardGrants).toContainEqual({ kind: 'deck', cardId: 'guard', bypassLimit: true })
+  })
 })

@@ -20,6 +20,10 @@ export interface Character {
   /** failed gap-fill attempts so far, per verse card. PERSISTENT (not on the transient prompt) so
    *  cancelling the modal and re-studying resumes the count instead of resetting to a fresh 3. */
   verseAttempts: Record<CardDefId, number>
+  /** PERSISTENT card pool — the extra cards this hero has permanently unlocked via events/shop,
+   *  beyond the content base pool + level unlocks (which are derived from `level`). Reward/shop
+   *  offers sample from the *effective* pool (see cards/pool.ts). Carries across runs. */
+  pool: CardDefId[]
   /** creation order, for stable slot sorting */
   createdSeq: number
 }
@@ -35,6 +39,7 @@ export function createCharacter(id: CharacterId, name: string, createdSeq: numbe
     ownedVerseCardIds: [],
     lostVerseCardIds: [],
     verseAttempts: {},
+    pool: [],
     createdSeq,
   }
 }

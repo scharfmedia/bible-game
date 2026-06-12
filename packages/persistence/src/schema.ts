@@ -28,6 +28,8 @@ const CharacterSchema = z.object({
   // .default(...) so saves written before verse-loss existed still validate (load uses .parse()).
   lostVerseCardIds: z.array(z.string()).default([]),
   verseAttempts: z.record(z.string(), z.number()).default({}),
+  // .default([]) so saves written before the card pool existed still validate.
+  pool: z.array(z.string()).default([]),
   createdSeq: z.number(),
 })
 

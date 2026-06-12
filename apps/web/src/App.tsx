@@ -12,6 +12,7 @@ import { SceneScreen } from './screens/SceneScreen'
 import { EventScreen } from './screens/EventScreen'
 import { RewardScreen } from './screens/RewardScreen'
 import { FireplaceScreen } from './screens/FireplaceScreen'
+import { ShopScreen } from './screens/ShopScreen'
 import { GameOverScreen } from './screens/GameOverScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { VerseModal } from './components/VerseModal'
@@ -33,6 +34,7 @@ const SCREENS: Record<ScreenId, ComponentType> = {
   event: EventScreen,
   reward: RewardScreen,
   fireplace: FireplaceScreen,
+  shop: ShopScreen,
   gameOver: GameOverScreen,
 }
 

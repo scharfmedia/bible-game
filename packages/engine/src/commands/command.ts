@@ -4,6 +4,7 @@ import type { Verb } from '../scene/types'
 import type { ScreenId, Settings } from '../state/gameState'
 import type { StatId } from '../state/stats'
 import type {
+  CardDefId,
   CharacterId,
   CombatantId,
   DialogueId,
@@ -44,7 +45,12 @@ export type Command =
   | { type: 'world/dialogueChoice'; dialogueId: DialogueId; nodeId: DialogueNodeId; choiceId: string }
   | { type: 'world/leaveDialogue' }
   | { type: 'world/dismissStory' }
-  | { type: 'world/fireplace'; action: 'rest' | 'pray' | 'leave' | 'study' }
+  | { type: 'world/fireplace'; action: 'rest' | 'pray' | 'leave' | 'study' | 'upgrade'; cardIndex?: number }
+  // ---- shop ----
+  | { type: 'world/shopBuyCard'; nodeId: NodeId; defId: CardDefId }
+  | { type: 'world/shopBuyItem'; nodeId: NodeId; itemId: ItemId }
+  | { type: 'world/shopRemoveCard'; nodeId: NodeId; cardIndex: number }
+  | { type: 'world/leaveShop' }
   | { type: 'world/advanceWorld' }
   // ---- combat ----
   | { type: 'combat/reposition'; moves: Array<{ id: CombatantId; row?: Row; side?: Side }> }
@@ -53,7 +59,11 @@ export type Command =
   | { type: 'combat/playCard'; iid: string; targetId?: CombatantId }
   | { type: 'combat/useGrace'; ability: GraceAbilityId; targetId?: CombatantId }
   | { type: 'combat/endTurn' }
-  | { type: 'combat/chooseReward'; optionId: string }
+  // ---- reward (post-combat): claim spoils individually, pick one card (or skip), then leave ----
+  | { type: 'combat/claimSpoil'; spoilId: string }
+  | { type: 'combat/takeCard'; defId: CardDefId }
+  | { type: 'combat/skipCard' }
+  | { type: 'combat/leaveReward' }
   // ---- verse gap-fill ----
   | { type: 'verse/submit'; challengeId: string; answers: string[] }
   | { type: 'verse/cancel' }

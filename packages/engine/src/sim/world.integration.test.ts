@@ -30,7 +30,8 @@ const fullPeacefulRun = (seed = 'run-1'): Command[] => [
   { type: 'world/enter' }, // → beast combat
   { type: 'combat/playCard', iid: strikeA, targetId: 'wolf' },
   { type: 'combat/playCard', iid: strikeB, targetId: 'wolf' }, // 16 dmg kills the 10-HP wolf
-  { type: 'combat/chooseReward', optionId: 'money' },
+  { type: 'combat/claimSpoil', spoilId: 'money' },
+  { type: 'combat/leaveReward' },
   { type: 'world/move', target: 'n3' },
   { type: 'world/enter' }, // → fireplace
   { type: 'world/fireplace', action: 'pray' }, // recover Spirit
@@ -39,7 +40,8 @@ const fullPeacefulRun = (seed = 'run-1'): Command[] => [
   { type: 'world/enter' }, // → thief mini-boss
   { type: 'combat/useGrace', ability: 'sight' }, // reveal the bound demon
   { type: 'combat/playCard', iid: lightCard, targetId: 'demon' }, // spiritual kill
-  { type: 'combat/chooseReward', optionId: 'money' },
+  { type: 'combat/claimSpoil', spoilId: 'money' },
+  { type: 'combat/leaveReward' },
 ]
 
 describe('vertical slice — full peaceful run (DoD tripwire)', () => {
@@ -81,7 +83,8 @@ describe('the cross-node gate', () => {
       { type: 'world/enter' },
       { type: 'combat/playCard', iid: strikeA, targetId: 'wolf' },
       { type: 'combat/playCard', iid: strikeB, targetId: 'wolf' },
-      { type: 'combat/chooseReward', optionId: 'money' },
+      { type: 'combat/claimSpoil', spoilId: 'money' },
+      { type: 'combat/leaveReward' },
       { type: 'world/move', target: 'n3' },
       { type: 'world/move', target: 'n4' }, // should be rejected — no key
     ])
@@ -101,7 +104,8 @@ describe('board-game travel (move = relocate, enter = resolve)', () => {
     { type: 'world/enter' },
     { type: 'combat/playCard', iid: strikeA, targetId: 'wolf' },
     { type: 'combat/playCard', iid: strikeB, targetId: 'wolf' },
-    { type: 'combat/chooseReward', optionId: 'money' },
+    { type: 'combat/claimSpoil', spoilId: 'money' },
+    { type: 'combat/leaveReward' },
   ]
 
   it('a first-visit move only relocates — the node does not resolve until enter', () => {
