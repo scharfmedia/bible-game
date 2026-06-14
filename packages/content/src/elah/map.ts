@@ -6,8 +6,9 @@ import type { EncounterDef, EnemyTemplate, MapEdge, MapNode, WorldMap } from '@b
 // and funnel through a last rest into Goliath. Three shops (early/mid/late), four rests, two elites.
 //
 // Theme: 1 Sam 17. The Philistines are HUMAN (killing grieves Spirit; subdue is righteous). Goliath
-// is a man with a few-hundred fixed HP and a soft flesh cap — flesh chips slowly, but holy/verse
-// damage bypasses his armor: "the battle is the LORD's... not by sword or spear" (17:47).
+// is a man with a huge HP pool and brutal multi-hit smashes — flesh chips him slowly, so survival
+// (block, heal, the Divine Protection miracle) wins: "the battle is the LORD's... not by sword or
+// spear" (17:47). Multi-enemy fights are sized for a SOLO hero (the 4-foe lines were cut to 3).
 
 type Conns = Record<string, string[]>
 
@@ -127,15 +128,15 @@ export const ELAH_MAP: WorldMap = {
 
 const soldier = (id: string, over: Partial<EnemyTemplate> = {}): EnemyTemplate => ({
   id, archetype: 'philistineSoldier', nameKey: 'enemy.philistineSoldier', isHuman: true,
-  scaling: { baseHp: 28, baseAtk: 2 }, ...over,
+  scaling: { baseHp: 30, baseAtk: 4 }, ...over,
 })
 const archer = (id: string, over: Partial<EnemyTemplate> = {}): EnemyTemplate => ({
   id, archetype: 'philistineArcher', nameKey: 'enemy.philistineArcher', isHuman: true, row: 'back',
-  scaling: { baseHp: 16, baseAtk: 2 }, ...over,
+  scaling: { baseHp: 22, baseAtk: 4 }, ...over,
 })
 const shield = (id: string, over: Partial<EnemyTemplate> = {}): EnemyTemplate => ({
   id, archetype: 'shieldBearer', nameKey: 'enemy.shieldBearer', isHuman: true,
-  scaling: { baseHp: 30, baseAtk: 2 }, ...over,
+  scaling: { baseHp: 46, baseAtk: 3 }, ...over,
 })
 
 /** battleBg/rewardBg pair from a combat-bg stem (sideview for the battle, plain for the reward). */
@@ -179,7 +180,7 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
     enemies: [{
       id: 'dread', archetype: 'spiritOfDread', nameKey: 'enemy.spiritOfDread', isHuman: false, isDemon: true,
       aiProfileId: 'dreadSpirit', row: 'back',
-      scaling: { baseHp: 34, baseAtk: 3 },
+      scaling: { baseHp: 34, baseAtk: 5 },
     }],
     flags: { mandatory: false, allowFlee: false, isBoss: false },
     winCondition: { kind: 'allDemonsDestroyed' },
@@ -190,19 +191,19 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
     id: 'dagonZealot',
     enemies: [
       { id: 'zealot', archetype: 'dagonZealot', nameKey: 'enemy.dagonZealot', isHuman: true, revealsId: 'idol',
-        scaling: { baseHp: 30, baseAtk: 3 } },
+        scaling: { baseHp: 34, baseAtk: 4 } },
       { id: 'idol', archetype: 'idolSpirit', nameKey: 'enemy.idolSpirit', isHuman: false, isDemon: true,
         hidden: true, boundToId: 'zealot', row: 'back',
-        scaling: { baseHp: 20, baseAtk: 2 } },
+        scaling: { baseHp: 24, baseAtk: 4 } },
     ],
     flags: { mandatory: false, allowFlee: false, isBoss: false },
     winCondition: { kind: 'allDemonsDestroyed' },
     rewardOptions: money(42), rewardXp: 36, battleMusic: 'music/battle-intense', ...bg('bg-combat-rocky-pass'),
   },
   shieldWallElite: {
-    // a shield wall screening two archers — a bulky target-priority puzzle
+    // a shield wall screening an archer — a bulky target-priority puzzle (solo: 3 foes, not 4)
     id: 'shieldWallElite',
-    enemies: [shield('shield1'), shield('shield2', { side: 'right' }), archer('arch1', { row: 'back' }), archer('arch2', { row: 'back', side: 'right' })],
+    enemies: [shield('shield1'), shield('shield2', { side: 'right' }), archer('arch1', { row: 'back' })],
     flags: { mandatory: false, allowFlee: true, isBoss: false },
     winCondition: { kind: 'allEnemiesDefeated' },
     rewardOptions: money(80), rewardXp: 55, battleMusic: 'music/battle-intense', ...bg('bg-combat-rocky-pass'),
@@ -212,7 +213,7 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
     id: 'champion',
     enemies: [
       { id: 'champ', archetype: 'philistineChampion', nameKey: 'enemy.philistineChampion', isHuman: true, aiProfileId: 'champion', banishImmune: true,
-        scaling: { baseHp: 50, baseAtk: 4 } },
+        scaling: { baseHp: 64, baseAtk: 5 } },
       shield('shield', { side: 'left' }),
       archer('arch', { side: 'right' }),
     ],
@@ -221,9 +222,9 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
     rewardOptions: money(90), rewardXp: 60, battleMusic: 'music/battle-intense', ...bg('bg-combat-rocky-pass'),
   },
   philistineVanguard: {
-    // the full Philistine line — a dress rehearsal for the giant's company
+    // the Philistine line — a dress rehearsal for the giant's company (solo: 3 foes, not 4)
     id: 'philistineVanguard',
-    enemies: [soldier('sol1'), soldier('sol2', { side: 'right' }), shield('shield', { side: 'left' }), archer('arch', { row: 'back', side: 'right' })],
+    enemies: [soldier('sol1'), shield('shield', { side: 'left' }), archer('arch', { row: 'back', side: 'right' })],
     flags: { mandatory: false, allowFlee: true, isBoss: false },
     winCondition: { kind: 'allEnemiesDefeated' },
     rewardOptions: money(60), rewardXp: 45, battleMusic: 'music/battle-intense', ...bg('bg-combat-rocky-pass'),
@@ -232,7 +233,7 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
     // the herald who taunts the armies of the living God — a hard single champion before the giant
     id: 'taunting',
     enemies: [{ id: 'herald', archetype: 'philistineChampion', nameKey: 'enemy.philistineChampion', isHuman: true, aiProfileId: 'champion', banishImmune: true,
-      scaling: { baseHp: 56, baseAtk: 4 } }],
+      scaling: { baseHp: 84, baseAtk: 6 } }],
     flags: { mandatory: false, allowFlee: false, isBoss: false },
     winCondition: { kind: 'allEnemiesDefeated' },
     rewardOptions: money(70), rewardXp: 55, battleMusic: 'music/battle-intense', ...bg('bg-combat-ridge-path'),
@@ -244,9 +245,9 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
     id: 'goliath',
     enemies: [
       { id: 'goliath', archetype: 'goliath', nameKey: 'enemy.goliath', isHuman: true, aiProfileId: 'goliath', banishImmune: true, row: 'front',
-        scaling: { baseHp: 120, baseAtk: 4, baseSpeed: 0 } },
-      shield('goliathShield', { side: 'left', scaling: { baseHp: 26, baseAtk: 2 } }),
-      archer('goliathArcher', { side: 'right', scaling: { baseHp: 16, baseAtk: 2 } }),
+        scaling: { baseHp: 140, baseAtk: 5, baseSpeed: 0 } },
+      shield('goliathShield', { side: 'left', scaling: { baseHp: 28, baseAtk: 3 } }),
+      archer('goliathArcher', { side: 'right', scaling: { baseHp: 18, baseAtk: 4 } }),
     ],
     flags: { mandatory: false, allowFlee: false, isBoss: true },
     winCondition: { kind: 'allEnemiesDefeated' },
