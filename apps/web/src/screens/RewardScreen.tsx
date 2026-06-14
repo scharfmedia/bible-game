@@ -63,6 +63,7 @@ export function RewardScreen() {
                       layer={c.layer}
                       nameKey={c.nameKey}
                       textKey={c.textKey}
+                      values={c.values}
                       verse={c.verse}
                       onClick={() => takeCard(c.defId)}
                     />

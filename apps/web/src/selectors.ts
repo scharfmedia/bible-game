@@ -10,6 +10,8 @@ import {
   nodeVisible,
   previewCardDamage,
   previewMiracle,
+  cardDisplayValues,
+  levelScale,
   type ContentBundle,
   type GameState,
   type NodeType,
@@ -132,7 +134,14 @@ export function selectStory(state: GameState): StoryView | null {
 }
 
 export interface SpoilView { id: string; kind: 'money' | 'relic'; label: string; claimed: boolean }
-export interface CardOfferView { defId: string; nameKey: string; textKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean }
+export interface CardOfferView { defId: string; nameKey: string; textKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean; values?: Record<string, number> }
+
+/** Scaled card-text interpolation values at the run's current hero level + Spirit (for menu cards). */
+function runCardValues(run: NonNullable<GameState['run']>, defId: string): Record<string, number> | undefined {
+  const def = run.content.cards[defId]
+  if (!def) return undefined
+  return cardDisplayValues(def, levelScale(run.party[0]?.level ?? 1), run.spirit.spirit)
+}
 export interface RewardView {
   spoils: SpoilView[]
   cardOptions: CardOfferView[]
@@ -144,8 +153,8 @@ export interface RewardView {
 }
 
 /** Build a card-offer view-model from a card defId (shared by reward + shop). */
-function cardOffer(content: ContentBundle, defId: string): CardOfferView {
-  const def = content.cards[defId]
+function cardOffer(run: NonNullable<GameState['run']>, defId: string): CardOfferView {
+  const def = run.content.cards[defId]
   return {
     defId,
     nameKey: def?.nameKey ?? defId,
@@ -153,6 +162,7 @@ function cardOffer(content: ContentBundle, defId: string): CardOfferView {
     cost: def?.cost ?? 0,
     layer: def?.layer ?? 'flesh',
     verse: def?.type === 'verse',
+    values: runCardValues(run, defId),
   }
 }
 
@@ -174,7 +184,7 @@ export function selectReward(state: GameState): RewardView | null {
       claimed: s.claimed,
       label: s.kind === 'money' ? `${s.amount ?? 0}` : (s.defId ? (content.items[s.defId]?.nameKey ?? s.defId) : s.kind),
     })),
-    cardOptions: (c.reward.cardOptions ?? []).map((defId) => cardOffer(content, defId)),
+    cardOptions: (c.reward.cardOptions ?? []).map((defId) => cardOffer(run, defId)),
   }
 }
 
@@ -317,6 +327,8 @@ export interface HandCardView {
   damage?: { perHit: number; hits: number; spiritual: boolean }
   /** miracle odds at the current Spirit (banish/protect cards); undefined otherwise */
   miracle?: { kind: 'banish' | 'protect'; chance: number; turns?: number }
+  /** scaled values for interpolating the card text (dmg/block/heal/chance) */
+  values: Record<string, number>
 }
 
 export interface CombatView {
@@ -370,11 +382,13 @@ export function selectCombat(state: GameState): CombatView | null {
       const def = c.cardDefs[ci.defId]!
       const dmg = previewCardDamage(c, ci.defId, ci.ownerId, spirit)
       const mir = previewMiracle(def, spirit)
+      const ownerScale = c.combatants[ci.ownerId]?.scale ?? c.partyOrder.map((id) => c.combatants[id]).find((x) => x?.alive)?.scale ?? 1
       return {
         iid: ci.iid, defId: ci.defId, ownerId: ci.ownerId, nameKey: def.nameKey, textKey: def.textKey,
         cost: ci.costOverride ?? def.cost, layer: def.layer, type: def.type, target: def.target,
         damage: dmg ? { perHit: dmg.perHit, hits: dmg.hits, spiritual: dmg.spirit } : undefined,
         miracle: mir ? { kind: mir.kind, chance: mir.chance, turns: 'turns' in mir ? mir.turns : undefined } : undefined,
+        values: cardDisplayValues(def, ownerScale, spirit),
       }
     }),
     energy: c.energy,
@@ -437,9 +451,11 @@ export interface UpgradeOption {
   toTextKey: string
   toCost: number
   toLayer: 'flesh' | 'spirit' | 'both'
+  values?: Record<string, number>
+  toValues?: Record<string, number>
 }
 
-export interface ShopCardView { defId: string; nameKey: string; textKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean; price: number; sold: boolean; affordable: boolean }
+export interface ShopCardView { defId: string; nameKey: string; textKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean; price: number; sold: boolean; affordable: boolean; values?: Record<string, number> }
 export interface ShopItemView { itemId: string; nameKey: string; price: number; sold: boolean; affordable: boolean }
 export interface ShopDeckCardView { index: number; nameKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean }
 export interface ShopView {
@@ -485,6 +501,7 @@ export function selectShop(state: GameState): ShopView | null {
         price: o.price,
         sold: o.sold,
         affordable: gold >= o.price && !deckFull,
+        values: runCardValues(run, o.defId),
       }
     }),
     items: shop.items.map((o) => ({
@@ -522,6 +539,8 @@ export function selectUpgradeable(state: GameState): UpgradeOption[] {
       toTextKey: to.textKey,
       toCost: to.cost,
       toLayer: to.layer,
+      values: runCardValues(run, id),
+      toValues: toId ? runCardValues(run, toId) : undefined,
     })
   })
   return out

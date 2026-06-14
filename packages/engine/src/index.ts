@@ -171,7 +171,7 @@ export { emptyInventory, itemCount } from './inventory/types'
 // ---- combat engine ----
 export { startCombat, HAND_SIZE, type CombatInit, type CombatStep } from './combat/combat'
 export { physicalAmount, absorb, statusStacks } from './combat/damage'
-export { previewCardDamage, previewMiracle, cardSource, type CardDamagePreview, type MiraclePreview } from './combat/preview'
+export { previewCardDamage, previewMiracle, cardDisplayValues, cardSource, type CardDamagePreview, type MiraclePreview } from './combat/preview'
 export { pickIntent } from './combat/ai'
 export { buildEncounter, encounterExists } from './combat/encounterBuilder'
 export { GRACE_ABILITIES, getGrace, type GraceAbilityMeta } from './grace/grace'

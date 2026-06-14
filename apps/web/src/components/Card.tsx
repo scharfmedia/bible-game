@@ -49,7 +49,7 @@ export function CardView({
       )}
       <div className={'card-art ' + card.layer} />
       <div className="card-name">{t(card.nameKey)}</div>
-      <div className="card-text">{t(card.textKey)}</div>
+      <div className="card-text">{t(card.textKey, card.values)}</div>
     </motion.button>
   )
 }

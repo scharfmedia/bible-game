@@ -77,9 +77,9 @@ export function FireplaceScreen() {
           <>
             <h3 className="reward-card-title">{t('ui.fireplace.upgradePreviewTitle')}</h3>
             <div className="upgrade-preview">
-              <CardFace cost={selected.cost} layer={selected.layer} nameKey={selected.nameKey} textKey={selected.textKey} verse={selected.verse} />
+              <CardFace cost={selected.cost} layer={selected.layer} nameKey={selected.nameKey} textKey={selected.textKey} values={selected.values} verse={selected.verse} />
               <span className="upgrade-arrow" aria-hidden>→</span>
-              <CardFace cost={selected.toCost} layer={selected.toLayer} nameKey={selected.toNameKey} textKey={selected.toTextKey} verse={selected.verse} selected />
+              <CardFace cost={selected.toCost} layer={selected.toLayer} nameKey={selected.toNameKey} textKey={selected.toTextKey} values={selected.toValues} verse={selected.verse} selected />
             </div>
             <button className="btn primary block" onClick={confirmUpgrade}>
               {t('ui.fireplace.upgradeConfirm')}
@@ -97,7 +97,7 @@ export function FireplaceScreen() {
             ) : (
               <div className="card-row">
                 {upgradeable.map((u) => (
-                  <CardFace key={u.index} cost={u.cost} layer={u.layer} nameKey={u.nameKey} textKey={u.textKey} verse={u.verse} onClick={() => setSelIdx(u.index)} />
+                  <CardFace key={u.index} cost={u.cost} layer={u.layer} nameKey={u.nameKey} textKey={u.textKey} values={u.values} verse={u.verse} onClick={() => setSelIdx(u.index)} />
                 ))}
               </div>
             )}

@@ -100,7 +100,11 @@ export interface EnemyScalingDef {
 
 /** Effective enemy "level" amplifies hero level by run depth so deeper runs bite a little harder. */
 export function effectiveEnemyLevel(heroLevel: number, runDepth: number): number {
-  return heroLevel + runDepth * 0.5
+  // Depth makes a world bite a little harder, but the bonus is a BUDGET that grows only as you level
+  // past 1 — so a fresh level-1 hero always faces enemies at their base stats (no depth inflation),
+  // and an under-leveled hero is never crushed. Enemies top out at ~1.5× the hero's scale (the
+  // on-level ratio). At level 1 the budget is 0, so the tutorial plays at the authored base numbers.
+  return heroLevel + Math.min(runDepth * 0.5, Math.max(0, heroLevel - 1) * 0.5)
 }
 
 /** Materialize an enemy's stats at the run's scale. maxHp + attack scale linearly; no defense. */

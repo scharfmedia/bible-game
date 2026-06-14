@@ -61,6 +61,25 @@ export function previewCardDamage(
   return { perHit, hits, total: perHit * hits, spirit: def.layer === 'spirit', blocked }
 }
 
+/**
+ * The displayable, SCALED values for a card's effects — for interpolating into the card text so the
+ * description states what the card actually does (damage/block/heal = level- or Spirit-scaled; miracle
+ * chance as a percent). Keyed for i18n interpolation: { dmg, block, heal, chance }. Counts (draw,
+ * energy, status stacks) are not scaled and stay literal in the text.
+ */
+export function cardDisplayValues(card: CardDef, scale: number, spirit: number): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const op of card.effects) {
+    if (op.kind === 'damage' && out.dmg === undefined) out.dmg = bySpiritBase(card, op.amount, spirit, scale)
+    else if (op.kind === 'block' && out.block === undefined) out.block = bySpiritBase(card, op.amount, spirit, scale)
+    else if (op.kind === 'heal' && out.heal === undefined) out.heal = bySpiritBase(card, op.amount, spirit, scale)
+    else if ((op.kind === 'banish' || op.kind === 'protect') && out.chance === undefined) {
+      out.chance = Math.round(miracleChance(spirit, op.floor, op.cap) * 100)
+    }
+  }
+  return out
+}
+
 /** Miracle odds for a banish/protect card at the current Spirit. null for non-miracle cards. */
 export function previewMiracle(card: CardDef, spirit: number): MiraclePreview | null {
   for (const op of card.effects) {

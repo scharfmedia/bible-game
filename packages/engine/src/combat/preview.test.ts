@@ -1,7 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import type { CardDef } from '../cards/types'
-import { previewCardDamage } from './preview'
+import { cardDisplayValues, previewCardDamage } from './preview'
 import type { Combatant, CombatState } from './types'
+
+describe('cardDisplayValues — scaled text interpolation', () => {
+  const flesh = (effects: CardDef['effects']): CardDef => ({ id: 'c', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects })
+  const spirit = (effects: CardDef['effects']): CardDef => ({ id: 'v', type: 'verse', layer: 'spirit', cost: 1, target: 'self', nameKey: '', textKey: '', effects })
+
+  it('flesh damage/block/heal scale by level', () => {
+    expect(cardDisplayValues(flesh([{ kind: 'damage', amount: 6 }]), 5, 0)).toEqual({ dmg: 30 })
+    expect(cardDisplayValues(flesh([{ kind: 'block', amount: 5 }, { kind: 'damage', amount: 5 }]), 10, 0)).toEqual({ block: 50, dmg: 50 })
+  })
+
+  it('spirit cards scale by potency; miracle chance is a percent', () => {
+    expect(cardDisplayValues(spirit([{ kind: 'heal', amount: 8, target: 'allAllies' }]), 5, 200)).toEqual({ heal: 8 }) // potency(200)=1
+    expect(cardDisplayValues(spirit([{ kind: 'banish', floor: 0.1, cap: 0.85 }]), 1, 1000)).toEqual({ chance: 85 })
+  })
+})
 
 const hero = (over: Partial<Combatant> = {}): Combatant => ({
   id: 'hero', faction: 'party', archetype: 'hero', isHuman: true, alive: true,

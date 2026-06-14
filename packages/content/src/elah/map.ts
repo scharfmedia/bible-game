@@ -127,15 +127,15 @@ export const ELAH_MAP: WorldMap = {
 
 const soldier = (id: string, over: Partial<EnemyTemplate> = {}): EnemyTemplate => ({
   id, archetype: 'philistineSoldier', nameKey: 'enemy.philistineSoldier', isHuman: true,
-  scaling: { baseHp: 30, baseAtk: 4 }, ...over,
+  scaling: { baseHp: 28, baseAtk: 2 }, ...over,
 })
 const archer = (id: string, over: Partial<EnemyTemplate> = {}): EnemyTemplate => ({
   id, archetype: 'philistineArcher', nameKey: 'enemy.philistineArcher', isHuman: true, row: 'back',
-  scaling: { baseHp: 22, baseAtk: 4 }, ...over,
+  scaling: { baseHp: 16, baseAtk: 2 }, ...over,
 })
 const shield = (id: string, over: Partial<EnemyTemplate> = {}): EnemyTemplate => ({
   id, archetype: 'shieldBearer', nameKey: 'enemy.shieldBearer', isHuman: true,
-  scaling: { baseHp: 46, baseAtk: 3 }, ...over,
+  scaling: { baseHp: 30, baseAtk: 2 }, ...over,
 })
 
 /** battleBg/rewardBg pair from a combat-bg stem (sideview for the battle, plain for the reward). */
@@ -179,7 +179,7 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
     enemies: [{
       id: 'dread', archetype: 'spiritOfDread', nameKey: 'enemy.spiritOfDread', isHuman: false, isDemon: true,
       aiProfileId: 'dreadSpirit', row: 'back',
-      scaling: { baseHp: 34, baseAtk: 5 },
+      scaling: { baseHp: 34, baseAtk: 3 },
     }],
     flags: { mandatory: false, allowFlee: false, isBoss: false },
     winCondition: { kind: 'allDemonsDestroyed' },
@@ -190,10 +190,10 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
     id: 'dagonZealot',
     enemies: [
       { id: 'zealot', archetype: 'dagonZealot', nameKey: 'enemy.dagonZealot', isHuman: true, revealsId: 'idol',
-        scaling: { baseHp: 34, baseAtk: 4 } },
+        scaling: { baseHp: 30, baseAtk: 3 } },
       { id: 'idol', archetype: 'idolSpirit', nameKey: 'enemy.idolSpirit', isHuman: false, isDemon: true,
         hidden: true, boundToId: 'zealot', row: 'back',
-        scaling: { baseHp: 24, baseAtk: 4 } },
+        scaling: { baseHp: 20, baseAtk: 2 } },
     ],
     flags: { mandatory: false, allowFlee: false, isBoss: false },
     winCondition: { kind: 'allDemonsDestroyed' },
@@ -212,7 +212,7 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
     id: 'champion',
     enemies: [
       { id: 'champ', archetype: 'philistineChampion', nameKey: 'enemy.philistineChampion', isHuman: true, aiProfileId: 'champion', banishImmune: true,
-        scaling: { baseHp: 64, baseAtk: 5 } },
+        scaling: { baseHp: 50, baseAtk: 4 } },
       shield('shield', { side: 'left' }),
       archer('arch', { side: 'right' }),
     ],
@@ -232,7 +232,7 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
     // the herald who taunts the armies of the living God — a hard single champion before the giant
     id: 'taunting',
     enemies: [{ id: 'herald', archetype: 'philistineChampion', nameKey: 'enemy.philistineChampion', isHuman: true, aiProfileId: 'champion', banishImmune: true,
-      scaling: { baseHp: 84, baseAtk: 6 } }],
+      scaling: { baseHp: 56, baseAtk: 4 } }],
     flags: { mandatory: false, allowFlee: false, isBoss: false },
     winCondition: { kind: 'allEnemiesDefeated' },
     rewardOptions: money(70), rewardXp: 55, battleMusic: 'music/battle-intense', ...bg('bg-combat-ridge-path'),
@@ -244,9 +244,9 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
     id: 'goliath',
     enemies: [
       { id: 'goliath', archetype: 'goliath', nameKey: 'enemy.goliath', isHuman: true, aiProfileId: 'goliath', banishImmune: true, row: 'front',
-        scaling: { baseHp: 140, baseAtk: 5, baseSpeed: 0 } },
-      shield('goliathShield', { side: 'left', scaling: { baseHp: 28, baseAtk: 3 } }),
-      archer('goliathArcher', { side: 'right', scaling: { baseHp: 18, baseAtk: 4 } }),
+        scaling: { baseHp: 120, baseAtk: 4, baseSpeed: 0 } },
+      shield('goliathShield', { side: 'left', scaling: { baseHp: 26, baseAtk: 2 } }),
+      archer('goliathArcher', { side: 'right', scaling: { baseHp: 16, baseAtk: 2 } }),
     ],
     flags: { mandatory: false, allowFlee: false, isBoss: true },
     winCondition: { kind: 'allEnemiesDefeated' },

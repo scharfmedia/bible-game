@@ -141,7 +141,7 @@ export function testContent(): ContentBundle {
       beast: {
         id: 'beast',
         enemies: [
-          { id: 'wolf', archetype: 'wolf', nameKey: 'enemy.wolf', isHuman: false, scaling: { baseHp: 5, baseAtk: 2 } },
+          { id: 'wolf', archetype: 'wolf', nameKey: 'enemy.wolf', isHuman: false, scaling: { baseHp: 10, baseAtk: 2 } },
         ],
         flags: { mandatory: false, allowFlee: true, isBoss: false },
         winCondition: { kind: 'allEnemiesDefeated' },
