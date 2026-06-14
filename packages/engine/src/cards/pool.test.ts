@@ -31,6 +31,14 @@ describe('effectivePool', () => {
     // strike.upgradeTo === 'strike_plus'; even if forced into the pool it must not appear
     expect(effectivePool(charAt(1, ['strike_plus']), content)).not.toContain('strike_plus')
   })
+  it('the "Enoch" testing hero unlocks the whole library (verse + "+" still filtered)', () => {
+    const enoch: Character = { ...createCharacter('h', 'Enoch', 1), level: 1, pool: [] }
+    const pool = effectivePool(enoch, content)
+    expect(pool).toContain('light') // not normally in the base pool at L1
+    expect(pool).toContain('mend') // a level-2 unlock, available without leveling
+    expect(pool).not.toContain('strike_plus') // '+' variants still filtered
+    expect(pool.length).toBeGreaterThan(effectivePool(charAt(1), content).length)
+  })
 })
 
 describe('sampleCards', () => {

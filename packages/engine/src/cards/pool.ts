@@ -6,7 +6,7 @@
 // `run.rng` via `shuffle` — never Math.random.
 
 import type { ContentBundle } from '../content/bundle'
-import type { Character } from '../state/character'
+import { TEST_HERO_NAME, type Character } from '../state/character'
 import type { RngState } from '../rng/rng'
 import { shuffle } from '../rng/rng'
 import type { CardDefId } from '../types'
@@ -34,11 +34,11 @@ function upgradeTargets(content: ContentBundle): Set<CardDefId> {
  */
 export function effectivePool(character: Character, content: ContentBundle): CardDefId[] {
   const targets = upgradeTargets(content)
-  const merged = [
-    ...(content.cardPoolStart ?? []),
-    ...unlocksUpToLevel(content, character.level),
-    ...character.pool,
-  ]
+  // Testing hero "Enoch": the whole card library is unlocked (verse + '+' variants still filtered below).
+  const merged =
+    character.name === TEST_HERO_NAME
+      ? Object.keys(content.cards)
+      : [...(content.cardPoolStart ?? []), ...unlocksUpToLevel(content, character.level), ...character.pool]
   const seen = new Set<CardDefId>()
   const out: CardDefId[] = []
   for (const id of merged) {

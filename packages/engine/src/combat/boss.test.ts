@@ -9,19 +9,19 @@ import type { Combatant } from './types'
 // drive the public API (startCombat → endTurn) and assert the new executeIntent cases land.
 
 const CARDS: Record<string, CardDef> = {
-  strike: { id: 'strike', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'damage', amount: 6, damageType: 'physical' }] },
+  strike: { id: 'strike', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'damage', amount: 6 }] },
 }
 
 const hero = (over: Partial<Combatant> = {}): Combatant => ({
   id: 'hero', faction: 'party', archetype: 'hero', isHuman: true, alive: true,
-  hp: 200, maxHp: 200, block: 0, spiritualBlock: 0, side: 'left', row: 'front',
+  hp: 200, maxHp: 200, block: 0, side: 'left', row: 'front',
   stats: { maxHp: 200, attack: 2, speed: 5 }, scale: 1,
   statuses: [], memberId: 'm-hero', contributesEnergy: 3, graceAbilityIds: [], ...over,
 })
 
 const boss = (over: Partial<Combatant> = {}): Combatant => ({
   id: 'boss', faction: 'enemy', archetype: 'goliath', isHuman: true, alive: true,
-  hp: 340, maxHp: 340, block: 0, spiritualBlock: 0, side: 'right', row: 'front',
+  hp: 340, maxHp: 340, block: 0, side: 'right', row: 'front',
   stats: { maxHp: 340, attack: 12, speed: 3 }, scale: 1,
   statuses: [], ...over,
 })

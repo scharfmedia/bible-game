@@ -174,12 +174,12 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
     rewardOptions: money(38), rewardXp: 32, ...bg('bg-combat-ridge-path'),
   },
   dreadWhisper: {
-    // a lone spirit of dread — its dread attack is stopped only by ward; flesh fells it but slowly
+    // a lone spirit of dread — it curses you with vulnerability then strikes; flesh fells it
     id: 'dreadWhisper',
     enemies: [{
       id: 'dread', archetype: 'spiritOfDread', nameKey: 'enemy.spiritOfDread', isHuman: false, isDemon: true,
-      dread: 8, spiritualArmor: 2, aiProfileId: 'dreadSpirit', row: 'back',
-      scaling: { baseHp: 34, baseAtk: 2 },
+      aiProfileId: 'dreadSpirit', row: 'back',
+      scaling: { baseHp: 34, baseAtk: 5 },
     }],
     flags: { mandatory: false, allowFlee: false, isBoss: false },
     winCondition: { kind: 'allDemonsDestroyed' },
@@ -192,8 +192,8 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
       { id: 'zealot', archetype: 'dagonZealot', nameKey: 'enemy.dagonZealot', isHuman: true, revealsId: 'idol',
         scaling: { baseHp: 34, baseAtk: 4 } },
       { id: 'idol', archetype: 'idolSpirit', nameKey: 'enemy.idolSpirit', isHuman: false, isDemon: true,
-        hidden: true, boundToId: 'zealot', dread: 6, row: 'back',
-        scaling: { baseHp: 24, baseAtk: 2 } },
+        hidden: true, boundToId: 'zealot', row: 'back',
+        scaling: { baseHp: 24, baseAtk: 4 } },
     ],
     flags: { mandatory: false, allowFlee: false, isBoss: false },
     winCondition: { kind: 'allDemonsDestroyed' },
@@ -211,7 +211,7 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
     // a Philistine champion (rich AI: weakens you, then crushes; enrages) with a screen + archer
     id: 'champion',
     enemies: [
-      { id: 'champ', archetype: 'philistineChampion', nameKey: 'enemy.philistineChampion', isHuman: true, aiProfileId: 'champion',
+      { id: 'champ', archetype: 'philistineChampion', nameKey: 'enemy.philistineChampion', isHuman: true, aiProfileId: 'champion', banishImmune: true,
         scaling: { baseHp: 64, baseAtk: 5 } },
       shield('shield', { side: 'left' }),
       archer('arch', { side: 'right' }),
@@ -231,7 +231,7 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
   taunting: {
     // the herald who taunts the armies of the living God — a hard single champion before the giant
     id: 'taunting',
-    enemies: [{ id: 'herald', archetype: 'philistineChampion', nameKey: 'enemy.philistineChampion', isHuman: true, aiProfileId: 'champion',
+    enemies: [{ id: 'herald', archetype: 'philistineChampion', nameKey: 'enemy.philistineChampion', isHuman: true, aiProfileId: 'champion', banishImmune: true,
       scaling: { baseHp: 84, baseAtk: 6 } }],
     flags: { mandatory: false, allowFlee: false, isBoss: false },
     winCondition: { kind: 'allEnemiesDefeated' },
@@ -243,7 +243,7 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
     // enraging below half HP (no guard, ×4 smashes). A shield-bearer + an archer make up his company.
     id: 'goliath',
     enemies: [
-      { id: 'goliath', archetype: 'goliath', nameKey: 'enemy.goliath', isHuman: true, aiProfileId: 'goliath', row: 'front',
+      { id: 'goliath', archetype: 'goliath', nameKey: 'enemy.goliath', isHuman: true, aiProfileId: 'goliath', banishImmune: true, row: 'front',
         scaling: { baseHp: 140, baseAtk: 5, baseSpeed: 0 } },
       shield('goliathShield', { side: 'left', scaling: { baseHp: 28, baseAtk: 3 } }),
       archer('goliathArcher', { side: 'right', scaling: { baseHp: 18, baseAtk: 4 } }),

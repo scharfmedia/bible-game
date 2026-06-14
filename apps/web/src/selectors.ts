@@ -9,6 +9,7 @@ import {
   memberMaxHp,
   nodeVisible,
   previewCardDamage,
+  previewMiracle,
   type ContentBundle,
   type GameState,
   type NodeType,
@@ -293,7 +294,8 @@ export interface CombatantView {
   hp: number
   maxHp: number
   block: number
-  ward: number
+  /** Divine Protection: turns left + per-hit negate chance (0-1), when shielded */
+  shield?: { turns: number; chance: number }
   row: 'front' | 'back'
   intentKind?: string
   intentValue?: number
@@ -308,11 +310,13 @@ export interface HandCardView {
   nameKey: string
   textKey: string
   cost: number
-  layer: 'flesh' | 'spirit' | 'both'
+  layer: 'flesh' | 'spirit'
   type: string
   target: string
-  /** nominal scaled damage at rest (level scale applied); undefined for non-damage cards */
+  /** nominal scaled damage at rest (level/Spirit scaled); undefined for non-damage cards */
   damage?: { perHit: number; hits: number; spiritual: boolean }
+  /** miracle odds at the current Spirit (banish/protect cards); undefined otherwise */
+  miracle?: { kind: 'banish' | 'protect'; chance: number; turns?: number }
 }
 
 export interface CombatView {
@@ -350,7 +354,7 @@ export function selectCombat(state: GameState): CombatView | null {
       hp: x.hp,
       maxHp: x.maxHp,
       block: x.block,
-      ward: x.spiritualBlock,
+      shield: x.shield,
       row: x.row,
       intentKind: x.intent?.kind,
       intentValue: x.intent?.value,
@@ -365,10 +369,12 @@ export function selectCombat(state: GameState): CombatView | null {
     hand: c.hand.map((ci) => {
       const def = c.cardDefs[ci.defId]!
       const dmg = previewCardDamage(c, ci.defId, ci.ownerId, spirit)
+      const mir = previewMiracle(def, spirit)
       return {
         iid: ci.iid, defId: ci.defId, ownerId: ci.ownerId, nameKey: def.nameKey, textKey: def.textKey,
         cost: ci.costOverride ?? def.cost, layer: def.layer, type: def.type, target: def.target,
-        damage: dmg ? { perHit: dmg.perHit, hits: dmg.hits, spiritual: dmg.damageType === 'spiritual' } : undefined,
+        damage: dmg ? { perHit: dmg.perHit, hits: dmg.hits, spiritual: dmg.spirit } : undefined,
+        miracle: mir ? { kind: mir.kind, chance: mir.chance, turns: 'turns' in mir ? mir.turns : undefined } : undefined,
       }
     }),
     energy: c.energy,

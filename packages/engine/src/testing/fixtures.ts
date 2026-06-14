@@ -10,11 +10,11 @@ import type { Scene } from '../scene/types'
 import type { Dialogue, MoralEvent, Story } from '../scene/types'
 
 const cards: Record<string, CardDef> = {
-  strike: { id: 'strike', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: 'card.strike.name', textKey: 'card.strike.text', upgradeTo: 'strike_plus', effects: [{ kind: 'damage', amount: 6, damageType: 'physical' }] },
-  strike_plus: { id: 'strike_plus', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: 'card.strike_plus.name', textKey: 'card.strike_plus.text', effects: [{ kind: 'damage', amount: 9, damageType: 'physical' }] },
+  strike: { id: 'strike', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: 'card.strike.name', textKey: 'card.strike.text', upgradeTo: 'strike_plus', effects: [{ kind: 'damage', amount: 6 }] },
+  strike_plus: { id: 'strike_plus', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: 'card.strike_plus.name', textKey: 'card.strike_plus.text', effects: [{ kind: 'damage', amount: 9 }] },
   guard: { id: 'guard', type: 'skill', layer: 'flesh', cost: 1, target: 'self', nameKey: 'card.guard.name', textKey: 'card.guard.text', effects: [{ kind: 'block', amount: 5 }] },
-  light: { id: 'light', type: 'spiritual', layer: 'spirit', cost: 1, target: 'enemy', nameKey: 'card.light.name', textKey: 'card.light.text', effects: [{ kind: 'damage', amount: 8, damageType: 'spiritual' }] },
-  prayer: { id: 'prayer', type: 'spiritual', layer: 'spirit', cost: 1, target: 'self', nameKey: 'card.prayer.name', textKey: 'card.prayer.text', effects: [{ kind: 'block', amount: 6, layer: 'spirit' }] },
+  light: { id: 'light', type: 'spiritual', layer: 'spirit', cost: 1, target: 'enemy', nameKey: 'card.light.name', textKey: 'card.light.text', effects: [{ kind: 'damage', amount: 8 }] },
+  prayer: { id: 'prayer', type: 'spiritual', layer: 'spirit', cost: 1, target: 'self', nameKey: 'card.prayer.name', textKey: 'card.prayer.text', effects: [{ kind: 'block', amount: 6 }] },
   // pool-only cards (not in the start deck) so reward/shop sampling has something to offer in tests
   brace: { id: 'brace', type: 'skill', layer: 'flesh', cost: 2, target: 'self', nameKey: 'card.brace.name', textKey: 'card.brace.text', effects: [{ kind: 'block', amount: 8 }] },
   mend: { id: 'mend', type: 'skill', layer: 'flesh', cost: 1, target: 'self', nameKey: 'card.mend.name', textKey: 'card.mend.text', effects: [{ kind: 'heal', amount: 5 }] },
@@ -152,7 +152,7 @@ export function testContent(): ContentBundle {
         id: 'thief',
         enemies: [
           { id: 'thief', archetype: 'thief', nameKey: 'enemy.thief', isHuman: true, revealsId: 'demon', scaling: { baseHp: 4, baseAtk: 1 } },
-          { id: 'demon', archetype: 'demon', nameKey: 'enemy.demon', isHuman: false, isDemon: true, hidden: true, boundToId: 'thief', dread: 3, scaling: { baseHp: 1, baseAtk: 1 } },
+          { id: 'demon', archetype: 'demon', nameKey: 'enemy.demon', isHuman: false, isDemon: true, hidden: true, boundToId: 'thief', scaling: { baseHp: 1, baseAtk: 3 } },
         ],
         flags: { mandatory: false, allowFlee: true, isBoss: true },
         winCondition: { kind: 'allDemonsDestroyed' },

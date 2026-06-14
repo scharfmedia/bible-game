@@ -86,6 +86,7 @@ export {
   applySpiritEvent,
   potencyMult,
   potencyTier,
+  miracleChance,
   scaleSpiritValue,
   SPIRIT_DELTAS,
   type SpiritEvent,
@@ -116,7 +117,6 @@ export type {
   CardType,
   CardLayer,
   EffectOp,
-  DamageType,
   StatusId,
   TargetKind,
   FruitAffinity,
@@ -170,8 +170,8 @@ export { emptyInventory, itemCount } from './inventory/types'
 
 // ---- combat engine ----
 export { startCombat, HAND_SIZE, type CombatInit, type CombatStep } from './combat/combat'
-export { physicalAmount, spiritualAmount, absorb, statusStacks } from './combat/damage'
-export { previewCardDamage, cardSource, type CardDamagePreview } from './combat/preview'
+export { physicalAmount, absorb, statusStacks } from './combat/damage'
+export { previewCardDamage, previewMiracle, cardSource, type CardDamagePreview, type MiraclePreview } from './combat/preview'
 export { pickIntent } from './combat/ai'
 export { buildEncounter, encounterExists } from './combat/encounterBuilder'
 export { GRACE_ABILITIES, getGrace, type GraceAbilityMeta } from './grace/grace'

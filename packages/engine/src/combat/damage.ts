@@ -1,12 +1,9 @@
 // The flesh damage pipeline — pure and integer-stable, so results are identical on every machine.
 //
-// `base` arrives already level-scaled (party cards: op.amount × source.scale; enemy attacks:
-// stats.attack, scaled at build time). Order: + strength(×scale) → ×weak(0.75) → ×vulnerable(1.5) →
-// back-row attacker ×0.5 → back-row defender ×0.5 → block (in damageTarget). There is NO flat
-// defense and NO damage cap — flesh always does its work; the only mitigation is block.
-//
-// Spiritual damage (spiritualAmount) is the spirit layer (Phase 2): it scales with Spirit potency
-// (upstream), bypasses rows, and is mitigated only by spiritualArmor + ward.
+// `base` arrives already scaled (flesh cards: op.amount × source.scale; spirit cards: scaled by Spirit
+// potency upstream; enemy attacks: stats.attack, scaled at build time). Order: + strength(×scale) →
+// ×weak(0.75) → ×vulnerable(1.5) → back-row attacker ×0.5 → back-row defender ×0.5 → block (in
+// damageTarget). There is NO flat defense and NO damage cap — the only mitigation is block.
 
 import type { StatusId } from '../cards/types'
 import type { Combatant } from './types'
@@ -28,11 +25,6 @@ export function physicalAmount(base: number, attacker: Combatant, defender: Comb
   if (attacker.row === 'back') dmg = Math.floor(dmg * 0.5)
   if (defender.row === 'back') dmg = Math.floor(dmg * 0.5)
   return { amount: Math.max(0, Math.floor(dmg)), capped: false }
-}
-
-/** Spiritual damage (`base` already scaled by potency). Bypasses rows + block; only spiritualArmor reduces it. */
-export function spiritualAmount(base: number, defender: Combatant): HitResult {
-  return { amount: Math.max(0, base - (defender.spiritualArmor ?? 0)), capped: false }
 }
 
 export interface AbsorbResult {

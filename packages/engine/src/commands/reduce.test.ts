@@ -45,6 +45,13 @@ describe('hero CRUD', () => {
     expect(eventTypes(s1, { type: 'createHero', id: 'h1', name: 'B' })).toEqual(['rejected'])
   })
 
+  it('testing gimmick: a hero named "Enoch" is born at max level', () => {
+    const enoch = run(newGame(), { type: 'createHero', id: 'h1', name: '  Enoch  ' }).state.profile.slots[0]!.character
+    expect(enoch.level).toBe(99)
+    const other = run(newGame(), { type: 'createHero', id: 'h2', name: 'Eve' }).state.profile.slots[0]!.character
+    expect(other.level).toBe(1)
+  })
+
   it('deletes a hero and clears last-selected', () => {
     const s1 = run(newGame(), { type: 'createHero', id: 'h1', name: 'A' }).state
     const { state, events } = run(s1, { type: 'deleteHero', id: 'h1' })
@@ -94,6 +101,23 @@ describe('run lifecycle', () => {
     expect(eventTypes(newGame(), { type: 'startRun', characterId: 'x', worldId: 'world-01', seed: 's', content: CONTENT })).toEqual([
       'rejected',
     ])
+  })
+
+  it('a scripture-earned verse card loads into the run deck (persistent pool → deck)', () => {
+    let s = withHero()
+    // a hero who solved the Zechariah scripture in a prior run owns the miracle card permanently
+    s = {
+      ...s,
+      profile: {
+        ...s.profile,
+        slots: s.profile.slots.map((slot) =>
+          slot.id === 'h1' ? { ...slot, character: { ...slot.character, ownedVerseCardIds: ['verse_zech_4_6'] } } : slot,
+        ),
+      },
+    }
+    const started = run(s, { type: 'startRun', characterId: 'h1', worldId: 'world-01', seed: 's', content: CONTENT }).state
+    const heroDeck = started.run!.deckByMember[started.run!.heroMemberId]!
+    expect(heroDeck).toContain('verse_zech_4_6')
   })
 
   it('abandoning a run returns to the fire (hero selection) and keeps the leveled hero', () => {

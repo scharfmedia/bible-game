@@ -5,13 +5,13 @@ import type { Combatant, CombatState } from './types'
 
 const hero = (over: Partial<Combatant> = {}): Combatant => ({
   id: 'hero', faction: 'party', archetype: 'hero', isHuman: true, alive: true,
-  hp: 50, maxHp: 50, block: 0, spiritualBlock: 0, side: 'left', row: 'front',
+  hp: 50, maxHp: 50, block: 0, side: 'left', row: 'front',
   stats: { maxHp: 50, attack: 0, speed: 5 }, scale: 1, statuses: [], memberId: 'm-hero',
   ...over,
 })
 const foe = (over: Partial<Combatant> = {}): Combatant => ({
   id: 'foe', faction: 'enemy', archetype: 'foe', isHuman: false, alive: true,
-  hp: 100, maxHp: 100, block: 0, spiritualBlock: 0, side: 'right', row: 'front',
+  hp: 100, maxHp: 100, block: 0, side: 'right', row: 'front',
   stats: { maxHp: 100, attack: 0, speed: 0 }, scale: 1, statuses: [],
   ...over,
 })
@@ -19,8 +19,8 @@ const foe = (over: Partial<Combatant> = {}): Combatant => ({
 const card = (id: string, effects: CardDef['effects']): CardDef => ({
   id, type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects,
 })
-const strike = card('strike', [{ kind: 'damage', amount: 6, damageType: 'physical' }])
-const flurry = card('flurry', [{ kind: 'damage', amount: 3, damageType: 'physical', hits: 2 }])
+const strike = card('strike', [{ kind: 'damage', amount: 6 }])
+const flurry = card('flurry', [{ kind: 'damage', amount: 3, hits: 2 }])
 const guard = card('guard', [{ kind: 'block', amount: 5 }])
 
 function mkState(party: Combatant[], enemies: Combatant[], defs: CardDef[]): CombatState {

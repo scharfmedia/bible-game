@@ -1,4 +1,4 @@
-import type { DamageType, StatusId } from '../cards/types'
+import type { StatusId } from '../cards/types'
 import type { DefeatMode, Outcome } from '../combat/types'
 import type { ScreenId } from '../state/gameState'
 import type {
@@ -49,9 +49,14 @@ export type GameEvent =
   | { type: 'cardDrawn'; iid: string }
   | { type: 'cardPlayed'; iid: string; defId: CardDefId }
   | { type: 'cardFizzled'; iid: string; defId: CardDefId; reason: 'lowSpirit' }
-  | { type: 'damageDealt'; targetId: CombatantId; amount: number; damageType: DamageType; blocked: number; capped: boolean }
-  | { type: 'blockGained'; targetId: CombatantId; amount: number; spiritual: boolean }
+  | { type: 'damageDealt'; targetId: CombatantId; amount: number; blocked: number; capped: boolean }
+  | { type: 'blockGained'; targetId: CombatantId; amount: number }
   | { type: 'healed'; targetId: CombatantId; amount: number }
+  // miracles (Spirit-powered)
+  | { type: 'banishAttempt'; success: boolean }
+  | { type: 'combatantBanished'; id: CombatantId }
+  | { type: 'protected'; targetId: CombatantId; turns: number; chance: number }
+  | { type: 'shieldNegated'; targetId: CombatantId }
   | { type: 'statusApplied'; targetId: CombatantId; status: StatusId; stacks: number }
   | { type: 'energyChanged'; current: number; max: number }
   | { type: 'graceChanged'; current: number; max: number }

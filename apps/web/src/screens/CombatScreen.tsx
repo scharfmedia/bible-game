@@ -122,7 +122,7 @@ export function CombatScreen() {
           </div>
           <div className="badges">
             {c.block > 0 && <span className="badge block">🛡 {c.block}</span>}
-            {c.ward > 0 && <span className="badge ward">✨ {c.ward}</span>}
+            {c.shield && <span className="badge ward">🛡✨ {Math.round(c.shield.chance * 100)}% · {c.shield.turns}t</span>}
             {c.row === 'back' && <span className="badge row">{t('ui.combat.backRow')}</span>}
           </div>
         </div>

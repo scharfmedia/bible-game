@@ -112,6 +112,15 @@ export function potencyMult(spirit: number): number {
   return clamp(spirit / 200, 0, 5)
 }
 
+/**
+ * Probability for a Spirit-powered MIRACLE (banish, divine protection). Ramps linearly with the walk:
+ * carnal (spirit 0) → `floor`, radiant (spirit 1000 / potency 5) → `cap`. So "they only work and scale
+ * with Spirit" — more Spirit, more often God acts. Per-card `floor`/`cap` tune the feel.
+ */
+export function miracleChance(spirit: number, floor: number, cap: number): number {
+  return clamp(floor + (cap - floor) * (potencyMult(spirit) / 5), Math.min(floor, cap), Math.max(floor, cap))
+}
+
 export function potencyTier(spirit: number): PotencyTier {
   if (spirit < 50) return 'dim'
   if (spirit < 150) return 'faint'

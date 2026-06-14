@@ -4,25 +4,27 @@ import { seedRng } from '../rng/rng'
 import { ensureActing, endTurn, playCard, reposition, startCombat, type CombatInit } from './combat'
 import type { Combatant } from './types'
 
-// Exercises the EffectOp interpreter + status pipeline + dread/ward + reposition that the headline
-// thief tests don't touch, to keep combat.ts coverage on the pillar.
+// Exercises the EffectOp interpreter + status pipeline + Divine Protection + reposition that the
+// headline thief tests don't touch, to keep combat.ts coverage on the pillar.
 
 const CARDS: Record<string, CardDef> = {
   guard: { id: 'guard', type: 'skill', layer: 'flesh', cost: 1, target: 'self', nameKey: '', textKey: '', effects: [{ kind: 'block', amount: 5 }] },
-  ward: { id: 'ward', type: 'spiritual', layer: 'spirit', cost: 1, target: 'self', nameKey: '', textKey: '', effects: [{ kind: 'block', amount: 6, layer: 'spirit' }] },
+  ward: { id: 'ward', type: 'spiritual', layer: 'spirit', cost: 1, target: 'self', nameKey: '', textKey: '', effects: [{ kind: 'block', amount: 6 }] },
   mend: { id: 'mend', type: 'skill', layer: 'flesh', cost: 1, target: 'self', nameKey: '', textKey: '', effects: [{ kind: 'heal', amount: 10 }, { kind: 'draw', count: 1 }] },
   surge: { id: 'surge', type: 'skill', layer: 'flesh', cost: 0, target: 'none', nameKey: '', textKey: '', effects: [{ kind: 'gainEnergy', amount: 2 }] },
-  shove: { id: 'shove', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'damage', amount: 4, damageType: 'physical' }, { kind: 'pushRow' }] },
+  shove: { id: 'shove', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'damage', amount: 4 }, { kind: 'pushRow' }] },
   enfeeble: { id: 'enfeeble', type: 'skill', layer: 'flesh', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'applyStatus', status: 'vulnerable', stacks: 1 }] },
-  strike: { id: 'strike', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'damage', amount: 10, damageType: 'physical' }] },
-  judge: { id: 'judge', type: 'spiritual', layer: 'spirit', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'scaleBySpirit', base: { kind: 'damage', amount: 10, damageType: 'spiritual' } }] },
+  strike: { id: 'strike', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'damage', amount: 10 }] },
+  judge: { id: 'judge', type: 'spiritual', layer: 'spirit', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'damage', amount: 10 }] },
+  // a guaranteed-protection miracle (floor=cap=1 ⇒ chance 1 at any Spirit) for a deterministic test
+  protect: { id: 'protect', type: 'verse', layer: 'spirit', cost: 1, target: 'self', nameKey: '', textKey: '', effects: [{ kind: 'protect', turns: 2, floor: 1, cap: 1 }] },
 }
 
 const hero = (over: Partial<Combatant> = {}): Combatant => ({
-  id: 'hero', faction: 'party', archetype: 'hero', isHuman: true, alive: true, hp: 30, maxHp: 50, block: 0, spiritualBlock: 0, side: 'left', row: 'front', stats: { maxHp: 50, attack: 0, speed: 5 }, scale: 1, statuses: [], memberId: 'm-hero', contributesEnergy: 4, graceAbilityIds: [], ...over,
+  id: 'hero', faction: 'party', archetype: 'hero', isHuman: true, alive: true, hp: 30, maxHp: 50, block: 0, side: 'left', row: 'front', stats: { maxHp: 50, attack: 0, speed: 5 }, scale: 1, statuses: [], memberId: 'm-hero', contributesEnergy: 4, graceAbilityIds: [], ...over,
 })
 const dummy = (over: Partial<Combatant> = {}): Combatant => ({
-  id: 'dummy', faction: 'enemy', archetype: 'dummy', isHuman: false, alive: true, hp: 100, maxHp: 100, block: 0, spiritualBlock: 0, side: 'right', row: 'front', stats: { maxHp: 100, attack: 6, speed: 1 }, scale: 1, statuses: [], ...over,
+  id: 'dummy', faction: 'enemy', archetype: 'dummy', isHuman: false, alive: true, hp: 100, maxHp: 100, block: 0, side: 'right', row: 'front', stats: { maxHp: 100, attack: 6, speed: 1 }, scale: 1, statuses: [], ...over,
 })
 
 const deck = (defs: string[]): CardInstance[] => defs.map((d, i) => ({ iid: `i${i}-${d}`, defId: d, ownerId: 'm-hero' }))
@@ -36,12 +38,11 @@ const begin = (i: CombatInit) => ensureActing(startCombat(i).combat).combat
 const iid = (c: ReturnType<typeof begin>, defId: string) => c.hand.find((x) => x.defId === defId)!.iid
 
 describe('effect ops', () => {
-  it('block (flesh) and ward (spirit) fill separate pools', () => {
+  it('a spirit block card adds to the single block pool, scaled by potency', () => {
     let c = begin(init(['guard', 'ward', 'guard', 'guard', 'guard']))
-    c = playCard(c, iid(c, 'guard'), undefined, 100).combat
-    c = playCard(c, iid(c, 'ward'), undefined, 100).combat
-    expect(c.combatants.hero!.block).toBe(5)
-    expect(c.combatants.hero!.spiritualBlock).toBeGreaterThanOrEqual(1) // scaled by potency, floored
+    c = playCard(c, iid(c, 'guard'), undefined, 100).combat // +5 flesh
+    c = playCard(c, iid(c, 'ward'), undefined, 100).combat // +floor(6 * potency(0.5)) = +3
+    expect(c.combatants.hero!.block).toBe(5 + 3)
   })
 
   it('heal clamps to maxHp and draw adds a card', () => {
@@ -73,7 +74,7 @@ describe('effect ops', () => {
     expect(hpBefore - c.combatants.dummy!.hp).toBe(15) // floor(10 * 1.5)
   })
 
-  it('scaleBySpirit damage scales with potency (0 when carnal)', () => {
+  it('a spirit-layer damage card scales with potency (fizzles when carnal)', () => {
     const carnal = begin(init(['judge', 'guard', 'guard', 'guard', 'guard']))
     const after0 = playCard(carnal, iid(carnal, 'judge'), 'dummy', 0).combat
     expect(after0.combatants.dummy!.hp).toBe(100) // fizzled
@@ -83,15 +84,15 @@ describe('effect ops', () => {
   })
 })
 
-describe('enemy turn: dread is stopped by ward, not flesh block', () => {
-  it('ward absorbs dread; flesh block does not', () => {
-    // hero with only flesh block faces a dread enemy
-    const dreadEnemy = dummy({ id: 'demon', isDemon: true, dread: 8, stats: { maxHp: 100, attack: 0, speed: 1 } })
-    let c = begin(init(['guard', 'ward', 'guard', 'guard', 'guard'], { enemies: [dreadEnemy], winCondition: { kind: 'survive', rounds: 99 } }))
-    c = playCard(c, iid(c, 'guard'), undefined, 100).combat // 5 flesh block
+describe('Divine Protection (shield) caps incoming hits at 1', () => {
+  it('a shielded hero takes only 1 from a big hit', () => {
+    const ogre = dummy({ id: 'ogre', stats: { maxHp: 100, attack: 20, speed: 1 } })
+    let c = begin(init(['protect', 'guard', 'guard', 'guard', 'guard'], { enemies: [ogre], winCondition: { kind: 'survive', rounds: 99 } }))
+    c = playCard(c, iid(c, 'protect'), undefined, 100).combat // shield: chance 1
+    expect(c.combatants.hero!.shield).toEqual({ turns: 2, chance: 1 })
     const hpBefore = c.combatants.hero!.hp
-    c = endTurn(c, 100).combat // demon dreads 8 — flesh block should NOT absorb it
-    expect(c.combatants.hero!.hp).toBe(hpBefore - 8)
+    c = endTurn(c, 100).combat // ogre hits 20 → capped to 1
+    expect(c.combatants.hero!.hp).toBe(hpBefore - 1)
   })
 })
 

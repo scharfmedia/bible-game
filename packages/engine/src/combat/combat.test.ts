@@ -7,8 +7,8 @@ import type { Combatant } from './types'
 // ---- fixtures ----------------------------------------------------------------------------
 
 const CARDS: Record<string, CardDef> = {
-  strike: { id: 'strike', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'damage', amount: 6, damageType: 'physical' }] },
-  light: { id: 'light', type: 'spiritual', layer: 'spirit', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'damage', amount: 8, damageType: 'spiritual' }] },
+  strike: { id: 'strike', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'damage', amount: 6 }] },
+  light: { id: 'light', type: 'spiritual', layer: 'spirit', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'damage', amount: 8 }] },
   guard: { id: 'guard', type: 'skill', layer: 'flesh', cost: 1, target: 'self', nameKey: '', textKey: '', effects: [{ kind: 'block', amount: 5 }] },
 }
 
@@ -24,7 +24,6 @@ const hero = (over: Partial<Combatant> = {}): Combatant => ({
   hp: 50,
   maxHp: 50,
   block: 0,
-  spiritualBlock: 0,
   side: 'left',
   row: 'front',
   stats: { maxHp: 50, attack: 2, speed: 5 },
@@ -45,7 +44,6 @@ const thief = (over: Partial<Combatant> = {}): Combatant => ({
   hp: 12,
   maxHp: 12,
   block: 0,
-  spiritualBlock: 0,
   side: 'right',
   row: 'front',
   stats: { maxHp: 12, attack: 4, speed: 3 },
@@ -66,13 +64,11 @@ const demon = (over: Partial<Combatant> = {}): Combatant => ({
   hp: 8,
   maxHp: 8,
   block: 0,
-  spiritualBlock: 0,
   side: 'right',
   row: 'front',
   stats: { maxHp: 8, attack: 2, speed: 1 },
   scale: 1,
   statuses: [],
-  dread: 4,
   boundToId: 'thief',
   ...over,
 })

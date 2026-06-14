@@ -1,9 +1,9 @@
 import { reduceCombat } from '../combat/reduce'
 import type { ContentBundle } from '../content/bundle'
 import type { GameEvent, ReduceResult } from '../events/event'
-import { totalXpForLevel } from '../leveling/scaling'
+import { LVL_MAX, totalXpForLevel } from '../leveling/scaling'
 import { reduceWorld } from '../map/reduce'
-import { createCharacter, partyMemberFromCharacter } from '../state/character'
+import { createCharacter, partyMemberFromCharacter, TEST_HERO_NAME } from '../state/character'
 import { STAT_IDS, type StatId } from '../state/stats'
 import {
   defaultSettings,
@@ -135,7 +135,12 @@ function createHero(state: GameState, id: string, name: string): ReduceResult {
   if (!trimmed) return reject(state, 'empty-name')
   if (state.profile.slots.some((s) => s.id === id)) return reject(state, 'duplicate-hero-id')
 
-  const slot: CharacterSlot = { id, character: createCharacter(id, trimmed, state.profile.nextCreateSeq) }
+  const base = createCharacter(id, trimmed, state.profile.nextCreateSeq)
+  // Testing gimmick: a hero named "Enoch" is born at max level — Enoch "walked with God" (Gen 5:24).
+  // Handy for exercising the linear level scaling (HP/damage) without grinding a run. His full card
+  // library is unlocked at run time (see startRun + cards/pool effectivePool).
+  const character = trimmed === TEST_HERO_NAME ? { ...base, level: LVL_MAX, xp: totalXpForLevel(LVL_MAX) } : base
+  const slot: CharacterSlot = { id, character }
   const profile: ProfileState = {
     ...state.profile,
     slots: [...state.profile.slots, slot],
@@ -177,8 +182,13 @@ function startRun(
   const world = content.worlds[worldId]
   if (!world) return reject(state, 'no-such-world')
 
-  // Build the hero party member from the permanent Character + the bundle's starter kit.
-  const startDeck = [...content.heroStartDeck, ...slot.character.ownedVerseCardIds]
+  // Build the hero party member from the permanent Character + the bundle's starter kit. The "Enoch"
+  // testing hero also gets every miracle (verse) card in his deck — they're earned by study otherwise.
+  const verseCards =
+    slot.character.name === TEST_HERO_NAME
+      ? Object.values(content.cards).filter((c) => c.type === 'verse').map((c) => c.id)
+      : slot.character.ownedVerseCardIds
+  const startDeck = [...content.heroStartDeck, ...verseCards]
   const hero = partyMemberFromCharacter(slot.character, startDeck, content.heroGraceAbilities)
   const run: RunState = {
     seed,

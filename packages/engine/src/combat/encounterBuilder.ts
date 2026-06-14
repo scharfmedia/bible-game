@@ -25,7 +25,6 @@ function partyCombatant(m: PartyMember): Combatant {
     hp: Math.min(m.currentHp, stats.maxHp),
     maxHp: stats.maxHp,
     block: 0,
-    spiritualBlock: 0,
     side: 'left',
     row: 'front',
     stats,
@@ -49,7 +48,6 @@ function enemyCombatant(t: EnemyTemplate, heroLevel: number, runDepth: number): 
     hp: stats.maxHp,
     maxHp: stats.maxHp,
     block: 0,
-    spiritualBlock: 0,
     side: t.side ?? 'right',
     row: t.row ?? 'front',
     stats,
@@ -58,8 +56,7 @@ function enemyCombatant(t: EnemyTemplate, heroLevel: number, runDepth: number): 
     hidden: t.hidden,
     revealsId: t.revealsId,
     boundToId: t.boundToId,
-    dread: t.dread,
-    spiritualArmor: t.spiritualArmor,
+    banishImmune: t.banishImmune,
     aiProfileId: t.aiProfileId,
   }
 }

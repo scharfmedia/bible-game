@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { absorb, physicalAmount, spiritualAmount, statusStacks } from './damage'
+import { absorb, physicalAmount, statusStacks } from './damage'
 import type { Combatant } from './types'
 
 const mk = (over: Partial<Combatant> = {}): Combatant => ({
@@ -11,7 +11,6 @@ const mk = (over: Partial<Combatant> = {}): Combatant => ({
   hp: 100,
   maxHp: 100,
   block: 0,
-  spiritualBlock: 0,
   side: 'right',
   row: 'front',
   stats: { maxHp: 100, attack: 0, speed: 0 },
@@ -56,14 +55,6 @@ describe('physicalAmount — flesh pipeline (no defense, no cap)', () => {
   it('clamps to 0, never negative', () => {
     const weak = mk({ statuses: [{ id: 'weak', stacks: 1 }] })
     expect(physicalAmount(0, weak, mk()).amount).toBe(0)
-  })
-})
-
-describe('spiritualAmount — spirit layer (Phase 2)', () => {
-  it('ignores rows; only spiritualArmor reduces it', () => {
-    const demon = mk({ row: 'back', spiritualArmor: 5 })
-    expect(spiritualAmount(50, demon).amount).toBe(45)
-    expect(spiritualAmount(50, demon).capped).toBe(false)
   })
 })
 

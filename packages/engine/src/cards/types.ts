@@ -1,8 +1,8 @@
 import type { AssetRef, CardDefId, I18nKey, MemberId } from '../types'
 
-export type DamageType = 'physical' | 'spiritual'
-/** Which dual-nature layer a card touches. Spirit-layer effects auto-scale with Spirit potency. */
-export type CardLayer = 'flesh' | 'spirit' | 'both'
+/** A card's nature. `flesh` cards do fixed work scaled by LEVEL; `spirit` cards are miracles whose
+ *  numeric magnitude AND chance scale with the hidden Spirit resource (and fizzle when carnal). */
+export type CardLayer = 'flesh' | 'spirit'
 export type CardType = 'attack' | 'skill' | 'power' | 'spiritual' | 'verse' | 'status' | 'curse'
 
 export type TargetKind = 'enemy' | 'allEnemies' | 'ally' | 'self' | 'allAllies' | 'none'
@@ -13,14 +13,14 @@ export type StatusId = 'weak' | 'vulnerable' | 'strength' | 'bound'
 export type FruitAffinity = 'mercy' | 'faith' | 'knowledge'
 
 /**
- * Data-driven, serializable card effect language. A central interpreter (cards/effects.ts,
- * Phase 3) resolves each op. Spirit scaling is ONE mechanism: any op whose damageType is
- * 'spiritual', or a `scaleBySpirit` wrapper, is multiplied by potencyMult in the interpreter —
- * no separate per-card scaling field.
+ * Data-driven, serializable card effect language resolved by the interpreter (combat/applyEffect).
+ * There is ONE damage type (flesh HP damage, mitigated only by block). A card's `layer:'spirit'`
+ * makes its numeric ops scale by Spirit potency; flesh ops scale by the attacker's level.
+ * Miracle ops (`banish`, `protect`) roll a Spirit-scaled chance (`miracleChance`).
  */
 export type EffectOp =
-  | { kind: 'damage'; amount: number; damageType: DamageType; target?: TargetKind; hits?: number }
-  | { kind: 'block'; amount: number; layer?: CardLayer; target?: TargetKind }
+  | { kind: 'damage'; amount: number; target?: TargetKind; hits?: number }
+  | { kind: 'block'; amount: number; target?: TargetKind }
   | { kind: 'heal'; amount: number; target?: TargetKind }
   | { kind: 'applyStatus'; status: StatusId; stacks: number; target?: TargetKind }
   | { kind: 'draw'; count: number }
@@ -29,8 +29,10 @@ export type EffectOp =
   | { kind: 'pushRow'; target?: TargetKind }
   | { kind: 'spiritShift'; amount: number; reason: string }
   | { kind: 'revealHidden'; via: 'sight' }
-  /** wrap any op so its numeric magnitude scales with Spirit potency (potencyMult) */
-  | { kind: 'scaleBySpirit'; base: EffectOp; floor?: number }
+  /** MIRACLE: chance (Spirit-scaled, floor→cap) to remove a random non-`banishImmune` enemy from battle */
+  | { kind: 'banish'; floor: number; cap: number }
+  /** MIRACLE: grant the target a `shield` for `turns` — each incoming hit has a Spirit-scaled chance to be reduced to 1 */
+  | { kind: 'protect'; turns: number; floor: number; cap: number; target?: TargetKind }
 
 export interface CardDef {
   id: CardDefId

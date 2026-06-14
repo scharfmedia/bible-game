@@ -18,7 +18,6 @@ export type IntentKind =
   | 'block'
   | 'buff'
   | 'debuff'
-  | 'dread'
   | 'special'
   | 'unknown'
 
@@ -40,10 +39,11 @@ export interface Combatant {
   alive: boolean
   hp: number
   maxHp: number
-  /** flesh block — absorbs physical damage, resets at the owner's turn start */
+  /** block — absorbs damage, resets at the owner's turn start (the only mitigation) */
   block: number
-  /** spiritual ward — mitigates `dread` (spirit-layer) damage */
-  spiritualBlock: number
+  /** MIRACLE buff (Divine Protection): while set, each incoming hit has `chance` to be reduced to 1.
+   *  `turns` counts down at the owner's round start. The chance is snapshotted from Spirit at play-time. */
+  shield?: { turns: number; chance: number }
   side: Side
   row: Row
   stats: CombatStats
@@ -67,10 +67,8 @@ export interface Combatant {
   revealsId?: CombatantId
   /** a demon's host human id; when the host dies the demon flees */
   boundToId?: CombatantId
-  /** reduces incoming spiritual damage by a flat amount (spiritual layer — Phase 2) */
-  spiritualArmor?: number
-  /** spirit-layer attack value (unblockable by flesh block; mitigated only by ward) */
-  dread?: number
+  /** bosses/elites cannot be removed by the `banish` miracle (Finger of God) */
+  banishImmune?: boolean
 }
 
 export type Phase =

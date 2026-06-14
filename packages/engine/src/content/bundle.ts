@@ -26,9 +26,8 @@ export interface EnemyTemplate {
   /** demon → its host human id (flees when the host dies) */
   boundToId?: string
   scaling: EnemyScalingDef
-  /** fixed (un-scaled) special attributes */
-  dread?: number
-  spiritualArmor?: number
+  /** bosses/elites cannot be removed by the `banish` miracle (Finger of God) */
+  banishImmune?: boolean
   side?: Side
   row?: Row
   /** selects a coded boss/elite AI pattern in combat/ai.ts (e.g. 'goliath' | 'champion' | 'dreadSpirit') */

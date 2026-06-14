@@ -1,10 +1,9 @@
 // Deterministic enemy AI. Enemies telegraph an intent at round start (beginRound) and execute it on
 // their turn (executeIntent). Pure: an intent depends only on the combatant and the round number.
 //
-// Most foes use `defaultIntent` (a demon with dread favors its spirit-layer attack; everyone else
-// attacks). Bosses/elites set `aiProfileId` to select a coded multi-turn pattern with enrage — the
-// patterns only emit intent kinds the combat core already executes (attack/attackMulti/dread/block/
-// buff/debuff), so this is a selection layer, not new execution.
+// Most foes use `defaultIntent` (just attack). Bosses/elites set `aiProfileId` to select a coded
+// multi-turn pattern with enrage — the patterns only emit intent kinds the combat core already
+// executes (attack/attackMulti/block/buff/debuff), so this is a selection layer, not new execution.
 
 import type { Combatant, Intent, IntentKind } from './types'
 
@@ -23,9 +22,6 @@ export function pickIntent(enemy: Combatant, ctx: AiContext = { round: 1 }): Int
 }
 
 function defaultIntent(enemy: Combatant): Intent {
-  if (enemy.isDemon && enemy.dread !== undefined && enemy.dread > 0) {
-    return { kind: 'dread', value: enemy.dread }
-  }
   return { kind: 'attack', value: Math.max(1, enemy.stats.attack) }
 }
 
@@ -52,10 +48,10 @@ function profileIntent(enemy: Combatant, profileId: string, round: number): Inte
       return { kind: 'attack', value: enraged ? atk * 2 : atk }
     }
     case 'dreadSpirit': {
-      // spirit-layer pressure (only ward stops it), salted with a vulnerability curse
-      const kind = at(['dread', 'debuff', 'dread'] as const)
+      // a tormentor: curses the hero with vulnerability, then strikes harder into the opening
+      const kind = at(['debuff', 'attack', 'attack'] as const)
       if (kind === 'debuff') return { kind: 'debuff', status: 'vulnerable', stacks: 1 }
-      return { kind: 'dread', value: enemy.dread ?? atk }
+      return { kind: 'attack', value: atk }
     }
     default:
       return defaultIntent(enemy)

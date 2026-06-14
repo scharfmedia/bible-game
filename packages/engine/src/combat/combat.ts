@@ -6,12 +6,12 @@
 import type { CardDef, CardInstance, EffectOp, StatusId, TargetKind } from '../cards/types'
 import type { GameEvent } from '../events/event'
 import { getGrace } from '../grace/grace'
-import { scaleSpiritValue } from '../spirit/spirit'
+import { miracleChance, scaleSpiritValue } from '../spirit/spirit'
 import type { SpiritEvent } from '../spirit/spirit'
-import { fork, nextFloat, shuffle, type RngState } from '../rng/rng'
+import { chance, fork, nextFloat, pick, shuffle, type RngState } from '../rng/rng'
 import type { CombatantId, GraceAbilityId } from '../types'
 import { pickIntent } from './ai'
-import { absorb, physicalAmount, spiritualAmount, statusStacks } from './damage'
+import { absorb, physicalAmount, statusStacks } from './damage'
 import type {
   CombatFlags,
   Combatant,
@@ -98,29 +98,36 @@ function resolveTargets(
   }
 }
 
-/** Apply raw damage of a type to a target: block/ward absorption, HP, and death routing. */
+/** Apply raw damage to a target: block absorption, Divine Protection, HP, and death routing. */
 function damageTarget(
   c: CombatState,
   sourceId: CombatantId,
   targetId: CombatantId,
   rawBase: number,
-  damageType: 'physical' | 'spiritual',
   opts: { nonLethal: boolean },
 ): CombatStep {
   const source = getC(c, sourceId)
   const target = getC(c, targetId)
   if (!source || !target || !target.alive) return step(c)
 
-  const hit =
-    damageType === 'physical' ? physicalAmount(rawBase, source, target) : spiritualAmount(rawBase, target)
+  const hit = physicalAmount(rawBase, source, target)
+  const split = absorb(hit.amount, target.block)
 
-  const pool = damageType === 'physical' ? target.block : target.spiritualBlock
-  const split = absorb(hit.amount, pool)
+  let hpDamage = split.hpDamage
+  let rng = c.rng
+  const events: GameEvent[] = []
+  // Divine Protection miracle: a successful Spirit-scaled roll caps this hit at 1 (party only).
+  if (target.faction === 'party' && target.shield && hpDamage > 1) {
+    const [negate, ns] = chance(rng, target.shield.chance)
+    rng = ns
+    if (negate) {
+      hpDamage = 1
+      events.push({ type: 'shieldNegated', targetId })
+    }
+  }
 
-  const hp = target.hp - split.hpDamage
-  const events: GameEvent[] = [
-    { type: 'damageDealt', targetId, amount: split.hpDamage, damageType, blocked: split.blocked, capped: hit.capped },
-  ]
+  const hp = target.hp - hpDamage
+  events.unshift({ type: 'damageDealt', targetId, amount: hpDamage, blocked: split.blocked, capped: hit.capped })
   const spiritEvents: SpiritEvent[] = []
 
   // Non-lethal vs humans: never drops below 1; instead subdues.
@@ -130,11 +137,10 @@ function damageTarget(
   let next: Combatant = {
     ...target,
     hp: subdue ? 1 : Math.max(0, hp),
-    block: damageType === 'physical' ? split.remainingBlock : target.block,
-    spiritualBlock: damageType === 'spiritual' ? split.remainingBlock : target.spiritualBlock,
+    block: split.remainingBlock,
   }
 
-  let outCombat = { ...c, combatants: { ...c.combatants, [targetId]: next } }
+  let outCombat = { ...c, rng, combatants: { ...c.combatants, [targetId]: next } }
 
   if (subdue) {
     next = { ...next, alive: false }
@@ -214,6 +220,16 @@ function applyStatusTo(c: CombatState, id: CombatantId, status: StatusId, stacks
   })
 }
 
+/**
+ * Magnitude of a numeric op. `spirit` cards scale by Spirit potency (verse cards fizzle to 0 when
+ * carnal — no floor; other spirit cards keep a floor). `flesh` cards scale by the attacker's level.
+ */
+function spiritScaled(card: CardDef, amount: number, spirit: number, scale: number, opts?: { floor?: number }): number {
+  if (card.layer !== 'spirit') return amount * scale
+  const floor = card.type === 'verse' ? undefined : opts?.floor
+  return scaleSpiritValue(amount, spirit, floor !== undefined ? { floor } : {})
+}
+
 /** Resolve a single EffectOp. `spirit` scales spirit-layer ops via potencyMult. */
 function applyEffect(
   c: CombatState,
@@ -234,21 +250,11 @@ function applyEffect(
     case 'damage': {
       const targets = resolveTargets(combat, sourceId, op.target ?? defaultTarget, chosenId)
       const hits = op.hits ?? 1
-      const isSpiritual = op.damageType === 'spiritual'
-      let base: number
-      if (isSpiritual) {
-        base = scaleSpiritValue(op.amount, spirit)
-        if (base <= 0) {
-          return step(combat, [{ type: 'cardFizzled', iid: '', defId: card.id, reason: 'lowSpirit' }])
-        }
-      } else {
-        base = op.amount * source.scale
-      }
+      const base = spiritScaled(card, op.amount, spirit, source.scale)
+      if (base <= 0) return step(combat, [{ type: 'cardFizzled', iid: '', defId: card.id, reason: 'lowSpirit' }])
       for (const tid of targets) {
         for (let h = 0; h < hits; h++) {
-          const r = damageTarget(combat, sourceId, tid, base, op.damageType, {
-            nonLethal: card.nonLethal ?? false,
-          })
+          const r = damageTarget(combat, sourceId, tid, base, { nonLethal: card.nonLethal ?? false })
           combat = r.combat
           events.push(...r.events)
           spiritEvents.push(...r.spiritEvents)
@@ -258,19 +264,16 @@ function applyEffect(
     }
     case 'block': {
       const targets = resolveTargets(combat, sourceId, op.target ?? 'self', chosenId)
-      const spiritual = op.layer === 'spirit'
-      const amount = spiritual ? scaleSpiritValue(op.amount, spirit, { floor: 1 }) : op.amount * source.scale
+      const amount = spiritScaled(card, op.amount, spirit, source.scale, { floor: 1 })
       for (const tid of targets) {
-        combat = withCombatant(combat, tid, (x) =>
-          spiritual ? { ...x, spiritualBlock: x.spiritualBlock + amount } : { ...x, block: x.block + amount },
-        )
-        events.push({ type: 'blockGained', targetId: tid, amount, spiritual })
+        combat = withCombatant(combat, tid, (x) => ({ ...x, block: x.block + amount }))
+        events.push({ type: 'blockGained', targetId: tid, amount })
       }
       return step(combat, events)
     }
     case 'heal': {
       const targets = resolveTargets(combat, sourceId, op.target ?? 'self', chosenId)
-      const amount = op.amount * source.scale
+      const amount = spiritScaled(card, op.amount, spirit, source.scale, { floor: 1 })
       for (const tid of targets) {
         combat = withCombatant(combat, tid, (x) => ({ ...x, hp: Math.min(x.maxHp, x.hp + amount) }))
         events.push({ type: 'healed', targetId: tid, amount })
@@ -306,18 +309,32 @@ function applyEffect(
     case 'revealHidden': {
       return revealDemons(combat)
     }
-    case 'scaleBySpirit': {
-      // wrapper: scale the inner op's magnitude by potency (only damage/heal/block carry amounts)
-      const scaled = scaleSpiritValue(
-        'amount' in op.base ? op.base.amount : 0,
-        spirit,
-        { floor: op.floor },
-      )
-      const inner = { ...op.base, amount: scaled } as EffectOp
-      if ('amount' in inner && inner.amount <= 0) {
-        return step(combat, [{ type: 'cardFizzled', iid: '', defId: card.id, reason: 'lowSpirit' }])
+    case 'banish': {
+      // MIRACLE: Spirit-scaled chance to remove a random non-immune enemy from battle (no kill grief).
+      const [hit, rng1] = chance(combat.rng, miracleChance(spirit, op.floor, op.cap))
+      combat = { ...combat, rng: rng1 }
+      events.push({ type: 'banishAttempt', success: hit })
+      if (!hit) return step(combat, events)
+      const candidates = combat.enemyOrder.filter((id) => {
+        const x = combat.combatants[id]
+        return x?.alive && !x.hidden && !x.banishImmune
+      })
+      const [chosen, rng2] = pick(combat.rng, candidates)
+      combat = { ...combat, rng: rng2 }
+      if (!chosen) return step(combat, events)
+      combat = withCombatant(combat, chosen, (x) => ({ ...x, alive: false, hp: 0 }))
+      events.push({ type: 'combatantBanished', id: chosen })
+      return step(combat, events)
+    }
+    case 'protect': {
+      // MIRACLE: grant a shield whose per-hit negate chance is snapshotted from current Spirit.
+      const targets = resolveTargets(combat, sourceId, op.target ?? 'self', chosenId)
+      const ch = miracleChance(spirit, op.floor, op.cap)
+      for (const tid of targets) {
+        combat = withCombatant(combat, tid, (x) => ({ ...x, shield: { turns: op.turns, chance: ch } }))
+        events.push({ type: 'protected', targetId: tid, turns: op.turns, chance: ch })
       }
-      return applyEffect(combat, inner, sourceId, chosenId, defaultTarget, /* already scaled */ 200, card)
+      return step(combat, events)
     }
   }
 }
@@ -432,9 +449,12 @@ function beginRound(c: CombatState): CombatStep {
   const round = c.roundNumber + 1
   let combat: CombatState = { ...c, roundNumber: round, roundActionTaken: false, phase: 'roundStart' }
 
-  // reset party block/ward + tick start-of-turn party statuses (none in M1)
+  // reset party block + tick down the Divine Protection shield (expires at 0 turns)
   for (const id of combat.partyOrder) {
-    combat = withCombatant(combat, id, (x) => ({ ...x, block: 0, spiritualBlock: 0 }))
+    combat = withCombatant(combat, id, (x) => {
+      const shield = x.shield && x.shield.turns > 1 ? { ...x.shield, turns: x.shield.turns - 1 } : undefined
+      return { ...x, block: 0, shield }
+    })
   }
 
   // telegraph enemy intents
@@ -616,7 +636,7 @@ function enemyPhase(c: CombatState): CombatStep {
   const spiritEvents: SpiritEvent[] = []
 
   // reset enemy block at the start of their turn
-  for (const id of combat.enemyOrder) combat = withCombatant(combat, id, (x) => ({ ...x, block: 0, spiritualBlock: 0 }))
+  for (const id of combat.enemyOrder) combat = withCombatant(combat, id, (x) => ({ ...x, block: 0 }))
 
   const order = [...combat.enemyOrder]
     .map((id) => combat.combatants[id]!)
@@ -657,13 +677,13 @@ function executeIntent(c: CombatState, enemyId: CombatantId): CombatStep {
 
   switch (intent.kind) {
     case 'attack':
-      return damageTarget(c, enemyId, target.id, intent.value ?? Math.max(1, e.stats.attack), 'physical', { nonLethal: false })
+      return damageTarget(c, enemyId, target.id, intent.value ?? Math.max(1, e.stats.attack), { nonLethal: false })
     case 'attackMulti': {
       let combat = c
       const events: GameEvent[] = []
       const spiritEvents: SpiritEvent[] = []
       for (let i = 0; i < (intent.hits ?? 1); i++) {
-        const r = damageTarget(combat, enemyId, target.id, intent.value ?? 1, 'physical', { nonLethal: false })
+        const r = damageTarget(combat, enemyId, target.id, intent.value ?? 1, { nonLethal: false })
         combat = r.combat
         events.push(...r.events)
         spiritEvents.push(...r.spiritEvents)
@@ -671,8 +691,6 @@ function executeIntent(c: CombatState, enemyId: CombatantId): CombatStep {
       }
       return step(combat, events, spiritEvents)
     }
-    case 'dread':
-      return damageTarget(c, enemyId, target.id, intent.value ?? e.dread ?? 0, 'spiritual', { nonLethal: false })
     case 'block':
       return step(withCombatant(c, enemyId, (x) => ({ ...x, block: x.block + (intent.value ?? 0) })))
     case 'buff':
