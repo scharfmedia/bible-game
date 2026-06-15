@@ -39,6 +39,15 @@ describe('effectivePool', () => {
     expect(pool).not.toContain('strike_plus') // '+' variants still filtered
     expect(pool.length).toBeGreaterThan(effectivePool(charAt(1), content).length)
   })
+
+  it('an UNLOCKED verse (spirit) card is offered like any pool card; a locked one is not', () => {
+    const verseDef = { id: 'verse_demo', type: 'verse' as const, layer: 'spirit' as const, cost: 1, target: 'enemy' as const, nameKey: '', textKey: '', effects: [] }
+    const verseContent = { ...content, cards: { ...content.cards, verse_demo: verseDef } }
+    // not unlocked (not in the character pool) → never offered
+    expect(effectivePool(charAt(1), verseContent)).not.toContain('verse_demo')
+    // unlocked (studied a fragment → added to Character.pool) → offered like any card
+    expect(effectivePool(charAt(1, ['verse_demo']), verseContent)).toContain('verse_demo')
+  })
 })
 
 describe('sampleCards', () => {

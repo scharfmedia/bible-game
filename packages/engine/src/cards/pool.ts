@@ -1,9 +1,10 @@
 // The persistent per-character card POOL — the set of cards reward/shop offers sample from. The
 // pool is mostly DERIVED so it self-heals across content rebalances and needs no save migration:
 //   effectivePool = base (content.cardPoolStart) ∪ level unlocks (≤ hero level) ∪ Character.pool
-// `Character.pool` stores only the event/shop-granted extras. Verse cards (earned via study) and the
-// '+' upgrade variants (created by upgrading, never offered) are filtered out. Pure: sampling threads
-// `run.rng` via `shuffle` — never Math.random.
+// `Character.pool` stores the event/shop-granted extras AND verse (spirit) cards unlocked by studying a
+// Scripture Fragment — so an unlocked verse card is offered like any other. Only the '+' upgrade
+// variants (created by upgrading, never offered) are filtered out. Pure: sampling threads `run.rng` via
+// `shuffle` — never Math.random.
 
 import type { ContentBundle } from '../content/bundle'
 import { TEST_HERO_NAME, type Character } from '../state/character'
@@ -44,7 +45,10 @@ export function effectivePool(character: Character, content: ContentBundle): Car
   for (const id of merged) {
     if (seen.has(id)) continue
     const def = content.cards[id]
-    if (!def || def.type === 'verse' || targets.has(id)) continue
+    // verse (spirit) cards are NOT filtered: they only reach `merged` once UNLOCKED (added to
+    // Character.pool by studying a Scripture Fragment), so an unlocked verse card is offered in
+    // rewards/shops like any other unlocked card. '+' upgrade variants are never offered.
+    if (!def || targets.has(id)) continue
     seen.add(id)
     out.push(id)
   }

@@ -417,7 +417,8 @@ export interface RestView {
   reflectKey: string
   rested: boolean
   prayed: boolean
-  verseAvailable: boolean
+  /** Scripture Fragments the hero holds — each can be studied at the fire to unlock its spirit card */
+  fragments: { itemId: string; nameKey: string }[]
   /** the once-per-fire upgrade has been spent here */
   upgraded: boolean
   /** at least one deck card can be honed (an upgrade target exists) */
@@ -429,18 +430,18 @@ export function selectFireplace(state: GameState): RestView | null {
   if (!run) return null
   const node = run.content.worlds[run.worldId]?.map.nodes[run.world.current]
   if (!node) return null
-  // scope to the CURRENT hero (matches the engine's per-hero study action) — not unioned across slots
-  const hero = heroCharacter(state)
-  const heroVerseOwned = new Set(hero?.ownedVerseCardIds ?? [])
-  const heroVerseLost = new Set(hero?.lostVerseCardIds ?? [])
   const deck = run.deckByMember[run.heroMemberId] ?? []
+  // Scripture Fragments held in the inventory — each opens its verse gap-fill when studied.
+  const fragments = Object.entries(run.inventory.stacks)
+    .filter(([id, n]) => n > 0 && run.content.items[id]?.kind === 'fragment')
+    .map(([id]) => ({ itemId: id, nameKey: run.content.items[id]!.nameKey }))
   return {
     nameKey: node.nameKey,
     bgAsset: node.bgAsset,
     reflectKey: `${node.nameKey}.reflect`,
     rested: Boolean(run.world.flags[`fireplace:${node.id}:rested`]),
     prayed: Boolean(run.world.flags[`fireplace:${node.id}:prayed`]),
-    verseAvailable: Object.values(run.content.verses).some((v) => !heroVerseOwned.has(v.cardDefId) && !heroVerseLost.has(v.cardDefId)),
+    fragments,
     upgraded: Boolean(run.world.flags[`fireplace:${node.id}:upgraded`]),
     canUpgrade: deck.some((id) => Boolean(run.content.cards[id]?.upgradeTo)),
   }

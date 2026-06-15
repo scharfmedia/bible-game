@@ -161,7 +161,7 @@ export const ENCOUNTERS: Record<string, EncounterDef> = {
     // (You may still avoid the pass entirely by routing around it on the map.)
     flags: { mandatory: true, allowFlee: false, isBoss: false },
     winCondition: { kind: 'allDemonsDestroyed' },
-    rewardOptions: [{ id: 'money', kind: 'money', amount: 45 }, { id: 'relic', kind: 'relic', defId: 'veil_lifted' }],
+    rewardOptions: [{ id: 'money', kind: 'money', amount: 45 }, { id: 'relic', kind: 'relic', defId: 'veil_lifted' }, { id: 'fragment', kind: 'relic', defId: 'fragment_2kings_6_17' }],
     rewardXp: 35,
     battleBg: 'bg-combat-rocky-pass-sideview',
     rewardBg: 'bg-combat-rocky-pass',
@@ -187,6 +187,13 @@ export const ITEMS: Record<string, ItemDef> = {
   letter: { id: 'letter', kind: 'questItem', nameKey: 'item.letter.name', descKey: 'item.letter.desc', icon: 'item/letter', stackable: false, usableInScene: false },
   coin: { id: 'coin', kind: 'currency', nameKey: 'item.coin.name', descKey: 'item.coin.desc', icon: 'item/coin', stackable: true, usableInScene: false },
   veil_lifted: { id: 'veil_lifted', kind: 'relic', nameKey: 'item.veil_lifted.name', descKey: 'item.veil_lifted.desc', icon: 'item/veil', stackable: false, usableInScene: false, spiritEffectWhileHeld: 2 },
+
+  // Scripture Fragments — collectibles studied at a fireplace to UNLOCK their spirit card (then it's
+  // offered like any unlocked card). One per verse; `verseChallengeId` names the gap-fill to solve.
+  fragment_2kings_6_17: { id: 'fragment_2kings_6_17', kind: 'fragment', nameKey: 'item.fragment_2kings_6_17.name', descKey: 'item.fragment.desc', icon: 'item/fragment', stackable: true, usableInScene: false, verseChallengeId: '2kings_6_17' },
+  fragment_phil_4_6: { id: 'fragment_phil_4_6', kind: 'fragment', nameKey: 'item.fragment_phil_4_6.name', descKey: 'item.fragment.desc', icon: 'item/fragment', stackable: true, usableInScene: false, verseChallengeId: 'phil_4_6' },
+  fragment_zech_4_6: { id: 'fragment_zech_4_6', kind: 'fragment', nameKey: 'item.fragment_zech_4_6.name', descKey: 'item.fragment.desc', icon: 'item/fragment', stackable: true, usableInScene: false, verseChallengeId: 'zech_4_6' },
+  fragment_luke_10_27: { id: 'fragment_luke_10_27', kind: 'fragment', nameKey: 'item.fragment_luke_10_27.name', descKey: 'item.fragment.desc', icon: 'item/fragment', stackable: true, usableInScene: false, verseChallengeId: 'luke_10_27' },
 }
 
 export const AMBUSH_TABLE = { combat: 0.3, event: 0.15, combatEncounterId: 'roadAmbush', eventId: 'traveler' } as const

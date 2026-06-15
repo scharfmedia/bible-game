@@ -219,7 +219,7 @@ describe('purity & determinism', () => {
   })
 })
 
-describe('verse gap-fill: attempts, loss, cancel', () => {
+describe('Scripture Fragments: study a fragment → attempts, loss (item destroyed), unlock', () => {
   const TEST_VERSE: VerseChallenge = {
     id: 'v_test',
     ref: { book: 'Psalms', chapter: 46, verse: 10 },
@@ -229,74 +229,95 @@ describe('verse gap-fill: attempts, loss, cancel', () => {
       de: { translation: 'LUTHER1912', reference: 'Psalm 46,10', fullText: 'Seid stille', tokens: ['Seid', 'stille'], blankIndices: [1] },
     },
   }
-  const VERSE_CONTENT = { ...CONTENT, verses: { v_test: TEST_VERSE } }
-  const PROMPT = { kind: 'verseChallenge' as const, cardDefId: 'verse_test_card', challengeId: 'v_test' }
+  const FRAGMENT = 'fragment_v_test'
+  const TEST_FRAGMENT = { id: FRAGMENT, kind: 'fragment' as const, nameKey: 'item.x', descKey: 'item.x', icon: 'item/x', stackable: true, usableInScene: false, verseChallengeId: 'v_test' }
+  const VERSE_CONTENT = { ...CONTENT, verses: { v_test: TEST_VERSE }, items: { ...CONTENT.items, [FRAGMENT]: TEST_FRAGMENT } }
+  const PROMPT = { kind: 'verseChallenge' as const, cardDefId: 'verse_test_card', challengeId: 'v_test', fragmentId: FRAGMENT }
   const wrong: Command = { type: 'verse/submit', challengeId: 'v_test', answers: ['definitely-not-it'] }
   const heroChar = (s: GameState) => s.profile.slots[0]!.character
+  const fragCount = (s: GameState) => s.run!.inventory.stacks[FRAGMENT] ?? 0
 
-  // a started run with one verse, study prompt already open
+  // a started run that HOLDS one fragment, with its gap-fill prompt already open
   const opened = (): GameState => {
     let s = run(newGame(), { type: 'createHero', id: 'h1', name: 'A' }).state
     s = run(s, { type: 'startRun', characterId: 'h1', worldId: 'world-01', seed: 'seed', content: VERSE_CONTENT }).state
+    s = { ...s, run: { ...s.run!, inventory: { ...s.run!.inventory, stacks: { ...s.run!.inventory.stacks, [FRAGMENT]: 1 } } } }
     return { ...s, prompt: { ...PROMPT } }
   }
-  // re-study: re-open the same challenge (what the fireplace "study" button does)
   const reopen = (s: GameState): GameState => ({ ...s, prompt: { ...PROMPT } })
 
-  it('counts a wrong answer, keeps the modal open, reports attempts left', () => {
+  it('the fireplace study action opens the chosen fragment’s gap-fill; rejects an un-held fragment', () => {
+    let s = run(newGame(), { type: 'createHero', id: 'h1', name: 'A' }).state
+    s = run(s, { type: 'startRun', characterId: 'h1', worldId: 'world-01', seed: 'seed', content: VERSE_CONTENT }).state
+    expect(run(s, { type: 'world/fireplace', action: 'study', fragmentId: FRAGMENT }).events)
+      .toContainEqual({ type: 'rejected', reason: 'fragment-not-held' })
+    s = { ...s, run: { ...s.run!, inventory: { ...s.run!.inventory, stacks: { [FRAGMENT]: 1 } } } }
+    const r = run(s, { type: 'world/fireplace', action: 'study', fragmentId: FRAGMENT })
+    expect(r.state.prompt).toMatchObject({ kind: 'verseChallenge', challengeId: 'v_test', fragmentId: FRAGMENT })
+  })
+
+  it('counts a wrong answer, keeps the modal open, reports attempts left (fragment kept)', () => {
     const r = run(opened(), wrong)
     expect(r.events).toContainEqual({ type: 'verseRejected', challengeId: 'v_test', attemptsLeft: MAX_VERSE_ATTEMPTS - 1 })
     expect(r.state.prompt?.kind).toBe('verseChallenge') // still open
     expect(heroChar(r.state).verseAttempts['verse_test_card']).toBe(1)
+    expect(fragCount(r.state)).toBe(1) // not consumed yet
   })
 
-  it('cancel closes the modal but REMEMBERS the attempts (the reported bug)', () => {
+  it('cancel closes the modal but REMEMBERS the attempts and keeps the fragment', () => {
     let s = run(opened(), wrong).state // one miss
     s = run(s, { type: 'verse/cancel' }).state
     expect(s.prompt).toBeNull()
     expect(heroChar(s).verseAttempts['verse_test_card']).toBe(1) // not reset
-    expect(heroChar(s).lostVerseCardIds).toEqual([]) // not lost yet
+    expect(fragCount(s)).toBe(1) // fragment retained for a later retry
   })
 
-  it('loses the scripture on the 3rd miss — even across cancel/re-study (no infinite retries)', () => {
+  it('on the 3rd miss the FRAGMENT is destroyed (consumed) — no permanent card-lock', () => {
     let s = opened()
     s = run(s, wrong).state // miss 1
     s = run(s, { type: 'verse/cancel' }).state // cancel
     s = run(reopen(s), wrong).state // miss 2 (count resumes from 1)
     s = run(s, { type: 'verse/cancel' }).state // cancel
-    const r = run(reopen(s), wrong) // miss 3 → lost
-    expect(r.events).toContainEqual({ type: 'verseLost', challengeId: 'v_test', cardDefId: 'verse_test_card' })
-    expect(r.events).toContainEqual({ type: 'notice', messageKey: 'fireplace.verseLost' })
+    const r = run(reopen(s), wrong) // miss 3 → fragment crumbles
+    expect(r.events).toContainEqual({ type: 'notice', messageKey: 'fireplace.fragmentDestroyed' })
     expect(r.state.prompt).toBeNull()
-    expect(heroChar(r.state).lostVerseCardIds).toContain('verse_test_card')
+    expect(fragCount(r.state)).toBe(0) // the fragment item is gone
+    expect(heroChar(r.state).lostVerseCardIds).not.toContain('verse_test_card') // NOT a permanent lock
   })
 
-  it('study no longer offers a verse the hero has lost', () => {
-    let s = opened()
-    s = run(s, wrong).state
-    s = run(reopen(s), wrong).state
-    s = run(reopen(s), wrong).state // lost (only verse in this content)
-    const r = run(s, { type: 'world/fireplace', action: 'study' })
-    expect(r.events).toEqual([{ type: 'rejected', reason: 'no-verse-available' }])
-  })
-
-  it('cancel without any wrong answer spends nothing', () => {
+  it('cancel without any wrong answer spends nothing and keeps the fragment', () => {
     const r = run(opened(), { type: 'verse/cancel' })
     expect(r.state.prompt).toBeNull()
     expect(heroChar(r.state).verseAttempts).toEqual({})
+    expect(fragCount(r.state)).toBe(1)
   })
 
-  it('correct answer grants the verse, clears the prompt + attempt count, and raises Spirit', () => {
-    // one miss first, so we can prove the success path also clears the dead attempt count
+  it('solving UNLOCKS the card (pool + this run’s deck), consumes the fragment, clears attempts, raises Spirit', () => {
+    // one miss first, so we also prove the success path clears the dead attempt count
     const s = run(opened(), wrong).state
     expect(heroChar(s).verseAttempts['verse_test_card']).toBe(1)
     const r = run({ ...s, prompt: { ...PROMPT } }, { type: 'verse/submit', challengeId: 'v_test', answers: ['still'] })
     expect(r.events).toContainEqual({ type: 'verseEarned', cardDefId: 'verse_test_card' })
+    expect(r.events).toContainEqual({ type: 'cardUnlocked', cardId: 'verse_test_card' })
     expect(r.events.some((e) => e.type === 'spiritShifted')).toBe(true)
     expect(r.state.prompt).toBeNull()
-    expect(heroChar(r.state).ownedVerseCardIds).toContain('verse_test_card')
+    expect(heroChar(r.state).pool).toContain('verse_test_card') // unlocked → offered like any card
+    expect(heroChar(r.state).ownedVerseCardIds).toContain('verse_test_card') // lifetime record
     expect(heroChar(r.state).verseAttempts).toEqual({}) // dead entry dropped
+    expect(fragCount(r.state)).toBe(0) // fragment consumed on success
     const hid = r.state.run!.heroMemberId
-    expect(r.state.run!.deckByMember[hid]).toContain('verse_test_card')
+    expect(r.state.run!.deckByMember[hid]).toContain('verse_test_card') // into this run's deck now
+  })
+
+  it('studying a SECOND fragment of the same scripture adds another copy (fragment-priced duplicates, by design)', () => {
+    let s = opened()
+    const hid = s.run!.heroMemberId
+    // already hold the card in this run's deck (e.g. studied an earlier fragment)…
+    s = { ...s, run: { ...s.run!, deckByMember: { ...s.run!.deckByMember, [hid]: [...(s.run!.deckByMember[hid] ?? []), 'verse_test_card'] } } }
+    const before = s.run!.deckByMember[hid]!.filter((c) => c === 'verse_test_card').length
+    const r = run(s, { type: 'verse/submit', challengeId: 'v_test', answers: ['still'] })
+    const after = r.state.run!.deckByMember[hid]!.filter((c) => c === 'verse_test_card').length
+    expect(after).toBe(before + 1) // a second copy — NOT deduped
+    expect(fragCount(r.state)).toBe(0) // and it cost the fragment
   })
 })

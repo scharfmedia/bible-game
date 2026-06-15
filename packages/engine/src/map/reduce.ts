@@ -96,10 +96,6 @@ function heroCharacter(state: GameState) {
   return state.profile.slots.find((s) => s.id === characterId)?.character
 }
 
-function heroLostVerseCards(state: GameState): string[] {
-  return heroCharacter(state)?.lostVerseCardIds ?? []
-}
-
 const clearNode = (run: RunState, nodeId: NodeId): RunState =>
   run.world.cleared.includes(nodeId)
     ? run
@@ -127,7 +123,7 @@ export function reduceWorld(state: GameState, cmd: Command): ReduceResult {
     case 'world/dismissStory':
       return dismissStory(state)
     case 'world/fireplace':
-      return fireplace(state, cmd.action, cmd.cardIndex)
+      return fireplace(state, cmd.action, cmd.cardIndex, cmd.fragmentId)
     case 'world/shopBuyCard':
       return shopBuyCard(state, cmd.nodeId, cmd.defId)
     case 'world/shopBuyItem':
@@ -529,7 +525,7 @@ function dismissStory(state: GameState): ReduceResult {
 
 // ---- fireplace --------------------------------------------------------------------------
 
-function fireplace(state: GameState, action: 'rest' | 'pray' | 'leave' | 'study' | 'upgrade', cardIndex?: number): ReduceResult {
+function fireplace(state: GameState, action: 'rest' | 'pray' | 'leave' | 'study' | 'upgrade', cardIndex?: number, fragmentId?: ItemId): ReduceResult {
   const run = state.run!
   const node = run.world.current
   const restFlag = `fireplace:${node}:rested`
@@ -559,14 +555,15 @@ function fireplace(state: GameState, action: 'rest' | 'pray' | 'leave' | 'study'
   }
 
   if (action === 'study') {
-    // EARN-PER-RUN: offer the first verse the hero doesn't already hold IN THIS RUN's deck and hasn't
-    // lost (failed 3×). Verses earned in prior runs are NOT auto-carried — they're re-studied fresh each
-    // run, so studying is a per-run deckbuilding choice.
-    const inDeck = new Set(run.deckByMember[run.heroMemberId] ?? [])
-    const lost = new Set(heroLostVerseCards(state))
-    const challenge = Object.values(run.content.verses).find((v) => !inDeck.has(v.cardDefId) && !lost.has(v.cardDefId))
-    if (!challenge) return reject(state, 'no-verse-available')
-    return ok({ ...state, prompt: { kind: 'verseChallenge', cardDefId: challenge.cardDefId, challengeId: challenge.id } }, [
+    // Study a Scripture Fragment the hero holds: open its verse gap-fill. Solving unlocks the spirit
+    // card (verse/reduce); 3 misses destroys the fragment. No once-per-fire flag — each study costs a
+    // fragment, so that's the limiter (and cancel/retry stays possible).
+    if (!fragmentId) return reject(state, 'no-fragment')
+    if ((run.inventory.stacks[fragmentId] ?? 0) <= 0) return reject(state, 'fragment-not-held')
+    const item = run.content.items[fragmentId]
+    const challenge = item?.verseChallengeId ? run.content.verses[item.verseChallengeId] : undefined
+    if (!item || item.kind !== 'fragment' || !challenge) return reject(state, 'not-a-fragment')
+    return ok({ ...state, prompt: { kind: 'verseChallenge', cardDefId: challenge.cardDefId, challengeId: challenge.id, fragmentId } }, [
       { type: 'notice', messageKey: 'fireplace.study' },
     ])
   }

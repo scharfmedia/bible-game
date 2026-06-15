@@ -108,6 +108,7 @@ export const en: Messages = {
   'ui.fireplace.rest': 'Rest (heal fully)',
   'ui.fireplace.pray': 'Pray',
   'ui.fireplace.study': 'Study Scripture',
+  'ui.fireplace.studyPick': 'Choose a fragment to study',
   'ui.fireplace.upgrade': 'Hone a card',
   'ui.fireplace.upgradeTitle': 'Choose a card to hone',
   'ui.fireplace.upgradePreviewTitle': 'Hone this card?',
@@ -203,6 +204,11 @@ export const en: Messages = {
   'item.coin.desc': 'They weigh more than their worth.',
   'item.veil_lifted.name': 'The Veil Lifted',
   'item.veil_lifted.desc': 'A relic of true sight. Your spirit is steadier near it.',
+  'item.fragment.desc': 'A torn scrap of Scripture. Study it at a fire to restore the verse and learn its miracle — but fail thrice and it crumbles to dust.',
+  'item.fragment_2kings_6_17.name': 'Fragment — Open My Eyes',
+  'item.fragment_phil_4_6.name': 'Fragment — Divine Protection',
+  'item.fragment_zech_4_6.name': 'Fragment — Finger of God',
+  'item.fragment_luke_10_27.name': 'Fragment — Loving Mercy',
   'item.idol_relic.name': 'Idol’s Charm',
   'item.idol_relic.desc': 'Strength bought at a price.',
 
@@ -269,6 +275,7 @@ export const en: Messages = {
   'fireplace.prayed': 'You pray. A quiet strength returns.',
   'fireplace.study': 'You open the Scriptures…',
   'fireplace.verseLost': 'The words slip away — that passage is lost to you, for now.',
+  'fireplace.fragmentDestroyed': 'The fragment crumbles to dust — the passage is lost. Seek another.',
   'world.nextComing': 'The boss is overcome. The next world is being prepared…',
 
   // -- verb labels --
@@ -391,6 +398,7 @@ export const de: Messages = {
   'ui.fireplace.rest': 'Rasten (voll heilen)',
   'ui.fireplace.pray': 'Beten',
   'ui.fireplace.study': 'Schrift studieren',
+  'ui.fireplace.studyPick': 'Wähle ein Fragment zum Studieren',
   'ui.fireplace.upgrade': 'Eine Karte schärfen',
   'ui.fireplace.upgradeTitle': 'Wähle eine Karte zum Schärfen',
   'ui.fireplace.upgradePreviewTitle': 'Diese Karte schärfen?',
@@ -482,6 +490,11 @@ export const de: Messages = {
   'item.coin.desc': 'Sie wiegen mehr als ihr Wert.',
   'item.veil_lifted.name': 'Der gelüftete Schleier',
   'item.veil_lifted.desc': 'Ein Relikt wahren Sehens. Dein Geist ist in seiner Nähe gefestigt.',
+  'item.fragment.desc': 'Ein zerrissener Schriftfetzen. Studiere ihn am Feuer, um den Vers wiederherzustellen und sein Wunder zu erlernen — doch wer dreimal scheitert, sieht ihn zu Staub zerfallen.',
+  'item.fragment_2kings_6_17.name': 'Fragment — Öffne meine Augen',
+  'item.fragment_phil_4_6.name': 'Fragment — Göttlicher Schutz',
+  'item.fragment_zech_4_6.name': 'Fragment — Finger Gottes',
+  'item.fragment_luke_10_27.name': 'Fragment — Liebende Barmherzigkeit',
   'item.idol_relic.name': 'Amulett des Götzen',
   'item.idol_relic.desc': 'Stärke, teuer erkauft.',
 
@@ -544,6 +557,7 @@ export const de: Messages = {
   'fireplace.prayed': 'Du betest. Eine stille Kraft kehrt zurück.',
   'fireplace.study': 'Du schlägst die Schrift auf…',
   'fireplace.verseLost': 'Die Worte entgleiten dir — diese Stelle ist dir vorerst verloren.',
+  'fireplace.fragmentDestroyed': 'Das Fragment zerfällt zu Staub — die Stelle ist verloren. Suche ein anderes.',
   'world.nextComing': 'Der Boss ist überwunden. Die nächste Welt wird vorbereitet…',
 
   'verb.observe': 'Betrachten',

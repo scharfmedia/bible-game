@@ -1,6 +1,6 @@
 import type { AssetRef, CardDefId, I18nKey, ItemId } from '../types'
 
-export type ItemKind = 'key' | 'consumable' | 'relic' | 'verseCard' | 'questItem' | 'currency'
+export type ItemKind = 'key' | 'consumable' | 'relic' | 'verseCard' | 'questItem' | 'currency' | 'fragment'
 
 export interface ItemDef {
   id: ItemId
@@ -16,6 +16,8 @@ export interface ItemDef {
   combatGrant?: CardDefId
   /** passive Spirit modifier while held */
   spiritEffectWhileHeld?: number
+  /** kind:'fragment' — the scripture (VerseChallenge id) this fragment lets you study at a fireplace */
+  verseChallengeId?: string
 }
 
 export interface InventoryState {

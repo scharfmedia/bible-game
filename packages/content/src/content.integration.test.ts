@@ -183,6 +183,19 @@ describe('Jericho Road — content & integration', () => {
     expect(card.effects).toContainEqual({ kind: 'revealHidden', via: 'sight' })
     expect(content.heroStartDeck).not.toContain('verse_2kings_6_17') // earned only by studying scripture
   })
+
+  it('Scripture Fragments: every verse card has a fragment item that unlocks it (and fragments are shop-buyable)', () => {
+    const verseCardIds = Object.values(content.cards).filter((c) => c.type === 'verse').map((c) => c.id)
+    expect(verseCardIds.length).toBeGreaterThan(0)
+    for (const cardId of verseCardIds) {
+      const frag = Object.values(content.items).find(
+        (i) => i.kind === 'fragment' && !!i.verseChallengeId && content.verses[i.verseChallengeId]?.cardDefId === cardId,
+      )
+      expect(frag, `expected a fragment item for verse card ${cardId}`).toBeDefined()
+    }
+    // kind:'fragment' is what the shop's buyable filter stocks
+    expect(Object.values(content.items).some((i) => i.kind === 'fragment')).toBe(true)
+  })
 })
 
 // ---- i18n coverage: every content-referenced key must resolve in EN and DE ----
