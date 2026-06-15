@@ -29,8 +29,12 @@ export const SPIRIT_DELTAS = {
   earnVerseFirstTry: 12,
   spareHuman: 15,
   useGrace: 6,
-  killHuman: -40,
-  killHumanWithGrace: -70,
+  // Killing a human is a heavy moral setback; killing a REDEEMABLE one (a victim you could have freed
+  // via Sight→Mercy) guts your walk. From the start (100) either floors Spirit to 0 → miracles go dark
+  // until you recover (pray/spare/peaceful win/verses). Intentionally brutal — the game's whole thesis
+  // is subdue, don't kill (Eph 6:12: the real enemy isn't flesh and blood).
+  killHuman: -120,
+  killHumanWithGrace: -350,
   pray: 12,
 } as const
 

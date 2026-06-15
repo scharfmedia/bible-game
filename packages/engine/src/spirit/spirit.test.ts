@@ -20,6 +20,16 @@ describe('applySpiritEvent', () => {
     expect(worse.state.killedHumans).toBe(1)
   })
 
+  it('killing penalties are BRUTAL — a kill is a heavy setback, an innocent kill guts the walk', () => {
+    // locked tuning: a regular kill craters Spirit; killing a redeemable human is near-catastrophic
+    expect(SPIRIT_DELTAS.killHuman).toBe(-120)
+    expect(SPIRIT_DELTAS.killHumanWithGrace).toBe(-350)
+    expect(applySpiritEvent(at(500), { kind: 'killHuman' }).state.spirit).toBe(380)
+    expect(applySpiritEvent(at(500), { kind: 'killHuman', graceWasAvailable: true }).state.spirit).toBe(150)
+    // from the start (100), ANY kill floors Spirit to 0 → potency 0 (miracles go dark)
+    expect(applySpiritEvent(at(SPIRIT_START), { kind: 'killHuman' }).state.spirit).toBe(0)
+  })
+
   it('clamps at [0, 1000] and reports the realized (clamped) delta', () => {
     const floored = applySpiritEvent(at(10), { kind: 'killHuman' })
     expect(floored.state.spirit).toBe(0)
