@@ -104,9 +104,9 @@ describe('run lifecycle', () => {
     ])
   })
 
-  it('a scripture-earned verse card loads into the run deck (persistent pool → deck)', () => {
+  it('EARN-PER-RUN: a prior-run verse does NOT auto-load — the run starts without it (re-study to bring it)', () => {
     let s = withHero()
-    // a hero who solved the Zechariah scripture in a prior run owns the miracle card permanently
+    // a hero who solved the Zechariah scripture in a prior run "owns" it as a lifetime record…
     s = {
       ...s,
       profile: {
@@ -118,7 +118,9 @@ describe('run lifecycle', () => {
     }
     const started = run(s, { type: 'startRun', characterId: 'h1', worldId: 'world-01', seed: 's', content: CONTENT }).state
     const heroDeck = started.run!.deckByMember[started.run!.heroMemberId]!
-    expect(heroDeck).toContain('verse_zech_4_6')
+    // …but the new run begins with ONLY the starter kit — verse cards are earned per-run by study
+    expect(heroDeck).not.toContain('verse_zech_4_6')
+    expect(heroDeck).toEqual(CONTENT.heroStartDeck)
   })
 
   it('abandoning a run returns to the fire (hero selection) and keeps the leveled hero', () => {

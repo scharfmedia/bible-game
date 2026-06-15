@@ -182,12 +182,14 @@ function startRun(
   const world = content.worlds[worldId]
   if (!world) return reject(state, 'no-such-world')
 
-  // Build the hero party member from the permanent Character + the bundle's starter kit. The "Enoch"
-  // testing hero also gets every miracle (verse) card in his deck — they're earned by study otherwise.
+  // Build the hero party member from the permanent Character + the bundle's starter kit. EARN-PER-RUN:
+  // a run begins with NO verse cards — they're (re)earned each run by studying scripture at a fireplace
+  // (a deliberate deckbuilding choice). The "Enoch" testing hero is the exception: he starts with every
+  // miracle (verse) card so the whole kit is reachable for testing.
   const verseCards =
     slot.character.name === TEST_HERO_NAME
       ? Object.values(content.cards).filter((c) => c.type === 'verse').map((c) => c.id)
-      : slot.character.ownedVerseCardIds
+      : []
   const startDeck = [...content.heroStartDeck, ...verseCards]
   const hero = partyMemberFromCharacter(slot.character, startDeck, content.heroGraceAbilities)
   const run: RunState = {

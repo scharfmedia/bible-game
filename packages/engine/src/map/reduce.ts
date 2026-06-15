@@ -96,10 +96,6 @@ function heroCharacter(state: GameState) {
   return state.profile.slots.find((s) => s.id === characterId)?.character
 }
 
-function heroOwnedVerseCards(state: GameState): string[] {
-  return heroCharacter(state)?.ownedVerseCardIds ?? []
-}
-
 function heroLostVerseCards(state: GameState): string[] {
   return heroCharacter(state)?.lostVerseCardIds ?? []
 }
@@ -563,10 +559,12 @@ function fireplace(state: GameState, action: 'rest' | 'pray' | 'leave' | 'study'
   }
 
   if (action === 'study') {
-    // Offer the first verse the hero neither owns nor has lost (failed 3×) as a gap-fill prompt.
-    const owned = new Set(heroOwnedVerseCards(state))
+    // EARN-PER-RUN: offer the first verse the hero doesn't already hold IN THIS RUN's deck and hasn't
+    // lost (failed 3×). Verses earned in prior runs are NOT auto-carried — they're re-studied fresh each
+    // run, so studying is a per-run deckbuilding choice.
+    const inDeck = new Set(run.deckByMember[run.heroMemberId] ?? [])
     const lost = new Set(heroLostVerseCards(state))
-    const challenge = Object.values(run.content.verses).find((v) => !owned.has(v.cardDefId) && !lost.has(v.cardDefId))
+    const challenge = Object.values(run.content.verses).find((v) => !inDeck.has(v.cardDefId) && !lost.has(v.cardDefId))
     if (!challenge) return reject(state, 'no-verse-available')
     return ok({ ...state, prompt: { kind: 'verseChallenge', cardDefId: challenge.cardDefId, challengeId: challenge.id } }, [
       { type: 'notice', messageKey: 'fireplace.study' },
