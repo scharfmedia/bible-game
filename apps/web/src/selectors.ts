@@ -8,6 +8,10 @@ import {
   MAX_VERSE_ATTEMPTS,
   memberMaxHp,
   nodeVisible,
+  previewCardDamage,
+  previewMiracle,
+  cardDisplayValues,
+  levelScale,
   type ContentBundle,
   type GameState,
   type NodeType,
@@ -130,7 +134,14 @@ export function selectStory(state: GameState): StoryView | null {
 }
 
 export interface SpoilView { id: string; kind: 'money' | 'relic'; label: string; claimed: boolean }
-export interface CardOfferView { defId: string; nameKey: string; textKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean }
+export interface CardOfferView { defId: string; nameKey: string; textKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean; values?: Record<string, number> }
+
+/** Scaled card-text interpolation values at the run's current hero level + Spirit (for menu cards). */
+function runCardValues(run: NonNullable<GameState['run']>, defId: string): Record<string, number> | undefined {
+  const def = run.content.cards[defId]
+  if (!def) return undefined
+  return cardDisplayValues(def, levelScale(run.party[0]?.level ?? 1), run.spirit.spirit)
+}
 export interface RewardView {
   spoils: SpoilView[]
   cardOptions: CardOfferView[]
@@ -142,8 +153,8 @@ export interface RewardView {
 }
 
 /** Build a card-offer view-model from a card defId (shared by reward + shop). */
-function cardOffer(content: ContentBundle, defId: string): CardOfferView {
-  const def = content.cards[defId]
+function cardOffer(run: NonNullable<GameState['run']>, defId: string): CardOfferView {
+  const def = run.content.cards[defId]
   return {
     defId,
     nameKey: def?.nameKey ?? defId,
@@ -151,6 +162,7 @@ function cardOffer(content: ContentBundle, defId: string): CardOfferView {
     cost: def?.cost ?? 0,
     layer: def?.layer ?? 'flesh',
     verse: def?.type === 'verse',
+    values: runCardValues(run, defId),
   }
 }
 
@@ -172,7 +184,7 @@ export function selectReward(state: GameState): RewardView | null {
       claimed: s.claimed,
       label: s.kind === 'money' ? `${s.amount ?? 0}` : (s.defId ? (content.items[s.defId]?.nameKey ?? s.defId) : s.kind),
     })),
-    cardOptions: (c.reward.cardOptions ?? []).map((defId) => cardOffer(content, defId)),
+    cardOptions: (c.reward.cardOptions ?? []).map((defId) => cardOffer(run, defId)),
   }
 }
 
@@ -292,7 +304,10 @@ export interface CombatantView {
   hp: number
   maxHp: number
   block: number
-  ward: number
+  /** Divine Protection: turns left + per-hit negate chance (0-1), when shielded */
+  shield?: { turns: number; chance: number }
+  /** "last stand" rally: a cornered lone foe deals ×2 and takes ×½ (intentValue already doubled) */
+  lastStand?: boolean
   row: 'front' | 'back'
   intentKind?: string
   intentValue?: number
@@ -303,12 +318,19 @@ export interface CombatantView {
 export interface HandCardView {
   iid: string
   defId: string
+  ownerId: string
   nameKey: string
   textKey: string
   cost: number
-  layer: 'flesh' | 'spirit' | 'both'
+  layer: 'flesh' | 'spirit'
   type: string
   target: string
+  /** nominal scaled damage at rest (level/Spirit scaled); undefined for non-damage cards */
+  damage?: { perHit: number; hits: number; spiritual: boolean }
+  /** miracle odds at the current Spirit (banish/protect cards); undefined otherwise */
+  miracle?: { kind: 'banish' | 'protect'; chance: number; turns?: number }
+  /** scaled values for interpolating the card text (dmg/block/heal/chance) */
+  values: Record<string, number>
 }
 
 export interface CombatView {
@@ -330,10 +352,15 @@ export interface CombatView {
 export function selectCombat(state: GameState): CombatView | null {
   const c = state.combat
   if (!c) return null
+  const spirit = state.run?.spirit.spirit ?? 0
   const heroName = (id: string) => state.run?.party.find((m) => m.memberId === id)?.displayName
 
   const toView = (id: string): CombatantView => {
     const x = c.combatants[id]!
+    const lastStand = x.statuses.some((s) => s.id === 'lastStand' && s.stacks > 0)
+    // honest telegraph: a rallied foe deals ×2, so show the doubled per-hit on attack intents
+    const isAttack = x.intent?.kind === 'attack' || x.intent?.kind === 'attackMulti'
+    const intentValue = x.intent?.value !== undefined && lastStand && isAttack ? x.intent.value * 2 : x.intent?.value
     return {
       id: x.id,
       nameKey: x.faction === 'enemy' ? `enemy.${x.archetype}` : `enemy.${x.archetype}`,
@@ -345,10 +372,11 @@ export function selectCombat(state: GameState): CombatView | null {
       hp: x.hp,
       maxHp: x.maxHp,
       block: x.block,
-      ward: x.spiritualBlock,
+      shield: x.shield,
+      lastStand,
       row: x.row,
       intentKind: x.intent?.kind,
-      intentValue: x.intent?.value,
+      intentValue,
       intentHits: x.intent?.hits,
       intentStacks: x.intent?.stacks,
     }
@@ -359,7 +387,16 @@ export function selectCombat(state: GameState): CombatView | null {
     enemies: c.enemyOrder.map(toView).filter((e) => e.alive),
     hand: c.hand.map((ci) => {
       const def = c.cardDefs[ci.defId]!
-      return { iid: ci.iid, defId: ci.defId, nameKey: def.nameKey, textKey: def.textKey, cost: ci.costOverride ?? def.cost, layer: def.layer, type: def.type, target: def.target }
+      const dmg = previewCardDamage(c, ci.defId, ci.ownerId, spirit)
+      const mir = previewMiracle(def, spirit)
+      const ownerScale = c.combatants[ci.ownerId]?.scale ?? c.partyOrder.map((id) => c.combatants[id]).find((x) => x?.alive)?.scale ?? 1
+      return {
+        iid: ci.iid, defId: ci.defId, ownerId: ci.ownerId, nameKey: def.nameKey, textKey: def.textKey,
+        cost: ci.costOverride ?? def.cost, layer: def.layer, type: def.type, target: def.target,
+        damage: dmg ? { perHit: dmg.perHit, hits: dmg.hits, spiritual: dmg.spirit } : undefined,
+        miracle: mir ? { kind: mir.kind, chance: mir.chance, turns: 'turns' in mir ? mir.turns : undefined } : undefined,
+        values: cardDisplayValues(def, ownerScale, spirit),
+      }
     }),
     energy: c.energy,
     grace: c.grace,
@@ -380,7 +417,8 @@ export interface RestView {
   reflectKey: string
   rested: boolean
   prayed: boolean
-  verseAvailable: boolean
+  /** Scripture Fragments the hero holds — each can be studied at the fire to unlock its spirit card */
+  fragments: { itemId: string; nameKey: string }[]
   /** the once-per-fire upgrade has been spent here */
   upgraded: boolean
   /** at least one deck card can be honed (an upgrade target exists) */
@@ -392,18 +430,18 @@ export function selectFireplace(state: GameState): RestView | null {
   if (!run) return null
   const node = run.content.worlds[run.worldId]?.map.nodes[run.world.current]
   if (!node) return null
-  // scope to the CURRENT hero (matches the engine's per-hero study action) — not unioned across slots
-  const hero = heroCharacter(state)
-  const heroVerseOwned = new Set(hero?.ownedVerseCardIds ?? [])
-  const heroVerseLost = new Set(hero?.lostVerseCardIds ?? [])
   const deck = run.deckByMember[run.heroMemberId] ?? []
+  // Scripture Fragments held in the inventory — each opens its verse gap-fill when studied.
+  const fragments = Object.entries(run.inventory.stacks)
+    .filter(([id, n]) => n > 0 && run.content.items[id]?.kind === 'fragment')
+    .map(([id]) => ({ itemId: id, nameKey: run.content.items[id]!.nameKey }))
   return {
     nameKey: node.nameKey,
     bgAsset: node.bgAsset,
     reflectKey: `${node.nameKey}.reflect`,
     rested: Boolean(run.world.flags[`fireplace:${node.id}:rested`]),
     prayed: Boolean(run.world.flags[`fireplace:${node.id}:prayed`]),
-    verseAvailable: Object.values(run.content.verses).some((v) => !heroVerseOwned.has(v.cardDefId) && !heroVerseLost.has(v.cardDefId)),
+    fragments,
     upgraded: Boolean(run.world.flags[`fireplace:${node.id}:upgraded`]),
     canUpgrade: deck.some((id) => Boolean(run.content.cards[id]?.upgradeTo)),
   }
@@ -421,9 +459,11 @@ export interface UpgradeOption {
   toTextKey: string
   toCost: number
   toLayer: 'flesh' | 'spirit' | 'both'
+  values?: Record<string, number>
+  toValues?: Record<string, number>
 }
 
-export interface ShopCardView { defId: string; nameKey: string; textKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean; price: number; sold: boolean; affordable: boolean }
+export interface ShopCardView { defId: string; nameKey: string; textKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean; price: number; sold: boolean; affordable: boolean; values?: Record<string, number> }
 export interface ShopItemView { itemId: string; nameKey: string; price: number; sold: boolean; affordable: boolean }
 export interface ShopDeckCardView { index: number; nameKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean }
 export interface ShopView {
@@ -469,6 +509,7 @@ export function selectShop(state: GameState): ShopView | null {
         price: o.price,
         sold: o.sold,
         affordable: gold >= o.price && !deckFull,
+        values: runCardValues(run, o.defId),
       }
     }),
     items: shop.items.map((o) => ({
@@ -506,6 +547,8 @@ export function selectUpgradeable(state: GameState): UpgradeOption[] {
       toTextKey: to.textKey,
       toCost: to.cost,
       toLayer: to.layer,
+      values: runCardValues(run, id),
+      toValues: toId ? runCardValues(run, toId) : undefined,
     })
   })
   return out

@@ -36,9 +36,20 @@ export function CardView({
       transition={{ type: 'spring', stiffness: 300, damping: 26 }}
     >
       <div className="card-cost">{card.cost}</div>
+      {card.damage && (
+        <div className={'card-damage ' + (card.damage.spiritual ? 'spirit' : 'flesh')}>
+          {card.damage.spiritual ? '✨' : '⚔'} {card.damage.perHit}
+          {card.damage.hits > 1 ? <span className="hits">×{card.damage.hits}</span> : null}
+        </div>
+      )}
+      {card.miracle && (
+        <div className="card-damage spirit">
+          {card.miracle.kind === 'banish' ? '✨' : '🛡✨'} {Math.round(card.miracle.chance * 100)}%
+        </div>
+      )}
       <div className={'card-art ' + card.layer} />
       <div className="card-name">{t(card.nameKey)}</div>
-      <div className="card-text">{t(card.textKey)}</div>
+      <div className="card-text">{t(card.textKey, card.values)}</div>
     </motion.button>
   )
 }

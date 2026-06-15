@@ -31,6 +31,23 @@ describe('effectivePool', () => {
     // strike.upgradeTo === 'strike_plus'; even if forced into the pool it must not appear
     expect(effectivePool(charAt(1, ['strike_plus']), content)).not.toContain('strike_plus')
   })
+  it('the "Enoch" testing hero unlocks the whole library (verse + "+" still filtered)', () => {
+    const enoch: Character = { ...createCharacter('h', 'Enoch', 1), level: 1, pool: [] }
+    const pool = effectivePool(enoch, content)
+    expect(pool).toContain('light') // not normally in the base pool at L1
+    expect(pool).toContain('mend') // a level-2 unlock, available without leveling
+    expect(pool).not.toContain('strike_plus') // '+' variants still filtered
+    expect(pool.length).toBeGreaterThan(effectivePool(charAt(1), content).length)
+  })
+
+  it('an UNLOCKED verse (spirit) card is offered like any pool card; a locked one is not', () => {
+    const verseDef = { id: 'verse_demo', type: 'verse' as const, layer: 'spirit' as const, cost: 1, target: 'enemy' as const, nameKey: '', textKey: '', effects: [] }
+    const verseContent = { ...content, cards: { ...content.cards, verse_demo: verseDef } }
+    // not unlocked (not in the character pool) → never offered
+    expect(effectivePool(charAt(1), verseContent)).not.toContain('verse_demo')
+    // unlocked (studied a fragment → added to Character.pool) → offered like any card
+    expect(effectivePool(charAt(1, ['verse_demo']), verseContent)).toContain('verse_demo')
+  })
 })
 
 describe('sampleCards', () => {

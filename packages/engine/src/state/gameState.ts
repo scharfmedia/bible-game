@@ -4,7 +4,7 @@ import type { InventoryState } from '../inventory/types'
 import type { WorldState } from '../map/types'
 import type { RngState } from '../rng/rng'
 import type { SpiritState } from '../spirit/types'
-import type { CardDefId, CharacterId, Locale, MemberId } from '../types'
+import type { CardDefId, CharacterId, ItemId, Locale, MemberId } from '../types'
 import type { Character, PartyMember } from './character'
 
 export const GAME_STATE_VERSION = 1
@@ -92,7 +92,7 @@ export interface RunState {
 /** Transient prompt the UI must resolve (level-up pick, verse gap-fill, reward choice). */
 export type GamePrompt =
   | { kind: 'levelUp'; memberId: MemberId; points: number }
-  | { kind: 'verseChallenge'; cardDefId: CardDefId; challengeId: string }
+  | { kind: 'verseChallenge'; cardDefId: CardDefId; challengeId: string; fragmentId: ItemId }
   | { kind: 'reward' }
 
 export interface GameState {

@@ -18,7 +18,6 @@ export type IntentKind =
   | 'block'
   | 'buff'
   | 'debuff'
-  | 'dread'
   | 'special'
   | 'unknown'
 
@@ -40,13 +39,17 @@ export interface Combatant {
   alive: boolean
   hp: number
   maxHp: number
-  /** flesh block — absorbs physical damage, resets at the owner's turn start */
+  /** block — absorbs damage, resets at the owner's turn start (the only mitigation) */
   block: number
-  /** spiritual ward — mitigates `dread` (spirit-layer) damage */
-  spiritualBlock: number
+  /** MIRACLE buff (Divine Protection): while set, each incoming hit has `chance` to be reduced to 1.
+   *  `turns` counts down at the owner's round start. The chance is snapshotted from Spirit at play-time. */
+  shield?: { turns: number; chance: number }
   side: Side
   row: Row
   stats: CombatStats
+  /** level multiplier for this combatant's damage/block/heal output (party: levelScale(level);
+   *  enemy: enemyScale(heroLevel, depth)). Content is authored in level-1 units; this scales it. */
+  scale: number
   statuses: StatusInstance[]
 
   // --- party members ---
@@ -64,12 +67,11 @@ export interface Combatant {
   revealsId?: CombatantId
   /** a demon's host human id; when the host dies the demon flees */
   boundToId?: CombatantId
-  /** caps incoming FLESH damage (the late-game wall; demons cap flesh to ~1) */
-  fleshDamageCap?: number
-  /** reduces incoming spiritual damage by a flat amount */
-  spiritualArmor?: number
-  /** spirit-layer attack value (unblockable by flesh block; mitigated only by ward) */
-  dread?: number
+  /** bosses/elites cannot be removed by the `banish` miracle (Finger of God) */
+  banishImmune?: boolean
+  /** trigger flag: when this foe becomes the SOLE living enemy it rallies — gains the `lastStand`
+   *  buff (deals ×2, takes ×½) and steps to the front. Set per-encounter (see refreshLastStand). */
+  lastStandWhenAlone?: boolean
 }
 
 export type Phase =

@@ -5,7 +5,7 @@
 
 import type { CardDef, CardInstance } from '../cards/types'
 import type { ContentBundle } from '../content/bundle'
-import { deriveStats, scaleEnemy } from '../leveling/scaling'
+import { deriveStats, enemyScale, levelScale, scaleEnemy } from '../leveling/scaling'
 import type { RngState } from '../rng/rng'
 import type { PartyMember } from '../state/character'
 import type { RunState } from '../state/gameState'
@@ -25,10 +25,10 @@ function partyCombatant(m: PartyMember): Combatant {
     hp: Math.min(m.currentHp, stats.maxHp),
     maxHp: stats.maxHp,
     block: 0,
-    spiritualBlock: 0,
     side: 'left',
     row: 'front',
     stats,
+    scale: levelScale(m.level),
     statuses: [],
     memberId: m.memberId,
     contributesEnergy: m.contributesEnergy,
@@ -36,7 +36,7 @@ function partyCombatant(m: PartyMember): Combatant {
   }
 }
 
-function enemyCombatant(t: EnemyTemplate, heroLevel: number, runDepth: number): Combatant {
+function enemyCombatant(t: EnemyTemplate, heroLevel: number, runDepth: number, lastStandWhenAlone?: boolean): Combatant {
   const stats = scaleEnemy(t.scaling, heroLevel, runDepth)
   return {
     id: t.id,
@@ -48,18 +48,17 @@ function enemyCombatant(t: EnemyTemplate, heroLevel: number, runDepth: number): 
     hp: stats.maxHp,
     maxHp: stats.maxHp,
     block: 0,
-    spiritualBlock: 0,
     side: t.side ?? 'right',
     row: t.row ?? 'front',
     stats,
+    scale: enemyScale(heroLevel, runDepth),
     statuses: [],
     hidden: t.hidden,
     revealsId: t.revealsId,
     boundToId: t.boundToId,
-    dread: t.dread,
-    fleshDamageCap: t.fleshDamageCap,
-    spiritualArmor: t.spiritualArmor,
+    banishImmune: t.banishImmune,
     aiProfileId: t.aiProfileId,
+    lastStandWhenAlone,
   }
 }
 
@@ -76,7 +75,7 @@ export function buildEncounter(run: RunState, encounterId: EncounterId, nodeId: 
   const heroLevel = run.party[0]?.level ?? 1
 
   const party = living.map(partyCombatant)
-  const enemies = enc.enemies.map((t) => enemyCombatant(t, heroLevel, run.depth))
+  const enemies = enc.enemies.map((t) => enemyCombatant(t, heroLevel, run.depth, enc.lastStandWhenAlone))
 
   const deck: CardInstance[] = []
   const cardDefs: Record<CardDefId, CardDef> = {}

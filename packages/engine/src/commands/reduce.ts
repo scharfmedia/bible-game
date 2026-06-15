@@ -1,9 +1,10 @@
 import { reduceCombat } from '../combat/reduce'
 import type { ContentBundle } from '../content/bundle'
 import type { GameEvent, ReduceResult } from '../events/event'
-import { totalXpForLevel } from '../leveling/scaling'
+import { LVL_MAX, totalXpForLevel } from '../leveling/scaling'
 import { reduceWorld } from '../map/reduce'
-import { createCharacter, partyMemberFromCharacter } from '../state/character'
+import { createCharacter, partyMemberFromCharacter, TEST_HERO_NAME } from '../state/character'
+import { STAT_IDS, type StatId } from '../state/stats'
 import {
   defaultSettings,
   GAME_STATE_VERSION,
@@ -134,7 +135,12 @@ function createHero(state: GameState, id: string, name: string): ReduceResult {
   if (!trimmed) return reject(state, 'empty-name')
   if (state.profile.slots.some((s) => s.id === id)) return reject(state, 'duplicate-hero-id')
 
-  const slot: CharacterSlot = { id, character: createCharacter(id, trimmed, state.profile.nextCreateSeq) }
+  const base = createCharacter(id, trimmed, state.profile.nextCreateSeq)
+  // Testing gimmick: a hero named "Enoch" is born at max level — Enoch "walked with God" (Gen 5:24).
+  // Handy for exercising the linear level scaling (HP/damage) without grinding a run. His full card
+  // library is unlocked at run time (see startRun + cards/pool effectivePool).
+  const character = trimmed === TEST_HERO_NAME ? { ...base, level: LVL_MAX, xp: totalXpForLevel(LVL_MAX) } : base
+  const slot: CharacterSlot = { id, character }
   const profile: ProfileState = {
     ...state.profile,
     slots: [...state.profile.slots, slot],
@@ -176,8 +182,15 @@ function startRun(
   const world = content.worlds[worldId]
   if (!world) return reject(state, 'no-such-world')
 
-  // Build the hero party member from the permanent Character + the bundle's starter kit.
-  const startDeck = [...content.heroStartDeck, ...slot.character.ownedVerseCardIds]
+  // Build the hero party member from the permanent Character + the bundle's starter kit. EARN-PER-RUN:
+  // a run begins with NO verse cards — they're (re)earned each run by studying scripture at a fireplace
+  // (a deliberate deckbuilding choice). The "Enoch" testing hero is the exception: he starts with every
+  // miracle (verse) card so the whole kit is reachable for testing.
+  const verseCards =
+    slot.character.name === TEST_HERO_NAME
+      ? Object.values(content.cards).filter((c) => c.type === 'verse').map((c) => c.id)
+      : []
+  const startDeck = [...content.heroStartDeck, ...verseCards]
   const hero = partyMemberFromCharacter(slot.character, startDeck, content.heroGraceAbilities)
   const run: RunState = {
     seed,
@@ -210,7 +223,8 @@ function allocateStat(state: GameState, memberId: string, stat: string): ReduceR
   const slot = state.profile.slots[slotIdx]
   if (!slot || slot.character.unspentPoints <= 0) return reject(state, 'no-points')
 
-  const statKey = stat as keyof typeof slot.character.allocated
+  if (!STAT_IDS.includes(stat as StatId)) return reject(state, 'bad-stat')
+  const statKey = stat as StatId
   const character = {
     ...slot.character,
     allocated: { ...slot.character.allocated, [statKey]: slot.character.allocated[statKey] + 1 },

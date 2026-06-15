@@ -12,12 +12,14 @@ export interface CardFaceProps {
   textKey: string
   /** verse cards get the special frame */
   verse?: boolean
+  /** scaled values for interpolating the card text (dmg/block/heal/chance) */
+  values?: Record<string, number>
   selected?: boolean
   disabled?: boolean
   onClick?: () => void
 }
 
-export function CardFace({ cost, layer, nameKey, textKey, verse, selected, disabled, onClick }: CardFaceProps) {
+export function CardFace({ cost, layer, nameKey, textKey, values, verse, selected, disabled, onClick }: CardFaceProps) {
   const { t } = useTranslation()
   return (
     <button
@@ -29,7 +31,7 @@ export function CardFace({ cost, layer, nameKey, textKey, verse, selected, disab
       <div className="card-cost">{cost}</div>
       <div className={'card-art ' + layer} />
       <div className="card-name">{t(nameKey)}</div>
-      <div className="card-text">{t(textKey)}</div>
+      <div className="card-text">{t(textKey, values)}</div>
     </button>
   )
 }

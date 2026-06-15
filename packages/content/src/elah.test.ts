@@ -35,10 +35,13 @@ describe('world-03 map shape', () => {
 
 describe('Goliath', () => {
   const goliath = bundle.encounters.goliath!.enemies.find((e) => e.id === 'goliath')!
-  it('is a fixed ~340 HP giant with a soft flesh cap and the goliath AI profile', () => {
-    expect(goliath.scaling.baseHp).toBe(340)
-    expect(goliath.scaling.hpLevelExp).toBe(0) // fixed regardless of hero level/depth
-    expect(goliath.fleshDamageCap).toBe(8)
+  it('is a high-HP wall (no flesh cap) felled by a long grind, with the goliath AI profile', () => {
+    // New model: no flesh cap — flesh always does its work. The giant is instead a sheer HP wall,
+    // so surviving the grind (block, heal, spiritual miracles) is what wins, not a damage ceiling.
+    expect(goliath.scaling.baseHp).toBeGreaterThanOrEqual(120)
+    expect('hpLevelExp' in goliath.scaling).toBe(false) // enemy scaling no longer carries level exponents
+    expect('atkLevelExp' in goliath.scaling).toBe(false)
+    expect('fleshDamageCap' in goliath).toBe(false) // flesh is never capped now
     expect(goliath.aiProfileId).toBe('goliath')
     expect(goliath.isHuman).toBe(true) // a man, felled by faith — not a demon
   })
@@ -48,5 +51,24 @@ describe('Goliath', () => {
     expect(enc.flags.allowFlee).toBe(false)
     expect(enc.enemies.map((e) => e.archetype).sort()).toEqual(['goliath', 'philistineArcher', 'shieldBearer'])
     expect(enc.battleMusic).toBe('music/battle-elah-boss')
+  })
+})
+
+describe('Scripture Fragments drop across the Elah gauntlet', () => {
+  it('its notable fights award fragments, covering all four scriptures (so Elah is a fragment source)', () => {
+    const fights = ['dagonZealot', 'shieldWallElite', 'champion', 'taunting', 'goliath']
+    const dropped = new Set<string>()
+    for (const id of fights) {
+      for (const o of bundle.encounters[id]?.rewardOptions ?? []) {
+        if (o.kind === 'relic' && o.defId?.startsWith('fragment_')) dropped.add(o.defId)
+      }
+    }
+    // every fragment item is a valid, studyable item linked to a real verse
+    for (const defId of dropped) {
+      const item = bundle.items[defId]
+      expect(item?.kind, defId).toBe('fragment')
+      expect(bundle.verses[item!.verseChallengeId!]).toBeDefined()
+    }
+    expect(dropped).toEqual(new Set(['fragment_2kings_6_17', 'fragment_phil_4_6', 'fragment_zech_4_6', 'fragment_luke_10_27']))
   })
 })

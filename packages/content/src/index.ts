@@ -19,7 +19,8 @@ import { TUTORIAL_SCENES } from './tutorial/scenes'
 import { ELAH_AMBUSH_TABLE, ELAH_ENCOUNTERS, ELAH_MAP } from './elah/map'
 import { ELAH_STORIES } from './elah/stories'
 
-const HERO_GRACE_ABILITIES = ['sight', 'mercy']
+// Sight is no longer a grace ability — it's the earned "Open My Eyes" verse card. Mercy remains.
+const HERO_GRACE_ABILITIES = ['mercy']
 
 export function createContent(): ContentBundle {
   const bundle: ContentBundle = {

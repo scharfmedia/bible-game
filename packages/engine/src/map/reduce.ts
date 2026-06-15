@@ -10,7 +10,7 @@ import type { GameEvent, ReduceResult } from '../events/event'
 import { memberMaxHp, type PartyMember } from '../state/character'
 import { applySpiritEvent, type SpiritEvent } from '../spirit/spirit'
 import type { GameState, RunState } from '../state/gameState'
-import { fork } from '../rng/rng'
+import { chance, fork } from '../rng/rng'
 import { resolveInteraction, runScript, type CardGrant, type SceneTransition } from '../scene/resolve'
 import type { DialogueChoice } from '../scene/types'
 import type { CardDefId, ItemId, NodeId } from '../types'
@@ -96,14 +96,6 @@ function heroCharacter(state: GameState) {
   return state.profile.slots.find((s) => s.id === characterId)?.character
 }
 
-function heroOwnedVerseCards(state: GameState): string[] {
-  return heroCharacter(state)?.ownedVerseCardIds ?? []
-}
-
-function heroLostVerseCards(state: GameState): string[] {
-  return heroCharacter(state)?.lostVerseCardIds ?? []
-}
-
 const clearNode = (run: RunState, nodeId: NodeId): RunState =>
   run.world.cleared.includes(nodeId)
     ? run
@@ -131,7 +123,7 @@ export function reduceWorld(state: GameState, cmd: Command): ReduceResult {
     case 'world/dismissStory':
       return dismissStory(state)
     case 'world/fireplace':
-      return fireplace(state, cmd.action, cmd.cardIndex)
+      return fireplace(state, cmd.action, cmd.cardIndex, cmd.fragmentId)
     case 'world/shopBuyCard':
       return shopBuyCard(state, cmd.nodeId, cmd.defId)
     case 'world/shopBuyItem':
@@ -183,9 +175,29 @@ function move(state: GameState, target: NodeId): ReduceResult {
   const firstVisit = chk.visit === 'first'
   const visited = firstVisit ? [...run.world.visited, target] : run.world.visited
   const depth = Math.max(run.depth, node.depth)
-  const run2: RunState = { ...run, depth, world: { ...run.world, current: target, visited } }
+  let run2: RunState = { ...run, depth, world: { ...run.world, current: target, visited } }
+  const moved: GameEvent = { type: 'moved', from: fromId, to: target, visit: chk.visit }
 
-  return ok({ ...state, run: run2 }, [{ type: 'moved', from: fromId, to: target, visit: chk.visit }])
+  // Revisit ambush: stepping back onto a CLEARED combat node (not the boss) risks a fresh skirmish —
+  // so backtracking across the map has a real cost. Chance + encounter come from the world's
+  // ambushTable (0 = never, e.g. the tutorial). The ambushCursor advances each roll so consecutive
+  // steps draw independent rolls. A backward fight does NOT re-clear the node (see combat leaveReward).
+  const table = run.content.worlds[run.worldId]?.ambushTable
+  const clearedCombat = !firstVisit && run.world.cleared.includes(target) && (node.type === 'combat' || node.type === 'elite')
+  if (clearedCombat && table && table.combat > 0 && table.combatEncounterId) {
+    const cursor = run.world.ambushCursor
+    const [hit] = chance(fork(run.rng, `ambush:${target}:${cursor}`), table.combat)
+    run2 = { ...run2, world: { ...run2.world, ambushCursor: cursor + 1 } }
+    if (hit) {
+      return startCombatNode({ ...state, run: run2 }, run2, target, table.combatEncounterId, true, [
+        moved,
+        { type: 'ambush', kind: 'combat' },
+      ])
+    }
+    return ok({ ...state, run: run2 }, [moved, { type: 'ambush', kind: 'nothing' }])
+  }
+
+  return ok({ ...state, run: run2 }, [moved])
 }
 
 /** Resolve the node the hero is standing on. First time fires its fixed event (combat/scene/event/
@@ -513,7 +525,7 @@ function dismissStory(state: GameState): ReduceResult {
 
 // ---- fireplace --------------------------------------------------------------------------
 
-function fireplace(state: GameState, action: 'rest' | 'pray' | 'leave' | 'study' | 'upgrade', cardIndex?: number): ReduceResult {
+function fireplace(state: GameState, action: 'rest' | 'pray' | 'leave' | 'study' | 'upgrade', cardIndex?: number, fragmentId?: ItemId): ReduceResult {
   const run = state.run!
   const node = run.world.current
   const restFlag = `fireplace:${node}:rested`
@@ -543,12 +555,15 @@ function fireplace(state: GameState, action: 'rest' | 'pray' | 'leave' | 'study'
   }
 
   if (action === 'study') {
-    // Offer the first verse the hero neither owns nor has lost (failed 3×) as a gap-fill prompt.
-    const owned = new Set(heroOwnedVerseCards(state))
-    const lost = new Set(heroLostVerseCards(state))
-    const challenge = Object.values(run.content.verses).find((v) => !owned.has(v.cardDefId) && !lost.has(v.cardDefId))
-    if (!challenge) return reject(state, 'no-verse-available')
-    return ok({ ...state, prompt: { kind: 'verseChallenge', cardDefId: challenge.cardDefId, challengeId: challenge.id } }, [
+    // Study a Scripture Fragment the hero holds: open its verse gap-fill. Solving unlocks the spirit
+    // card (verse/reduce); 3 misses destroys the fragment. No once-per-fire flag — each study costs a
+    // fragment, so that's the limiter (and cancel/retry stays possible).
+    if (!fragmentId) return reject(state, 'no-fragment')
+    if ((run.inventory.stacks[fragmentId] ?? 0) <= 0) return reject(state, 'fragment-not-held')
+    const item = run.content.items[fragmentId]
+    const challenge = item?.verseChallengeId ? run.content.verses[item.verseChallengeId] : undefined
+    if (!item || item.kind !== 'fragment' || !challenge) return reject(state, 'not-a-fragment')
+    return ok({ ...state, prompt: { kind: 'verseChallenge', cardDefId: challenge.cardDefId, challengeId: challenge.id, fragmentId } }, [
       { type: 'notice', messageKey: 'fireplace.study' },
     ])
   }

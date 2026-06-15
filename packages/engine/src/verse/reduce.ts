@@ -46,6 +46,13 @@ export function reduceVerse(state: GameState, cmd: Command): ReduceResult {
   const data = challenge.byLocale[locale]
   const result = checkVerseAnswers(data, locale, cmd.answers)
 
+  // the Scripture Fragment being studied (carried on the prompt) — consumed on success OR on loss
+  const fragmentId = state.prompt.fragmentId
+  const takeFragment = (r: typeof run): typeof run => {
+    const left = Math.max(0, (r.inventory.stacks[fragmentId] ?? 0) - 1)
+    return { ...r, inventory: { ...r.inventory, stacks: { ...r.inventory.stacks, [fragmentId]: left } } }
+  }
+
   if (!result.correct) {
     const attempts = (slot?.character.verseAttempts[cardId] ?? 0) + 1
     const verseAttempts = { ...(slot?.character.verseAttempts ?? {}), [cardId]: attempts }
@@ -53,37 +60,45 @@ export function reduceVerse(state: GameState, cmd: Command): ReduceResult {
       // still tries left: persist the miss, keep the modal open
       return { state: { ...state, profile: patchCharacter({ verseAttempts }) }, events: [{ type: 'verseRejected', challengeId, attemptsLeft: MAX_VERSE_ATTEMPTS - attempts }] }
     }
-    // out of tries: the scripture is lost (permanent), close the modal
-    const lostVerseCardIds = slot && !slot.character.lostVerseCardIds.includes(cardId) ? [...slot.character.lostVerseCardIds, cardId] : (slot?.character.lostVerseCardIds ?? [])
+    // out of tries: the FRAGMENT falls to pieces (the item is destroyed) — no permanent card-lock; a
+    // fresh fragment can be found/bought to try again. Clear the dead attempt count + close the modal.
+    const verseAttemptsCleared = { ...(slot?.character.verseAttempts ?? {}) }
+    delete verseAttemptsCleared[cardId]
     return {
-      state: { ...state, profile: patchCharacter({ verseAttempts, lostVerseCardIds }), prompt: null },
+      state: { ...state, profile: patchCharacter({ verseAttempts: verseAttemptsCleared }), run: takeFragment(run), prompt: null },
       events: [
         { type: 'verseLost', challengeId, cardDefId: cardId },
-        { type: 'notice', messageKey: 'fireplace.verseLost' },
+        { type: 'notice', messageKey: 'fireplace.fragmentDestroyed' },
       ],
     }
   }
 
-  // success: grant the card permanently + into the run deck, raise Spirit, clear the prompt (and drop
-  // the now-dead attempt count for this verse, so the persisted character carries no stale entries)
+  // success: UNLOCK the card into the persistent pool (so it's offered like any unlocked card from now
+  // on) AND drop it into THIS run's deck; consume the fragment; raise Spirit; clear the attempt count
+  // (and keep a lifetime "learned" record on ownedVerseCardIds).
   let profile = state.profile
   if (slot) {
-    const ownedVerseCardIds = slot.character.ownedVerseCardIds.includes(cardId) ? slot.character.ownedVerseCardIds : [...slot.character.ownedVerseCardIds, cardId]
+    const has = (xs: string[]) => xs.includes(cardId)
+    const ownedVerseCardIds = has(slot.character.ownedVerseCardIds) ? slot.character.ownedVerseCardIds : [...slot.character.ownedVerseCardIds, cardId]
+    const pool = has(slot.character.pool) ? slot.character.pool : [...slot.character.pool, cardId]
     const verseAttempts = { ...slot.character.verseAttempts }
     delete verseAttempts[cardId]
-    profile = patchCharacter({ ownedVerseCardIds, verseAttempts })
+    profile = patchCharacter({ ownedVerseCardIds, pool, verseAttempts })
   }
 
+  // Append a copy to this run's deck. Intentionally NO dedup: the study just consumed a fragment, so it
+  // always yields a copy — studying a second fragment of the same scripture is a valid, fragment-priced
+  // way to run duplicates (decks already allow multiples, e.g. 3× Strike). Deduping would silently
+  // waste a consumed fragment.
   const heroDeck = run.deckByMember[run.heroMemberId] ?? []
-  const deckByMember = heroDeck.includes(cardId)
-    ? run.deckByMember
-    : { ...run.deckByMember, [run.heroMemberId]: [...heroDeck, cardId] }
+  const deckByMember = { ...run.deckByMember, [run.heroMemberId]: [...heroDeck, cardId] }
 
   const out = applySpiritEvent(run.spirit, { kind: 'earnVerse' })
-  const newRun = { ...run, deckByMember, spirit: out.state }
+  const newRun = { ...takeFragment(run), deckByMember, spirit: out.state }
 
   const events: GameEvent[] = [
     { type: 'verseEarned', cardDefId: cardId },
+    { type: 'cardUnlocked', cardId },
     { type: 'spiritShifted', delta: out.delta, reason: out.reason },
   ]
   return { state: { ...state, profile, run: newRun, prompt: null }, events }

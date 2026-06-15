@@ -1,13 +1,12 @@
-// The damage pipeline — pure, integer-stable (Math.floor after every multiply, fixed order), so
-// results are identical on every machine. This is one of the three flagged correctness risks.
+// The flesh damage pipeline — pure and integer-stable, so results are identical on every machine.
 //
-// Physical order: base + strength → ×weak(0.75) → ×vulnerable(1.5) → back-row attacker ×0.5 →
-//   back-row defender ×0.5 → flat defense → global 9999 cap → per-target fleshDamageCap → block.
-// Spiritual damage BYPASSES rows + the flesh cap (only spiritualArmor + ward reduce it) — this is
-// what lets a high-Spirit player breach the late-game wall that pure flesh cannot.
+// `base` arrives already scaled (flesh cards: op.amount × source.scale; spirit cards: scaled by Spirit
+// potency upstream; enemy attacks: stats.attack, scaled at build time). Order: + strength(×scale) →
+// ×lastStand-out(2) → ×weak(0.75) → ×vulnerable(1.5) → back-row attacker ×0.5 → back-row defender
+// ×0.5 → ×lastStand-in(0.5) → block (in damageTarget). There is NO flat defense and NO damage cap —
+// the only mitigation is block (and the `lastStand` rally buff: a cornered lone foe hits ×2, takes ×½).
 
 import type { StatusId } from '../cards/types'
-import { DAMAGE_CAP } from '../leveling/scaling'
 import type { Combatant } from './types'
 
 export const statusStacks = (c: Combatant, id: StatusId): number =>
@@ -15,33 +14,20 @@ export const statusStacks = (c: Combatant, id: StatusId): number =>
 
 export interface HitResult {
   amount: number
+  /** retained for the damageDealt event shape; flesh is never capped now, so always false */
   capped: boolean
 }
 
-/** Physical damage from `base` (already including the attacker's flat attack contribution). */
+/** Physical damage from `base` (already level-scaled). Strength scales with the attacker's level. */
 export function physicalAmount(base: number, attacker: Combatant, defender: Combatant): HitResult {
-  let dmg = base + statusStacks(attacker, 'strength')
+  let dmg = base + statusStacks(attacker, 'strength') * attacker.scale
+  if (statusStacks(attacker, 'lastStand') > 0) dmg = Math.floor(dmg * 2) // a rallied lone foe hits twice as hard
   if (statusStacks(attacker, 'weak') > 0) dmg = Math.floor(dmg * 0.75)
   if (statusStacks(defender, 'vulnerable') > 0) dmg = Math.floor(dmg * 1.5)
   if (attacker.row === 'back') dmg = Math.floor(dmg * 0.5)
   if (defender.row === 'back') dmg = Math.floor(dmg * 0.5)
-  dmg = dmg - defender.stats.defense
-
-  let capped = false
-  if (dmg > DAMAGE_CAP) {
-    dmg = DAMAGE_CAP
-    capped = true
-  }
-  if (defender.fleshDamageCap !== undefined && dmg > defender.fleshDamageCap) {
-    dmg = defender.fleshDamageCap
-    capped = true
-  }
-  return { amount: Math.max(0, dmg), capped }
-}
-
-/** Spiritual damage (`base` already scaled by potency). Bypasses rows + flesh cap. */
-export function spiritualAmount(base: number, defender: Combatant): HitResult {
-  return { amount: Math.max(0, base - (defender.spiritualArmor ?? 0)), capped: false }
+  if (statusStacks(defender, 'lastStand') > 0) dmg = Math.floor(dmg * 0.5) // …and takes only half
+  return { amount: Math.max(0, Math.floor(dmg)), capped: false }
 }
 
 export interface AbsorbResult {

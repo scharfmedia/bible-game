@@ -124,15 +124,15 @@ export const WORLD_01_MAP: WorldMap = {
 
 // ---- encounters ---------------------------------------------------------------------------
 // Human enemies (robbers, the thief) grief Spirit if killed — subdue/Mercy is the righteous path.
-// Demons (the Spirit of Greed, the Accuser) are the real foe: flesh-capped + dread → only Spirit
-// (grace + spiritual/verse cards) can overcome them.
+// Demons (the Spirit of Greed, the Accuser) are the real foe: bigger HP pools + dread. Flesh can
+// fell them (it is never capped), but their dread punishes a long, flesh-only grind.
 
 export const ENCOUNTERS: Record<string, EncounterDef> = {
   roadRobbers: {
     id: 'roadRobbers',
     enemies: [
-      { id: 'robber1', archetype: 'robber', nameKey: 'enemy.robber', isHuman: true, scaling: { baseHp: 7, baseAtk: 2, hpLevelExp: 1, atkLevelExp: 1 } },
-      { id: 'robber2', archetype: 'robber', nameKey: 'enemy.robber', isHuman: true, side: 'right', row: 'back', scaling: { baseHp: 5, baseAtk: 2, hpLevelExp: 1, atkLevelExp: 1 } },
+      { id: 'robber1', archetype: 'robber', nameKey: 'enemy.robber', isHuman: true, scaling: { baseHp: 7, baseAtk: 2 } },
+      { id: 'robber2', archetype: 'robber', nameKey: 'enemy.robber', isHuman: true, side: 'right', row: 'back', scaling: { baseHp: 5, baseAtk: 2 } },
     ],
     flags: { mandatory: false, allowFlee: true, isBoss: false },
     winCondition: { kind: 'allEnemiesDefeated' },
@@ -143,7 +143,7 @@ export const ENCOUNTERS: Record<string, EncounterDef> = {
   },
   roadAmbush: {
     id: 'roadAmbush',
-    enemies: [{ id: 'ambusher', archetype: 'robber', nameKey: 'enemy.ambusher', isHuman: true, scaling: { baseHp: 9, baseAtk: 3, hpLevelExp: 1, atkLevelExp: 1 } }],
+    enemies: [{ id: 'ambusher', archetype: 'robber', nameKey: 'enemy.ambusher', isHuman: true, scaling: { baseHp: 9, baseAtk: 3 } }],
     flags: { mandatory: false, allowFlee: true, isBoss: false },
     winCondition: { kind: 'allEnemiesDefeated' },
     rewardOptions: [{ id: 'money', kind: 'money', amount: 22 }],
@@ -154,14 +154,14 @@ export const ENCOUNTERS: Record<string, EncounterDef> = {
   thiefGreed: {
     id: 'thiefGreed',
     enemies: [
-      { id: 'thief', archetype: 'thief', nameKey: 'enemy.thief', isHuman: true, revealsId: 'greed', scaling: { baseHp: 8, baseAtk: 2, hpLevelExp: 1, atkLevelExp: 1 } },
-      { id: 'greed', archetype: 'demon', nameKey: 'enemy.greed', isHuman: false, isDemon: true, hidden: true, boundToId: 'thief', dread: 5, fleshDamageCap: 1, scaling: { baseHp: 5, baseAtk: 1, hpLevelExp: 1, atkLevelExp: 1 } },
+      { id: 'thief', archetype: 'thief', nameKey: 'enemy.thief', isHuman: true, revealsId: 'greed', scaling: { baseHp: 8, baseAtk: 2 } },
+      { id: 'greed', archetype: 'demon', nameKey: 'enemy.greed', isHuman: false, isDemon: true, hidden: true, boundToId: 'thief', scaling: { baseHp: 5, baseAtk: 4 } },
     ],
     // The Spirit of Greed binds you to the spot — once joined, there is no fleeing the rocky pass.
     // (You may still avoid the pass entirely by routing around it on the map.)
     flags: { mandatory: true, allowFlee: false, isBoss: false },
     winCondition: { kind: 'allDemonsDestroyed' },
-    rewardOptions: [{ id: 'money', kind: 'money', amount: 45 }, { id: 'relic', kind: 'relic', defId: 'veil_lifted' }],
+    rewardOptions: [{ id: 'money', kind: 'money', amount: 45 }, { id: 'relic', kind: 'relic', defId: 'veil_lifted' }, { id: 'fragment', kind: 'relic', defId: 'fragment_2kings_6_17' }],
     rewardXp: 35,
     battleBg: 'bg-combat-rocky-pass-sideview',
     rewardBg: 'bg-combat-rocky-pass',
@@ -169,7 +169,7 @@ export const ENCOUNTERS: Record<string, EncounterDef> = {
   accuser: {
     id: 'accuser',
     enemies: [
-      { id: 'accuser', archetype: 'demon', nameKey: 'enemy.accuser', isHuman: false, isDemon: true, dread: 8, fleshDamageCap: 1, spiritualArmor: 2, scaling: { baseHp: 16, baseAtk: 2, hpLevelExp: 1.1, atkLevelExp: 1 } },
+      { id: 'accuser', archetype: 'demon', nameKey: 'enemy.accuser', isHuman: false, isDemon: true, scaling: { baseHp: 20, baseAtk: 5 } },
     ],
     flags: { mandatory: false, allowFlee: false, isBoss: true },
     winCondition: { kind: 'allDemonsDestroyed' },
@@ -187,6 +187,13 @@ export const ITEMS: Record<string, ItemDef> = {
   letter: { id: 'letter', kind: 'questItem', nameKey: 'item.letter.name', descKey: 'item.letter.desc', icon: 'item/letter', stackable: false, usableInScene: false },
   coin: { id: 'coin', kind: 'currency', nameKey: 'item.coin.name', descKey: 'item.coin.desc', icon: 'item/coin', stackable: true, usableInScene: false },
   veil_lifted: { id: 'veil_lifted', kind: 'relic', nameKey: 'item.veil_lifted.name', descKey: 'item.veil_lifted.desc', icon: 'item/veil', stackable: false, usableInScene: false, spiritEffectWhileHeld: 2 },
+
+  // Scripture Fragments — collectibles studied at a fireplace to UNLOCK their spirit card (then it's
+  // offered like any unlocked card). One per verse; `verseChallengeId` names the gap-fill to solve.
+  fragment_2kings_6_17: { id: 'fragment_2kings_6_17', kind: 'fragment', nameKey: 'item.fragment_2kings_6_17.name', descKey: 'item.fragment.desc', icon: 'item/fragment', stackable: true, usableInScene: false, verseChallengeId: '2kings_6_17' },
+  fragment_phil_4_6: { id: 'fragment_phil_4_6', kind: 'fragment', nameKey: 'item.fragment_phil_4_6.name', descKey: 'item.fragment.desc', icon: 'item/fragment', stackable: true, usableInScene: false, verseChallengeId: 'phil_4_6' },
+  fragment_zech_4_6: { id: 'fragment_zech_4_6', kind: 'fragment', nameKey: 'item.fragment_zech_4_6.name', descKey: 'item.fragment.desc', icon: 'item/fragment', stackable: true, usableInScene: false, verseChallengeId: 'zech_4_6' },
+  fragment_luke_10_27: { id: 'fragment_luke_10_27', kind: 'fragment', nameKey: 'item.fragment_luke_10_27.name', descKey: 'item.fragment.desc', icon: 'item/fragment', stackable: true, usableInScene: false, verseChallengeId: 'luke_10_27' },
 }
 
 export const AMBUSH_TABLE = { combat: 0.3, event: 0.15, combatEncounterId: 'roadAmbush', eventId: 'traveler' } as const

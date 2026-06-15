@@ -26,10 +26,8 @@ export interface EnemyTemplate {
   /** demon → its host human id (flees when the host dies) */
   boundToId?: string
   scaling: EnemyScalingDef
-  /** fixed (un-scaled) special attributes */
-  dread?: number
-  fleshDamageCap?: number
-  spiritualArmor?: number
+  /** bosses/elites cannot be removed by the `banish` miracle (Finger of God) */
+  banishImmune?: boolean
   side?: Side
   row?: Row
   /** selects a coded boss/elite AI pattern in combat/ai.ts (e.g. 'goliath' | 'champion' | 'dreadSpirit') */
@@ -41,6 +39,9 @@ export interface EncounterDef {
   enemies: EnemyTemplate[]
   formation?: FormationLayout
   flags: CombatFlags
+  /** when true, the LAST surviving foe of this (multi-enemy) fight rallies: gains the `lastStand`
+   *  buff (deals ×2, takes ×½) and steps to the front. Reusable opt-in for any fight. */
+  lastStandWhenAlone?: boolean
   winCondition: WinCondition
   rewardOptions?: RewardOption[]
   rewardXp?: number

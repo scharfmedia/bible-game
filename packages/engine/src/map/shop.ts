@@ -11,7 +11,8 @@ import type { RunState } from '../state/gameState'
 import type { NodeId } from '../types'
 import type { ShopItemOffer, ShopState } from './types'
 
-const CARD_OFFER_COUNT = 4
+// up to 8 card choices (capped by the hero's effective pool size — ~6 early, ~9 by level 5)
+const CARD_OFFER_COUNT = 8
 const ITEM_OFFER_COUNT = 2
 const REMOVE_PRICE = 60
 
@@ -24,6 +25,7 @@ const CARD_PRICE: Record<NonNullable<CardDef['rarity']>, number> = {
 const cardPrice = (def: CardDef | undefined): number => (def?.rarity ? CARD_PRICE[def.rarity] : 45)
 
 const ITEM_PRICE = 55
+const FRAGMENT_PRICE = 70 // Scripture Fragments are a rare-ish buy
 
 /** Build a shop's stock for `nodeId`. Deterministic per (run seed, node). Does not advance run.rng. */
 export function generateShop(run: RunState, character: Character | undefined, nodeId: NodeId): ShopState {
@@ -37,10 +39,12 @@ export function generateShop(run: RunState, character: Character | undefined, no
     cards = picks.map((defId) => ({ defId, price: cardPrice(run.content.cards[defId]), sold: false }))
   }
 
-  // items: relics + consumables the world defines
-  const buyable = Object.values(run.content.items).filter((i) => i.kind === 'relic' || i.kind === 'consumable')
+  // items: relics + consumables + Scripture Fragments the world defines
+  const buyable = Object.values(run.content.items).filter((i) => i.kind === 'relic' || i.kind === 'consumable' || i.kind === 'fragment')
   const [shuffledItems] = shuffle(rng, buyable)
-  const items: ShopItemOffer[] = shuffledItems.slice(0, ITEM_OFFER_COUNT).map((i) => ({ itemId: i.id, price: ITEM_PRICE, sold: false }))
+  const items: ShopItemOffer[] = shuffledItems
+    .slice(0, ITEM_OFFER_COUNT)
+    .map((i) => ({ itemId: i.id, price: i.kind === 'fragment' ? FRAGMENT_PRICE : ITEM_PRICE, sold: false }))
 
   return { cards, items, removePrice: REMOVE_PRICE }
 }

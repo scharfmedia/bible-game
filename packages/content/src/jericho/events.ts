@@ -45,7 +45,9 @@ export const EVENTS: Record<string, MoralEvent> = {
       {
         id: 'rob',
         labelKey: 'event.traveler.rob',
-        script: [{ addSpirit: -30, reason: 'robbedTraveler' }, { giveItem: 'coin', count: 2 }, { say: 'event.traveler.rob.result' }],
+        // robbing the wounded (the anti-Samaritan) is serious harm — a big hit, though less than a kill.
+        // Author future "harm" choices in this harsher band.
+        script: [{ addSpirit: -80, reason: 'robbedTraveler' }, { giveItem: 'coin', count: 2 }, { say: 'event.traveler.rob.result' }],
       },
       { id: 'leave', labelKey: 'event.traveler.leave', script: [{ say: 'event.traveler.leave.result' }] },
     ],

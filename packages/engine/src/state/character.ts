@@ -2,6 +2,10 @@ import type { CardDefId, CharacterId, GraceAbilityId, I18nKey, MemberId } from '
 import { deriveStats } from '../leveling/scaling'
 import { emptyAllocation, type StatAllocation } from './stats'
 
+/** Testing gimmick: a hero with this exact (trimmed) name spawns at max level with every card
+ *  unlocked — for exercising scaling + the full card library without grinding. */
+export const TEST_HERO_NAME = 'Enoch'
+
 /** The PERMANENT hero — persists across runs (WoW/Diablo style). Created once, named by the player. */
 export interface Character {
   id: CharacterId

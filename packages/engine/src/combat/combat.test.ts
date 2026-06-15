@@ -7,9 +7,10 @@ import type { Combatant } from './types'
 // ---- fixtures ----------------------------------------------------------------------------
 
 const CARDS: Record<string, CardDef> = {
-  strike: { id: 'strike', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'damage', amount: 6, damageType: 'physical' }] },
-  light: { id: 'light', type: 'spiritual', layer: 'spirit', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'damage', amount: 8, damageType: 'spiritual' }] },
+  strike: { id: 'strike', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'damage', amount: 6 }] },
+  light: { id: 'light', type: 'spiritual', layer: 'spirit', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'damage', amount: 8 }] },
   guard: { id: 'guard', type: 'skill', layer: 'flesh', cost: 1, target: 'self', nameKey: '', textKey: '', effects: [{ kind: 'block', amount: 5 }] },
+  reveal: { id: 'reveal', type: 'verse', layer: 'spirit', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'revealHidden', via: 'sight' }] }, // the "Open My Eyes" Sight card
 }
 
 const deck = (defs: string[], owner = 'm-hero'): CardInstance[] =>
@@ -24,14 +25,14 @@ const hero = (over: Partial<Combatant> = {}): Combatant => ({
   hp: 50,
   maxHp: 50,
   block: 0,
-  spiritualBlock: 0,
   side: 'left',
   row: 'front',
-  stats: { maxHp: 50, attack: 2, defense: 0, spiritAffinity: 1, speed: 5 },
+  stats: { maxHp: 50, attack: 2, speed: 5 },
+  scale: 1,
   statuses: [],
   memberId: 'm-hero',
   contributesEnergy: 3,
-  graceAbilityIds: ['sight', 'mercy'],
+  graceAbilityIds: ['mercy'],
   ...over,
 })
 
@@ -44,10 +45,10 @@ const thief = (over: Partial<Combatant> = {}): Combatant => ({
   hp: 12,
   maxHp: 12,
   block: 0,
-  spiritualBlock: 0,
   side: 'right',
   row: 'front',
-  stats: { maxHp: 12, attack: 4, defense: 0, spiritAffinity: 0, speed: 3 },
+  stats: { maxHp: 12, attack: 4, speed: 3 },
+  scale: 1,
   statuses: [],
   revealsId: 'demon',
   ...over,
@@ -64,12 +65,11 @@ const demon = (over: Partial<Combatant> = {}): Combatant => ({
   hp: 8,
   maxHp: 8,
   block: 0,
-  spiritualBlock: 0,
   side: 'right',
   row: 'front',
-  stats: { maxHp: 8, attack: 2, defense: 0, spiritAffinity: 0, speed: 1 },
+  stats: { maxHp: 8, attack: 2, speed: 1 },
+  scale: 1,
   statuses: [],
-  dread: 4,
   boundToId: 'thief',
   ...over,
 })
@@ -78,7 +78,7 @@ const thiefInit = (over: Partial<CombatInit> = {}): CombatInit => ({
   rng: seedRng('combat-test'),
   party: [hero()],
   enemies: [thief(), demon()],
-  deck: deck(['strike', 'light', 'light', 'guard', 'strike']),
+  deck: deck(['strike', 'light', 'reveal', 'guard', 'strike']),
   cardDefs: CARDS,
   energyMax: 3,
   graceMax: 1,
@@ -114,19 +114,18 @@ describe('startCombat', () => {
 // ---- the righteous path ------------------------------------------------------------------
 
 describe('thief encounter — the righteous (peaceful) path', () => {
-  it('Sight reveals the demon; spiritual damage destroys it; the human is freed, not killed', () => {
+  it('the Sight CARD reveals the demon; spiritual damage destroys it; the human is freed, not killed', () => {
     const spirit = 200 // potency 1.0 → light deals its full 8
     let { combat } = startCombat(thiefInit())
+    combat = ensureActing(combat).combat // draw the opening hand
 
-    const sight = useGrace(combat, 'sight', undefined, spirit)
-    combat = sight.combat
+    // "Open My Eyes" applied to the human reveals its bound demon (replaces the old Sight grace)
+    const seen = playCard(combat, findInHand(combat, 'reveal'), 'thief', spirit)
+    combat = seen.combat
     expect(combat.enemyOrder).toContain('demon')
-    expect(combat.grace.current).toBe(0)
-    expect(sight.events.some((e) => e.type === 'demonRevealed')).toBe(true)
-    expect(sight.spiritEvents).toContainEqual({ kind: 'useGrace', ability: 'sight' })
+    expect(seen.events.some((e) => e.type === 'demonRevealed' && e.id === 'demon')).toBe(true)
 
-    const light = findInHand(combat, 'light')
-    const played = playCard(combat, light, 'demon', spirit)
+    const played = playCard(combat, findInHand(combat, 'light'), 'demon', spirit)
     combat = played.combat
 
     expect(combat.combatants.demon!.alive).toBe(false)
@@ -139,9 +138,10 @@ describe('thief encounter — the righteous (peaceful) path', () => {
 
   it('a spiritual card FIZZLES when Spirit is low (the trap)', () => {
     let { combat } = startCombat(thiefInit())
-    combat = useGrace(combat, 'sight', undefined, 0).combat
-    const light = findInHand(combat, 'light')
-    const played = playCard(combat, light, 'demon', 0) // carnal: potency 0
+    combat = ensureActing(combat).combat
+    // reveal the demon first (reveal ignores Spirit), then try to smite it while carnal
+    combat = playCard(combat, findInHand(combat, 'reveal'), 'thief', 0).combat
+    const played = playCard(combat, findInHand(combat, 'light'), 'demon', 0) // carnal: potency 0
 
     expect(played.events.some((e) => e.type === 'cardFizzled' && e.defId === 'light')).toBe(true)
     expect(played.combat.combatants.demon!.hp).toBe(8) // unharmed
@@ -165,7 +165,7 @@ describe('thief encounter — the brute path (teaches by contrast)', () => {
   it('killing the human ends the fight (demon flees) with a heavy Spirit penalty, no righteous loot', () => {
     let { combat } = startCombat(thiefInit())
     combat = ensureActing(combat).combat // draw the opening hand
-    // two Strikes (6 + hero attack 2 = 8 each) kill the 12-HP thief
+    // two Strikes (base 6 × hero scale 1 = 6 each; no attack-stat bonus) kill the 12-HP thief
     const s1 = findInHand(combat, 'strike')
     const played = playCard(combat, s1, 'thief', 100)
     combat = played.combat
@@ -195,7 +195,7 @@ describe('companion death purges their cards from every pile + drops shared ener
     let { combat } = startCombat(
       thiefInit({
         party: [hero({ hp: 5 }), companion],
-        enemies: [{ ...thief({ id: 'brute', archetype: 'brute', isHuman: false, revealsId: undefined, hp: 100, maxHp: 100, stats: { maxHp: 100, attack: 99, defense: 0, spiritAffinity: 0, speed: 9 } }) }],
+        enemies: [{ ...thief({ id: 'brute', archetype: 'brute', isHuman: false, revealsId: undefined, hp: 100, maxHp: 100, stats: { maxHp: 100, attack: 99, speed: 9 } }) }],
         deck: [...deck(['strike', 'light', 'guard'], 'm-hero'), ...deck(['strike', 'guard'], 'm-comp')],
         energyMax: 4,
         winCondition: { kind: 'allEnemiesDefeated' },
@@ -239,7 +239,8 @@ describe('determinism', () => {
   it('the same seed + same command script yields byte-identical final state', () => {
     const playPeaceful = () => {
       let { combat } = startCombat(thiefInit())
-      combat = useGrace(combat, 'sight', undefined, 200).combat
+      combat = ensureActing(combat).combat
+      combat = playCard(combat, findInHand(combat, 'reveal'), 'thief', 200).combat
       combat = playCard(combat, findInHand(combat, 'light'), 'demon', 200).combat
       return combat
     }

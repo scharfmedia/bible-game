@@ -66,6 +66,7 @@ export function ShopScreen() {
                       layer={c.layer}
                       nameKey={c.nameKey}
                       textKey={c.textKey}
+                      values={c.values}
                       verse={c.verse}
                       disabled={c.sold || !c.affordable}
                       onClick={!c.sold && c.affordable ? () => buyCard(c.defId) : undefined}

@@ -29,8 +29,12 @@ export const SPIRIT_DELTAS = {
   earnVerseFirstTry: 12,
   spareHuman: 15,
   useGrace: 6,
-  killHuman: -40,
-  killHumanWithGrace: -70,
+  // Killing a human is a heavy moral setback; killing a REDEEMABLE one (a victim you could have freed
+  // via Sight→Mercy) guts your walk. From the start (100) either floors Spirit to 0 → miracles go dark
+  // until you recover (pray/spare/peaceful win/verses). Intentionally brutal — the game's whole thesis
+  // is subdue, don't kill (Eph 6:12: the real enemy isn't flesh and blood).
+  killHuman: -120,
+  killHumanWithGrace: -350,
   pray: 12,
 } as const
 
@@ -110,6 +114,15 @@ export function applySpiritEvent(s: SpiritState, ev: SpiritEvent): SpiritOutcome
  */
 export function potencyMult(spirit: number): number {
   return clamp(spirit / 200, 0, 5)
+}
+
+/**
+ * Probability for a Spirit-powered MIRACLE (banish, divine protection). Ramps linearly with the walk:
+ * carnal (spirit 0) → `floor`, radiant (spirit 1000 / potency 5) → `cap`. So "they only work and scale
+ * with Spirit" — more Spirit, more often God acts. Per-card `floor`/`cap` tune the feel.
+ */
+export function miracleChance(spirit: number, floor: number, cap: number): number {
+  return clamp(floor + (cap - floor) * (potencyMult(spirit) / 5), Math.min(floor, cap), Math.max(floor, cap))
 }
 
 export function potencyTier(spirit: number): PotencyTier {

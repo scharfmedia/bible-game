@@ -45,7 +45,7 @@ export type Command =
   | { type: 'world/dialogueChoice'; dialogueId: DialogueId; nodeId: DialogueNodeId; choiceId: string }
   | { type: 'world/leaveDialogue' }
   | { type: 'world/dismissStory' }
-  | { type: 'world/fireplace'; action: 'rest' | 'pray' | 'leave' | 'study' | 'upgrade'; cardIndex?: number }
+  | { type: 'world/fireplace'; action: 'rest' | 'pray' | 'leave' | 'study' | 'upgrade'; cardIndex?: number; fragmentId?: ItemId }
   // ---- shop ----
   | { type: 'world/shopBuyCard'; nodeId: NodeId; defId: CardDefId }
   | { type: 'world/shopBuyItem'; nodeId: NodeId; itemId: ItemId }

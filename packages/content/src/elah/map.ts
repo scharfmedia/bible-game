@@ -6,8 +6,9 @@ import type { EncounterDef, EnemyTemplate, MapEdge, MapNode, WorldMap } from '@b
 // and funnel through a last rest into Goliath. Three shops (early/mid/late), four rests, two elites.
 //
 // Theme: 1 Sam 17. The Philistines are HUMAN (killing grieves Spirit; subdue is righteous). Goliath
-// is a man with a few-hundred fixed HP and a soft flesh cap — flesh chips slowly, but holy/verse
-// damage bypasses his armor: "the battle is the LORD's... not by sword or spear" (17:47).
+// is a man with a huge HP pool and brutal multi-hit smashes — flesh chips him slowly, so survival
+// (block, heal, the Divine Protection miracle) wins: "the battle is the LORD's... not by sword or
+// spear" (17:47). Multi-enemy fights are sized for a SOLO hero (the 4-foe lines were cut to 3).
 
 type Conns = Record<string, string[]>
 
@@ -120,37 +121,44 @@ export const ELAH_MAP: WorldMap = {
 }
 
 // ---- enemy templates ---------------------------------------------------------------------
-// Humans use modest super-linear HP (hpLevelExp 0.6–0.8) on larger bases + FLAT attack, so the
-// fight stays readable across hero levels. Demons are flesh-capped and want a spiritual answer.
+// Numbers are level-1 units; HP + attack scale linearly with level/depth at build time (so fight
+// length is constant across levels — growth is cosmetic). No flesh caps: flesh always works.
+// Archers sit back row (half melee until shoved). Difficulty across the world comes from bigger HP
+// pools, not armor. The base helpers below give the "stock" attack used by the big 3+ fights and the
+// boss; the small 1-2 foe skirmishes override scaling to DOUBLE that attack so they still bite solo.
 
 const soldier = (id: string, over: Partial<EnemyTemplate> = {}): EnemyTemplate => ({
   id, archetype: 'philistineSoldier', nameKey: 'enemy.philistineSoldier', isHuman: true,
-  scaling: { baseHp: 16, baseAtk: 6, hpLevelExp: 0.7, atkLevelExp: 0 }, ...over,
+  scaling: { baseHp: 30, baseAtk: 4 }, ...over,
 })
 const archer = (id: string, over: Partial<EnemyTemplate> = {}): EnemyTemplate => ({
   id, archetype: 'philistineArcher', nameKey: 'enemy.philistineArcher', isHuman: true, row: 'back',
-  scaling: { baseHp: 12, baseAtk: 7, hpLevelExp: 0.6, atkLevelExp: 0 }, ...over,
+  scaling: { baseHp: 22, baseAtk: 4 }, ...over,
 })
 const shield = (id: string, over: Partial<EnemyTemplate> = {}): EnemyTemplate => ({
   id, archetype: 'shieldBearer', nameKey: 'enemy.shieldBearer', isHuman: true,
-  scaling: { baseHp: 26, baseAtk: 4, hpLevelExp: 0.7, atkLevelExp: 0 }, ...over,
+  scaling: { baseHp: 46, baseAtk: 3 }, ...over,
 })
 
 /** battleBg/rewardBg pair from a combat-bg stem (sideview for the battle, plain for the reward). */
 const bg = (stem: string) => ({ battleBg: `${stem}-sideview`, rewardBg: stem })
 const money = (amount: number) => [{ id: 'money', kind: 'money' as const, amount }]
+/** a Scripture Fragment spoil (claimed like a relic, by item id) — Elah's fragment source */
+const frag = (defId: string) => ({ id: 'fragment', kind: 'relic' as const, defId })
 
 export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
   philistineScouts: {
     id: 'philistineScouts',
-    enemies: [soldier('sol'), archer('arch', { side: 'right' })],
+    // small 1-2 foe skirmish: attack DOUBLED vs the base helper so the early fights bite (the 3+ and boss fights keep base damage)
+    enemies: [soldier('sol', { scaling: { baseHp: 30, baseAtk: 8 } }), archer('arch', { side: 'right', scaling: { baseHp: 22, baseAtk: 8 } })],
     flags: { mandatory: false, allowFlee: true, isBoss: false },
     winCondition: { kind: 'allEnemiesDefeated' },
     rewardOptions: money(28), rewardXp: 24, ...bg('bg-combat-shepherds-track'),
   },
   philistinePatrol: {
     id: 'philistinePatrol',
-    enemies: [soldier('sol1'), soldier('sol2', { side: 'right' })],
+    // small 2-foe skirmish: attack DOUBLED
+    enemies: [soldier('sol1', { scaling: { baseHp: 30, baseAtk: 8 } }), soldier('sol2', { side: 'right', scaling: { baseHp: 30, baseAtk: 8 } })],
     flags: { mandatory: false, allowFlee: true, isBoss: false },
     winCondition: { kind: 'allEnemiesDefeated' },
     rewardOptions: money(32), rewardXp: 28, ...bg('bg-combat-dry-wash'),
@@ -158,7 +166,8 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
   slingStones: {
     // a soldier behind a shield-bearer — learn to drop the screen / use the back row
     id: 'slingStones',
-    enemies: [soldier('sol'), shield('shield', { side: 'right' })],
+    // small 2-foe screen puzzle: attack DOUBLED
+    enemies: [soldier('sol', { scaling: { baseHp: 30, baseAtk: 8 } }), shield('shield', { side: 'right', scaling: { baseHp: 46, baseAtk: 6 } })],
     flags: { mandatory: false, allowFlee: true, isBoss: false },
     winCondition: { kind: 'allEnemiesDefeated' },
     rewardOptions: money(36), rewardXp: 30, ...bg('bg-combat-broken-toll-gate'),
@@ -167,17 +176,18 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
     // two back-row archers behind a screening soldier — reach the back line
     id: 'archerNest',
     enemies: [soldier('screen'), archer('arch1'), archer('arch2', { side: 'right' })],
+    lastStandWhenAlone: true, // 3+ fight: the last foe standing rallies (×2 dmg, ×½ taken, steps to front)
     flags: { mandatory: false, allowFlee: true, isBoss: false },
     winCondition: { kind: 'allEnemiesDefeated' },
     rewardOptions: money(38), rewardXp: 32, ...bg('bg-combat-ridge-path'),
   },
   dreadWhisper: {
-    // a lone spirit of dread — only ward stops its spirit attack; flesh is capped
+    // a lone spirit of dread — it curses you with vulnerability then strikes; flesh fells it
     id: 'dreadWhisper',
     enemies: [{
       id: 'dread', archetype: 'spiritOfDread', nameKey: 'enemy.spiritOfDread', isHuman: false, isDemon: true,
-      dread: 8, fleshDamageCap: 4, spiritualArmor: 2, aiProfileId: 'dreadSpirit', row: 'back',
-      scaling: { baseHp: 20, baseAtk: 2, hpLevelExp: 0.7, atkLevelExp: 0 },
+      aiProfileId: 'dreadSpirit', row: 'back',
+      scaling: { baseHp: 34, baseAtk: 10 }, // lone foe: attack DOUBLED
     }],
     flags: { mandatory: false, allowFlee: false, isBoss: false },
     winCondition: { kind: 'allDemonsDestroyed' },
@@ -188,40 +198,43 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
     id: 'dagonZealot',
     enemies: [
       { id: 'zealot', archetype: 'dagonZealot', nameKey: 'enemy.dagonZealot', isHuman: true, revealsId: 'idol',
-        scaling: { baseHp: 18, baseAtk: 5, hpLevelExp: 0.6, atkLevelExp: 0 } },
+        scaling: { baseHp: 34, baseAtk: 8 } }, // small 1-2 foe fight: attack DOUBLED
       { id: 'idol', archetype: 'idolSpirit', nameKey: 'enemy.idolSpirit', isHuman: false, isDemon: true,
-        hidden: true, boundToId: 'zealot', dread: 6, fleshDamageCap: 4, row: 'back',
-        scaling: { baseHp: 14, baseAtk: 2, hpLevelExp: 0.6, atkLevelExp: 0 } },
+        hidden: true, boundToId: 'zealot', row: 'back',
+        scaling: { baseHp: 24, baseAtk: 8 } },
     ],
     flags: { mandatory: false, allowFlee: false, isBoss: false },
     winCondition: { kind: 'allDemonsDestroyed' },
-    rewardOptions: money(42), rewardXp: 36, battleMusic: 'music/battle-intense', ...bg('bg-combat-rocky-pass'),
+    rewardOptions: [...money(42), frag('fragment_2kings_6_17')], rewardXp: 36, battleMusic: 'music/battle-intense', ...bg('bg-combat-rocky-pass'), // Sight — "open his eyes" fits the demon-bound zealot
   },
   shieldWallElite: {
-    // a shield wall screening two archers — a bulky target-priority puzzle
+    // a shield wall screening an archer — a bulky target-priority puzzle (solo: 3 foes, not 4)
     id: 'shieldWallElite',
-    enemies: [shield('shield1'), shield('shield2', { side: 'right' }), archer('arch1', { row: 'back' }), archer('arch2', { row: 'back', side: 'right' })],
+    enemies: [shield('shield1'), shield('shield2', { side: 'right' }), archer('arch1', { row: 'back' })],
+    lastStandWhenAlone: true, // 3+ fight: the last foe standing rallies (×2 dmg, ×½ taken, steps to front)
     flags: { mandatory: false, allowFlee: true, isBoss: false },
     winCondition: { kind: 'allEnemiesDefeated' },
-    rewardOptions: money(80), rewardXp: 55, battleMusic: 'music/battle-intense', ...bg('bg-combat-rocky-pass'),
+    rewardOptions: [...money(80), frag('fragment_phil_4_6')], rewardXp: 55, battleMusic: 'music/battle-intense', ...bg('bg-combat-rocky-pass'), // Divine Protection from the shield wall
   },
   champion: {
     // a Philistine champion (rich AI: weakens you, then crushes; enrages) with a screen + archer
     id: 'champion',
     enemies: [
-      { id: 'champ', archetype: 'philistineChampion', nameKey: 'enemy.philistineChampion', isHuman: true, aiProfileId: 'champion',
-        scaling: { baseHp: 40, baseAtk: 9, hpLevelExp: 0.8, atkLevelExp: 0 } },
+      { id: 'champ', archetype: 'philistineChampion', nameKey: 'enemy.philistineChampion', isHuman: true, aiProfileId: 'champion', banishImmune: true,
+        scaling: { baseHp: 64, baseAtk: 5 } },
       shield('shield', { side: 'left' }),
       archer('arch', { side: 'right' }),
     ],
+    lastStandWhenAlone: true, // 3+ elite: the last foe standing rallies (×2 dmg, ×½ taken, steps to front)
     flags: { mandatory: false, allowFlee: true, isBoss: false },
     winCondition: { kind: 'allEnemiesDefeated' },
-    rewardOptions: money(90), rewardXp: 60, battleMusic: 'music/battle-intense', ...bg('bg-combat-rocky-pass'),
+    rewardOptions: [...money(90), frag('fragment_zech_4_6')], rewardXp: 60, battleMusic: 'music/battle-intense', ...bg('bg-combat-rocky-pass'), // Finger of God — "not by might" vs the champion
   },
   philistineVanguard: {
-    // the full Philistine line — a dress rehearsal for the giant's company
+    // the Philistine line — a dress rehearsal for the giant's company (solo: 3 foes, not 4)
     id: 'philistineVanguard',
-    enemies: [soldier('sol1'), soldier('sol2', { side: 'right' }), shield('shield', { side: 'left' }), archer('arch', { row: 'back', side: 'right' })],
+    enemies: [soldier('sol1'), shield('shield', { side: 'left' }), archer('arch', { row: 'back', side: 'right' })],
+    lastStandWhenAlone: true, // 3+ fight: the last foe standing rallies (×2 dmg, ×½ taken, steps to front)
     flags: { mandatory: false, allowFlee: true, isBoss: false },
     winCondition: { kind: 'allEnemiesDefeated' },
     rewardOptions: money(60), rewardXp: 45, battleMusic: 'music/battle-intense', ...bg('bg-combat-rocky-pass'),
@@ -229,26 +242,26 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
   taunting: {
     // the herald who taunts the armies of the living God — a hard single champion before the giant
     id: 'taunting',
-    enemies: [{ id: 'herald', archetype: 'philistineChampion', nameKey: 'enemy.philistineChampion', isHuman: true, aiProfileId: 'champion',
-      scaling: { baseHp: 48, baseAtk: 10, hpLevelExp: 0.8, atkLevelExp: 0 } }],
+    enemies: [{ id: 'herald', archetype: 'philistineChampion', nameKey: 'enemy.philistineChampion', isHuman: true, aiProfileId: 'champion', banishImmune: true,
+      scaling: { baseHp: 84, baseAtk: 12 } }], // lone champion (not a 3+ line, not the boss): attack DOUBLED
     flags: { mandatory: false, allowFlee: false, isBoss: false },
     winCondition: { kind: 'allEnemiesDefeated' },
-    rewardOptions: money(70), rewardXp: 55, battleMusic: 'music/battle-intense', ...bg('bg-combat-ridge-path'),
+    rewardOptions: [...money(70), frag('fragment_luke_10_27')], rewardXp: 55, battleMusic: 'music/battle-intense', ...bg('bg-combat-ridge-path'), // Loving Mercy from the taunting herald
   },
   goliath: {
-    // The giant: fixed ~340 HP, soft flesh cap (8/hit) + the depth defense curve make flesh slow;
-    // holy/verse damage bypasses both. Rich 'goliath' profile: brace(strength) → smash(×3) → guard,
+    // The giant: a huge HP wall — flesh fells him but it's a long grind, so survival (block, heal,
+    // spiritual miracles) is what wins. Rich 'goliath' profile: brace(strength) → smash(×3) → guard,
     // enraging below half HP (no guard, ×4 smashes). A shield-bearer + an archer make up his company.
     id: 'goliath',
     enemies: [
-      { id: 'goliath', archetype: 'goliath', nameKey: 'enemy.goliath', isHuman: true, aiProfileId: 'goliath', fleshDamageCap: 8, row: 'front',
-        scaling: { baseHp: 340, baseAtk: 14, hpLevelExp: 0, atkLevelExp: 0, baseSpeed: 0 } },
-      shield('goliathShield', { side: 'left', scaling: { baseHp: 30, baseAtk: 4, hpLevelExp: 0, atkLevelExp: 0 } }),
-      archer('goliathArcher', { side: 'right', scaling: { baseHp: 18, baseAtk: 6, hpLevelExp: 0, atkLevelExp: 0 } }),
+      { id: 'goliath', archetype: 'goliath', nameKey: 'enemy.goliath', isHuman: true, aiProfileId: 'goliath', banishImmune: true, row: 'front',
+        scaling: { baseHp: 140, baseAtk: 5, baseSpeed: 0 } },
+      shield('goliathShield', { side: 'left', scaling: { baseHp: 28, baseAtk: 3 } }),
+      archer('goliathArcher', { side: 'right', scaling: { baseHp: 18, baseAtk: 4 } }),
     ],
     flags: { mandatory: false, allowFlee: false, isBoss: true },
     winCondition: { kind: 'allEnemiesDefeated' },
-    rewardOptions: money(200), rewardXp: 120, battleMusic: 'music/battle-elah-boss',
+    rewardOptions: [...money(200), frag('fragment_zech_4_6')], rewardXp: 120, battleMusic: 'music/battle-elah-boss', // Finger of God — "not by might nor power" (1 Sam 17:47) crowns the giant's fall
     battleBg: 'bg-boss-narrow-gate-sideview', rewardBg: 'bg-boss-narrow-gate',
   },
 }

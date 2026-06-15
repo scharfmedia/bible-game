@@ -57,8 +57,7 @@ export {
 
 // ---- leveling / scaling ----
 export {
-  baseMaxHp,
-  baseAttack,
+  levelScale,
   deriveStats,
   resolveStat,
   grantXp,
@@ -66,9 +65,10 @@ export {
   levelForXp,
   totalXpForLevel,
   scaleEnemy,
+  enemyScale,
   effectiveEnemyLevel,
-  DAMAGE_CAP,
   ENEMY_HP_CAP,
+  HP_UNIT,
   LVL_MAX,
   type EnemyScalingDef,
 } from './leveling/scaling'
@@ -86,6 +86,7 @@ export {
   applySpiritEvent,
   potencyMult,
   potencyTier,
+  miracleChance,
   scaleSpiritValue,
   SPIRIT_DELTAS,
   type SpiritEvent,
@@ -116,7 +117,6 @@ export type {
   CardType,
   CardLayer,
   EffectOp,
-  DamageType,
   StatusId,
   TargetKind,
   FruitAffinity,
@@ -170,7 +170,8 @@ export { emptyInventory, itemCount } from './inventory/types'
 
 // ---- combat engine ----
 export { startCombat, HAND_SIZE, type CombatInit, type CombatStep } from './combat/combat'
-export { physicalAmount, spiritualAmount, absorb, statusStacks } from './combat/damage'
+export { physicalAmount, absorb, statusStacks } from './combat/damage'
+export { previewCardDamage, previewMiracle, cardDisplayValues, cardSource, type CardDamagePreview, type MiraclePreview } from './combat/preview'
 export { pickIntent } from './combat/ai'
 export { buildEncounter, encounterExists } from './combat/encounterBuilder'
 export { GRACE_ABILITIES, getGrace, type GraceAbilityMeta } from './grace/grace'

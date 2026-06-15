@@ -11,10 +11,10 @@ const mk = (over: Partial<Combatant> = {}): Combatant => ({
   hp: 100,
   maxHp: 100,
   block: 0,
-  spiritualBlock: 0,
   side: 'right',
   row: 'front',
-  stats: { maxHp: 100, attack: 10, defense: 0, spiritAffinity: 1, speed: 0 },
+  stats: { maxHp: 100, attack: 10, speed: 0 },
+  scale: 1,
   statuses: [],
   ...over,
 })
@@ -23,8 +23,8 @@ describe('pickIntent — default (no profile)', () => {
   it('a plain enemy attacks for its attack stat', () => {
     expect(pickIntent(mk(), { round: 1 })).toEqual({ kind: 'attack', value: 10 })
   })
-  it('a demon with dread favors the spirit attack', () => {
-    expect(pickIntent(mk({ isDemon: true, dread: 7 }), { round: 1 })).toEqual({ kind: 'dread', value: 7 })
+  it('a demon just attacks with its attack stat (dread is gone)', () => {
+    expect(pickIntent(mk({ isDemon: true }), { round: 1 })).toEqual({ kind: 'attack', value: 10 })
   })
   it('a bound enemy wastes its turn (special), taking precedence over a profile', () => {
     const e = mk({ aiProfileId: 'goliath', statuses: [{ id: 'bound', stacks: 1 }] })
@@ -36,7 +36,7 @@ describe('pickIntent — default (no profile)', () => {
 })
 
 describe('goliath profile', () => {
-  const g = (round: number, over: Partial<Combatant> = {}) => pickIntent(mk({ aiProfileId: 'goliath', stats: { maxHp: 100, attack: 12, defense: 0, spiritAffinity: 1, speed: 0 }, ...over }), { round })
+  const g = (round: number, over: Partial<Combatant> = {}) => pickIntent(mk({ aiProfileId: 'goliath', stats: { maxHp: 100, attack: 12, speed: 0 }, ...over }), { round })
 
   it('cycles brace → smash(×3) → guard while healthy, on a 1-based round', () => {
     expect(g(1)).toEqual({ kind: 'buff', status: 'strength', stacks: 2 })
@@ -69,10 +69,10 @@ describe('champion profile', () => {
 })
 
 describe('dreadSpirit profile', () => {
-  const d = (round: number) => pickIntent(mk({ aiProfileId: 'dreadSpirit', isDemon: true, dread: 8 }), { round })
-  it('dread, vulnerability curse, dread', () => {
-    expect(d(1)).toEqual({ kind: 'dread', value: 8 })
-    expect(d(2)).toEqual({ kind: 'debuff', status: 'vulnerable', stacks: 1 })
-    expect(d(3)).toEqual({ kind: 'dread', value: 8 })
+  const d = (round: number) => pickIntent(mk({ aiProfileId: 'dreadSpirit', isDemon: true }), { round })
+  it('curses with vulnerability, then strikes into the opening', () => {
+    expect(d(1)).toEqual({ kind: 'debuff', status: 'vulnerable', stacks: 1 })
+    expect(d(2)).toEqual({ kind: 'attack', value: 10 })
+    expect(d(3)).toEqual({ kind: 'attack', value: 10 })
   })
 })

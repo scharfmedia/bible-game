@@ -100,8 +100,7 @@ describe('Jericho Road — content & integration', () => {
     s = dispatch(s, { type: 'world/enter' })
     expect(s.screen).toBe('combat')
     expect(s.combat?.encounterId).toBe('accuser')
-    // the late-game wall: flesh barely scratches the Accuser; only Spirit (grace/spiritual/verse) can win
-    expect(s.combat?.combatants.accuser?.fleshDamageCap).toBe(1)
+    // flesh is never capped now — the Accuser is a demon with dread; Spirit cards are the bonus, not a gate
     expect(s.combat?.combatants.accuser?.isDemon).toBe(true)
   })
 
@@ -171,6 +170,31 @@ describe('Jericho Road — content & integration', () => {
     expect(s.run!.world.revealed).toContain('hollow')
     expect(s.run!.world.current).toBe('hollow')
     expect(s.run!.world.visited).toContain('hollow')
+  })
+
+  it('Sight is an EARNED card, not grace: the 2 Kings verse unlocks the "Open My Eyes" reveal card', () => {
+    expect(content.heroGraceAbilities).toEqual(['mercy']) // Sight removed from the grace kit
+    const verse = content.verses['2kings_6_17']!
+    expect(verse.cardDefId).toBe('verse_2kings_6_17')
+    const card = content.cards.verse_2kings_6_17!
+    expect(card.type).toBe('verse')
+    expect(card.layer).toBe('spirit')
+    expect(card.target).toBe('enemy') // "applied to the enemy"
+    expect(card.effects).toContainEqual({ kind: 'revealHidden', via: 'sight' })
+    expect(content.heroStartDeck).not.toContain('verse_2kings_6_17') // earned only by studying scripture
+  })
+
+  it('Scripture Fragments: every verse card has a fragment item that unlocks it (and fragments are shop-buyable)', () => {
+    const verseCardIds = Object.values(content.cards).filter((c) => c.type === 'verse').map((c) => c.id)
+    expect(verseCardIds.length).toBeGreaterThan(0)
+    for (const cardId of verseCardIds) {
+      const frag = Object.values(content.items).find(
+        (i) => i.kind === 'fragment' && !!i.verseChallengeId && content.verses[i.verseChallengeId]?.cardDefId === cardId,
+      )
+      expect(frag, `expected a fragment item for verse card ${cardId}`).toBeDefined()
+    }
+    // kind:'fragment' is what the shop's buyable filter stocks
+    expect(Object.values(content.items).some((i) => i.kind === 'fragment')).toBe(true)
   })
 })
 

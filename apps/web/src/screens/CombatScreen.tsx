@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { assetBg } from '@bible/assets'
+import { previewCardDamage } from '@bible/engine'
 import { bgUrl } from '../asset'
 import { useGame } from '../store/gameStore'
 import { selectCombat, type CombatantView } from '../selectors'
@@ -36,6 +37,16 @@ export function CombatScreen() {
 
   const enemyTargetable = pending?.kind === 'card' || (pending?.kind === 'grace' && pending.ability === 'mercy')
 
+  // While aiming a damage card, show the EXACT hit each enemy would take (level scale + statuses +
+  // rows + their block) — the honest correction over the card's nominal number.
+  const pendingCard = pending?.kind === 'card' ? view.hand.find((h) => h.iid === pending.iid) : undefined
+  const spirit = state.run?.spirit.spirit ?? 0
+  const targetPreview = (enemyId: string): number | null => {
+    if (!pendingCard || !state.combat) return null
+    const p = previewCardDamage(state.combat, pendingCard.defId, pendingCard.ownerId, spirit, enemyId)
+    return p ? p.total : null
+  }
+
   const clickCard = (iid: string, target: string) => {
     if (pending?.kind === 'card' && pending.iid === iid) return setPending(null) // click again → cancel
     if (target === 'enemy') setPending({ kind: 'card', iid })
@@ -54,8 +65,7 @@ export function CombatScreen() {
     }
   }
   const useGraceAbility = (ability: string) => {
-    if (ability === 'sight') dispatch({ type: 'combat/useGrace', ability: 'sight' })
-    else setPending({ kind: 'grace', ability }) // mercy → pick a human
+    setPending({ kind: 'grace', ability }) // mercy → pick a human (Sight is now a card, not grace)
   }
 
   const N = view.hand.length
@@ -67,6 +77,7 @@ export function CombatScreen() {
   const Unit = ({ c, side }: { c: CombatantView; side: 'party' | 'enemy' }) => {
     const hpPct = Math.max(0, (c.hp / c.maxHp) * 100)
     const targetable = side === 'enemy' && enemyTargetable
+    const predicted = side === 'enemy' && pendingCard ? targetPreview(c.id) : null
     return (
       <motion.div
         layout
@@ -89,6 +100,9 @@ export function CombatScreen() {
           </div>
         )}
         <div className="unit-figure">
+          {predicted !== null && (
+            <div className="dmg-predict">−{predicted}</div>
+          )}
           <span className="sprite">{spriteGlyph(c)}</span>
           <span className="unit-shadow" />
           <AnimatePresence>
@@ -107,7 +121,8 @@ export function CombatScreen() {
           </div>
           <div className="badges">
             {c.block > 0 && <span className="badge block">🛡 {c.block}</span>}
-            {c.ward > 0 && <span className="badge ward">✨ {c.ward}</span>}
+            {c.shield && <span className="badge ward">🛡✨ {Math.round(c.shield.chance * 100)}% · {c.shield.turns}t</span>}
+            {c.lastStand && <span className="badge laststand" title={t('ui.combat.lastStandHint')}>🔥 {t('ui.combat.lastStand')}</span>}
             {c.row === 'back' && <span className="badge row">{t('ui.combat.backRow')}</span>}
           </div>
         </div>
