@@ -9,7 +9,6 @@ const content = testContent()
 const HERO = heroMemberId('h1')
 const strikeA = `${HERO}#0`
 const strikeB = `${HERO}#4`
-const lightCard = `${HERO}#2`
 
 const bootstrap = (seed = 'run-1'): Command[] => [
   { type: 'createHero', id: 'h1', name: 'Gideon' },
@@ -19,7 +18,9 @@ const bootstrap = (seed = 'run-1'): Command[] => [
 
 // The full vertical slice with the board-game travel model: each step is move (walk the trail) then
 // enter (resolve the node). scene (take key) → beast combat → fireplace (pray) → gated edge →
-// thief mini-boss completed RIGHTEOUSLY (Sight → spiritual kill; the human is freed).
+// thief mini-boss completed RIGHTEOUSLY via Mercy (the human is subdued, not killed; its bound demon
+// flees). (Revealing-then-destroying the demon now needs the earned "Open My Eyes" card — covered in
+// combat.test.ts; the slice uses the always-available Mercy grace so it stays seed-robust.)
 const fullPeacefulRun = (seed = 'run-1'): Command[] => [
   ...bootstrap(seed),
   { type: 'world/move', target: 'n1' }, // walk to the forest house…
@@ -38,8 +39,7 @@ const fullPeacefulRun = (seed = 'run-1'): Command[] => [
   { type: 'world/fireplace', action: 'leave' },
   { type: 'world/move', target: 'n4' }, // gated by "key"
   { type: 'world/enter' }, // → thief mini-boss
-  { type: 'combat/useGrace', ability: 'sight' }, // reveal the bound demon
-  { type: 'combat/playCard', iid: lightCard, targetId: 'demon' }, // spiritual kill
+  { type: 'combat/useGrace', ability: 'mercy', targetId: 'thief' }, // subdue the human → its bound demon flees
   { type: 'combat/claimSpoil', spoilId: 'money' },
   { type: 'combat/leaveReward' },
 ]
@@ -52,8 +52,8 @@ describe('vertical slice — full peaceful run (DoD tripwire)', () => {
     expect(sawEvent(res, 'rejected')).toBe(false)
   })
 
-  it('reaches and defeats the thief mini-boss righteously (demon revealed, human freed)', () => {
-    expect(sawEvent(res, 'demonRevealed')).toBe(true)
+  it('reaches and defeats the thief mini-boss righteously (human subdued, demon flees)', () => {
+    expect(res.events.some((e) => e.type === 'combatantDied' && e.id === 'thief' && e.mode === 'subdued')).toBe(true)
     expect(run.world.bossDefeated).toBe(true)
     expect(run.world.cleared).toEqual(expect.arrayContaining(['n1', 'n2', 'n3', 'n4']))
     expect(res.state.screen).toBe('map')

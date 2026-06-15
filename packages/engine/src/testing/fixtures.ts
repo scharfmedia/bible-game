@@ -132,7 +132,7 @@ const map: WorldMap = {
 export function testContent(): ContentBundle {
   return {
     heroStartDeck: ['strike', 'guard', 'light', 'prayer', 'strike'],
-    heroGraceAbilities: ['sight', 'mercy'],
+    heroGraceAbilities: ['mercy'], // Sight is now an earned card, not grace
     cards,
     cardPoolStart: ['brace', 'guard'],
     cardUnlocksByLevel: { 2: ['mend'] },

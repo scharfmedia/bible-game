@@ -91,7 +91,8 @@ describe('run lifecycle', () => {
     expect(state.run).not.toBeNull()
     expect(state.run!.party).toHaveLength(1)
     expect(state.run!.party[0]!.kind).toBe('hero')
-    expect(state.run!.party[0]!.graceAbilityIds).toContain('sight')
+    expect(state.run!.party[0]!.graceAbilityIds).toContain('mercy')
+    expect(state.run!.party[0]!.graceAbilityIds).not.toContain('sight') // Sight is a card now, not grace
     expect(state.run!.spirit.spirit).toBe(100)
     expect(state.run!.heroMemberId).toBe(state.run!.party[0]!.memberId)
     expect(events.map((e) => e.type)).toContain('runStarted')

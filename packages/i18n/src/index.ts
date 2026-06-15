@@ -212,8 +212,6 @@ export const en: Messages = {
   'enemy.demon': 'Spirit of Greed',
 
   // -- grace --
-  'grace.sight.name': 'Sight',
-  'grace.sight.desc': 'Open your eyes to the unseen (2 Kings 6:17). Reveal the demon behind a captive.',
   'grace.mercy.name': 'Stay the Hand',
   'grace.mercy.desc': 'Subdue a human without killing (Luke 6:36).',
 
@@ -247,6 +245,8 @@ export const en: Messages = {
   'card.verse_phil_4_6.text': 'For 2 turns, each hit on your party has a {{chance}}% chance to be reduced to 1. "The peace of God shall guard your hearts." (Phil 4:6-7)',
   'card.verse_luke_10_27.name': 'Loving Mercy',
   'card.verse_luke_10_27.text': 'Heal the whole party for {{heal}}. "Love thy neighbour as thyself." (Luke 10:27)',
+  'card.verse_2kings_6_17.name': 'Open My Eyes',
+  'card.verse_2kings_6_17.text': 'Reveal the demon bound behind a foe. "LORD…open his eyes, that he may see." (2 Kings 6:17)',
   // '+' upgrade variants
   'card.strike_plus.name': 'Strike+',
   'card.strike_plus.text': 'Deal {{dmg}} damage.',
@@ -489,8 +489,6 @@ export const de: Messages = {
   'enemy.thief': 'Verzweifelter Dieb',
   'enemy.demon': 'Geist der Habgier',
 
-  'grace.sight.name': 'Sicht',
-  'grace.sight.desc': 'Öffne die Augen für das Unsichtbare (2. Könige 6,17). Enthülle den Dämon hinter einem Gefangenen.',
   'grace.mercy.name': 'Halte die Hand zurück',
   'grace.mercy.desc': 'Überwältige einen Menschen, ohne zu töten (Lukas 6,36).',
 
@@ -523,6 +521,8 @@ export const de: Messages = {
   'card.verse_phil_4_6.text': 'Für 2 Runden hat jeder Treffer auf deine Gruppe eine {{chance}}%-Chance, auf 1 reduziert zu werden. „Der Friede Gottes bewahre eure Herzen." (Phil 4,6-7)',
   'card.verse_luke_10_27.name': 'Liebende Barmherzigkeit',
   'card.verse_luke_10_27.text': 'Heile die ganze Gruppe um {{heal}}. „Liebe deinen Nächsten wie dich selbst." (Lukas 10,27)',
+  'card.verse_2kings_6_17.name': 'Öffne meine Augen',
+  'card.verse_2kings_6_17.text': 'Enthülle den Dämon hinter einem Feind. „HERR…öffne ihm die Augen, daß er sehe!" (2. Könige 6,17)',
   // '+'-Aufwertungen
   'card.strike_plus.name': 'Schlag+',
   'card.strike_plus.text': 'Füge {{dmg}} Schaden zu.',

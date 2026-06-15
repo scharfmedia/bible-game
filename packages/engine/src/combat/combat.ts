@@ -323,7 +323,9 @@ function applyEffect(
       return step(combat, events, spiritEvents)
     }
     case 'revealHidden': {
-      return revealDemons(combat)
+      // "Open My Eyes" (Sight): applied to a foe → reveal the demon bound to it (single-demon
+      // encounters today → effectively reveals the one hidden demon).
+      return revealDemons(combat, chosenId)
     }
     case 'banish': {
       // MIRACLE: Spirit-scaled chance to remove a random non-immune enemy from battle (no kill grief).
@@ -376,13 +378,16 @@ function drawCards(c: CombatState, n: number): { combat: CombatState; events: Ga
 
 // ---- Sight (grace) ----------------------------------------------------------------------
 
-function revealDemons(c: CombatState): CombatStep {
+// Reveal hidden demons. When `viaHostId` is the human a Sight card was applied to, reveal only THAT
+// host's bound demon (its revealsId); otherwise (or if that foe binds nothing) reveal all hidden.
+function revealDemons(c: CombatState, viaHostId?: CombatantId): CombatStep {
+  const onlyId = viaHostId ? getC(c, viaHostId)?.revealsId : undefined
   const events: GameEvent[] = []
   let combat = c
   let enemyOrder = [...c.enemyOrder]
   for (const id of Object.keys(c.combatants)) {
     const x = c.combatants[id]!
-    if (x.faction === 'enemy' && x.hidden && x.alive) {
+    if (x.faction === 'enemy' && x.hidden && x.alive && (onlyId === undefined || id === onlyId)) {
       combat = withCombatant(combat, id, (e) => ({ ...e, hidden: false }))
       if (!enemyOrder.includes(id)) enemyOrder = [...enemyOrder, id]
       events.push({ type: 'demonRevealed', id })
@@ -613,11 +618,7 @@ export function useGrace(c: CombatState, ability: GraceAbilityId, chosenId: Comb
   events.push({ type: 'graceUsed', ability, targetId: chosenId })
   events.push({ type: 'graceChanged', current: combat.grace.current, max: combat.grace.max })
 
-  if (ability === 'sight') {
-    const r = revealDemons(combat)
-    combat = r.combat
-    events.push(...r.events)
-  } else if (ability === 'mercy') {
+  if (ability === 'mercy') {
     const target = chosenId ? getC(combat, chosenId) : undefined
     if (!target || target.faction !== 'enemy' || !target.isHuman || !target.alive) {
       return reject(c, 'mercy-needs-living-human')

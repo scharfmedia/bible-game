@@ -27,6 +27,9 @@ export const CARDS: Record<string, CardDef> = {
   verse_phil_4_6: { id: 'verse_phil_4_6', type: 'verse', layer: 'spirit', cost: 1, target: 'allAllies', nameKey: 'card.verse_phil_4_6.name', textKey: 'card.verse_phil_4_6.text', rarity: 'rare', fruitAffinity: 'faith', verseChallengeId: 'phil_4_6', effects: [{ kind: 'protect', turns: 2, floor: 0.15, cap: 0.9, target: 'allAllies' }] },
   // "Love thy neighbour" — mercy poured out heals the whole company (scales with Spirit).
   verse_luke_10_27: { id: 'verse_luke_10_27', type: 'verse', layer: 'spirit', cost: 1, target: 'allAllies', nameKey: 'card.verse_luke_10_27.name', textKey: 'card.verse_luke_10_27.text', rarity: 'rare', fruitAffinity: 'mercy', verseChallengeId: 'luke_10_27', effects: [{ kind: 'heal', amount: 8, target: 'allAllies' }] },
+  // "Open his eyes, that he may see" — applied to a foe, reveals the demon bound behind it (replaces
+  // the old Sight grace button). A plain card: a dead draw when no demon hides — a deckbuilding choice.
+  verse_2kings_6_17: { id: 'verse_2kings_6_17', type: 'verse', layer: 'spirit', cost: 1, target: 'enemy', nameKey: 'card.verse_2kings_6_17.name', textKey: 'card.verse_2kings_6_17.text', rarity: 'rare', fruitAffinity: 'knowledge', verseChallengeId: '2kings_6_17', effects: [{ kind: 'revealHidden', via: 'sight' }] },
 
   // --- '+' upgrade variants (created by upgrading at a fire; never offered in the pool) ---
   strike_plus: { id: 'strike_plus', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: 'card.strike_plus.name', textKey: 'card.strike_plus.text', rarity: 'starter', effects: [{ kind: 'damage', amount: 9 }] },

@@ -10,6 +10,7 @@ const CARDS: Record<string, CardDef> = {
   strike: { id: 'strike', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'damage', amount: 6 }] },
   light: { id: 'light', type: 'spiritual', layer: 'spirit', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'damage', amount: 8 }] },
   guard: { id: 'guard', type: 'skill', layer: 'flesh', cost: 1, target: 'self', nameKey: '', textKey: '', effects: [{ kind: 'block', amount: 5 }] },
+  reveal: { id: 'reveal', type: 'verse', layer: 'spirit', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'revealHidden', via: 'sight' }] }, // the "Open My Eyes" Sight card
 }
 
 const deck = (defs: string[], owner = 'm-hero'): CardInstance[] =>
@@ -31,7 +32,7 @@ const hero = (over: Partial<Combatant> = {}): Combatant => ({
   statuses: [],
   memberId: 'm-hero',
   contributesEnergy: 3,
-  graceAbilityIds: ['sight', 'mercy'],
+  graceAbilityIds: ['mercy'],
   ...over,
 })
 
@@ -77,7 +78,7 @@ const thiefInit = (over: Partial<CombatInit> = {}): CombatInit => ({
   rng: seedRng('combat-test'),
   party: [hero()],
   enemies: [thief(), demon()],
-  deck: deck(['strike', 'light', 'light', 'guard', 'strike']),
+  deck: deck(['strike', 'light', 'reveal', 'guard', 'strike']),
   cardDefs: CARDS,
   energyMax: 3,
   graceMax: 1,
@@ -113,19 +114,18 @@ describe('startCombat', () => {
 // ---- the righteous path ------------------------------------------------------------------
 
 describe('thief encounter — the righteous (peaceful) path', () => {
-  it('Sight reveals the demon; spiritual damage destroys it; the human is freed, not killed', () => {
+  it('the Sight CARD reveals the demon; spiritual damage destroys it; the human is freed, not killed', () => {
     const spirit = 200 // potency 1.0 → light deals its full 8
     let { combat } = startCombat(thiefInit())
+    combat = ensureActing(combat).combat // draw the opening hand
 
-    const sight = useGrace(combat, 'sight', undefined, spirit)
-    combat = sight.combat
+    // "Open My Eyes" applied to the human reveals its bound demon (replaces the old Sight grace)
+    const seen = playCard(combat, findInHand(combat, 'reveal'), 'thief', spirit)
+    combat = seen.combat
     expect(combat.enemyOrder).toContain('demon')
-    expect(combat.grace.current).toBe(0)
-    expect(sight.events.some((e) => e.type === 'demonRevealed')).toBe(true)
-    expect(sight.spiritEvents).toContainEqual({ kind: 'useGrace', ability: 'sight' })
+    expect(seen.events.some((e) => e.type === 'demonRevealed' && e.id === 'demon')).toBe(true)
 
-    const light = findInHand(combat, 'light')
-    const played = playCard(combat, light, 'demon', spirit)
+    const played = playCard(combat, findInHand(combat, 'light'), 'demon', spirit)
     combat = played.combat
 
     expect(combat.combatants.demon!.alive).toBe(false)
@@ -138,9 +138,10 @@ describe('thief encounter — the righteous (peaceful) path', () => {
 
   it('a spiritual card FIZZLES when Spirit is low (the trap)', () => {
     let { combat } = startCombat(thiefInit())
-    combat = useGrace(combat, 'sight', undefined, 0).combat
-    const light = findInHand(combat, 'light')
-    const played = playCard(combat, light, 'demon', 0) // carnal: potency 0
+    combat = ensureActing(combat).combat
+    // reveal the demon first (reveal ignores Spirit), then try to smite it while carnal
+    combat = playCard(combat, findInHand(combat, 'reveal'), 'thief', 0).combat
+    const played = playCard(combat, findInHand(combat, 'light'), 'demon', 0) // carnal: potency 0
 
     expect(played.events.some((e) => e.type === 'cardFizzled' && e.defId === 'light')).toBe(true)
     expect(played.combat.combatants.demon!.hp).toBe(8) // unharmed
@@ -238,7 +239,8 @@ describe('determinism', () => {
   it('the same seed + same command script yields byte-identical final state', () => {
     const playPeaceful = () => {
       let { combat } = startCombat(thiefInit())
-      combat = useGrace(combat, 'sight', undefined, 200).combat
+      combat = ensureActing(combat).combat
+      combat = playCard(combat, findInHand(combat, 'reveal'), 'thief', 200).combat
       combat = playCard(combat, findInHand(combat, 'light'), 'demon', 200).combat
       return combat
     }

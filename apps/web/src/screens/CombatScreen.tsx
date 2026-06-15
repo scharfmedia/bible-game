@@ -65,8 +65,7 @@ export function CombatScreen() {
     }
   }
   const useGraceAbility = (ability: string) => {
-    if (ability === 'sight') dispatch({ type: 'combat/useGrace', ability: 'sight' })
-    else setPending({ kind: 'grace', ability }) // mercy → pick a human
+    setPending({ kind: 'grace', ability }) // mercy → pick a human (Sight is now a card, not grace)
   }
 
   const N = view.hand.length

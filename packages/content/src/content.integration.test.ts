@@ -171,6 +171,18 @@ describe('Jericho Road — content & integration', () => {
     expect(s.run!.world.current).toBe('hollow')
     expect(s.run!.world.visited).toContain('hollow')
   })
+
+  it('Sight is an EARNED card, not grace: the 2 Kings verse unlocks the "Open My Eyes" reveal card', () => {
+    expect(content.heroGraceAbilities).toEqual(['mercy']) // Sight removed from the grace kit
+    const verse = content.verses['2kings_6_17']!
+    expect(verse.cardDefId).toBe('verse_2kings_6_17')
+    const card = content.cards.verse_2kings_6_17!
+    expect(card.type).toBe('verse')
+    expect(card.layer).toBe('spirit')
+    expect(card.target).toBe('enemy') // "applied to the enemy"
+    expect(card.effects).toContainEqual({ kind: 'revealHidden', via: 'sight' })
+    expect(content.heroStartDeck).not.toContain('verse_2kings_6_17') // earned only by studying scripture
+  })
 })
 
 // ---- i18n coverage: every content-referenced key must resolve in EN and DE ----

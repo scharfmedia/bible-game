@@ -16,12 +16,52 @@ const LUKE_1027_EN =
   'Thou shalt love the Lord thy God with all thy heart, and with all thy soul, and with all thy strength, and with all thy mind; and thy neighbour as thyself.'
 const LUKE_1027_DE =
   'Du sollst Gott, deinen HERRN, lieben von ganzem Herzen, von ganzer Seele, von allen Kräften und von ganzem Gemüte und deinen Nächsten als dich selbst.'
+const KINGS_617_EN =
+  'And Elisha prayed, and said, LORD, I pray thee, open his eyes, that he may see. And the LORD opened the eyes of the young man; and he saw: and, behold, the mountain was full of horses and chariots of fire round about Elisha.'
+const KINGS_617_DE =
+  'Und Elisa betete und sprach: HERR, öffne ihm die Augen, daß er sehe! Da öffnete der HERR dem Diener die Augen, daß er sah; und siehe, da war der Berg voll feuriger Rosse und Wagen um Elisa her.'
 
 // Helper: token index of the first token whose normalized core matches `word`.
 const idxOf = (text: string, word: string): number =>
   tokenize(text).findIndex((t) => t.replace(/[^A-Za-zÀ-ÿ]/g, '').toLowerCase() === word.toLowerCase())
 
 export const VERSES: Record<string, VerseChallenge> = {
+  // First in the record so the fireplace `study` (offers the first un-owned verse) surfaces Sight
+  // early, before the demon-binding fights. Earns the "Open My Eyes" reveal card.
+  '2kings_6_17': {
+    id: '2kings_6_17',
+    ref: { book: '2 Kings', chapter: 6, verse: 17 },
+    cardDefId: 'verse_2kings_6_17',
+    fruitAffinity: 'knowledge',
+    byLocale: {
+      en: {
+        translation: 'KJV',
+        reference: '2 Kings 6:17',
+        fullText: KINGS_617_EN,
+        tokens: tokenize(KINGS_617_EN),
+        blankIndices: [
+          idxOf(KINGS_617_EN, 'eyes'),
+          idxOf(KINGS_617_EN, 'see'),
+          idxOf(KINGS_617_EN, 'chariots'),
+          idxOf(KINGS_617_EN, 'fire'),
+        ],
+        fuzzyIndices: [idxOf(KINGS_617_EN, 'chariots')],
+      },
+      de: {
+        translation: 'LUTHER1912',
+        reference: '2. Könige 6,17',
+        fullText: KINGS_617_DE,
+        tokens: tokenize(KINGS_617_DE),
+        blankIndices: [
+          idxOf(KINGS_617_DE, 'Augen'),
+          idxOf(KINGS_617_DE, 'sehe'),
+          idxOf(KINGS_617_DE, 'feuriger'),
+          idxOf(KINGS_617_DE, 'Wagen'),
+        ],
+        fuzzyIndices: [idxOf(KINGS_617_DE, 'feuriger')],
+      },
+    },
+  },
   phil_4_6: {
     id: 'phil_4_6',
     ref: { book: 'Philippians', chapter: 4, verse: 6 },
