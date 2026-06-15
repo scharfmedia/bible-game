@@ -39,6 +39,9 @@ export interface EncounterDef {
   enemies: EnemyTemplate[]
   formation?: FormationLayout
   flags: CombatFlags
+  /** when true, the LAST surviving foe of this (multi-enemy) fight rallies: gains the `lastStand`
+   *  buff (deals ×2, takes ×½) and steps to the front. Reusable opt-in for any fight. */
+  lastStandWhenAlone?: boolean
   winCondition: WinCondition
   rewardOptions?: RewardOption[]
   rewardXp?: number

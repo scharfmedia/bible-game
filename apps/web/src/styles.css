@@ -305,6 +305,7 @@ body {
 .badge { font-size: 0.66rem; padding: 1px 6px; border-radius: 6px; background: rgba(0,0,0,0.55); }
 .badge.block { color: #9fd1ff; }
 .badge.ward { color: var(--gold-bright); }
+.badge.laststand { color: #ff9d5c; background: rgba(120,30,0,0.6); font-weight: 700; }
 .badge.row { color: var(--spirit); }
 
 /* bottom HUD: energy + draw stack (left), fanned hand (centre), end-turn + discard stack (right) */

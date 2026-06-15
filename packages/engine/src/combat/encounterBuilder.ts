@@ -36,7 +36,7 @@ function partyCombatant(m: PartyMember): Combatant {
   }
 }
 
-function enemyCombatant(t: EnemyTemplate, heroLevel: number, runDepth: number): Combatant {
+function enemyCombatant(t: EnemyTemplate, heroLevel: number, runDepth: number, lastStandWhenAlone?: boolean): Combatant {
   const stats = scaleEnemy(t.scaling, heroLevel, runDepth)
   return {
     id: t.id,
@@ -58,6 +58,7 @@ function enemyCombatant(t: EnemyTemplate, heroLevel: number, runDepth: number): 
     boundToId: t.boundToId,
     banishImmune: t.banishImmune,
     aiProfileId: t.aiProfileId,
+    lastStandWhenAlone,
   }
 }
 
@@ -74,7 +75,7 @@ export function buildEncounter(run: RunState, encounterId: EncounterId, nodeId: 
   const heroLevel = run.party[0]?.level ?? 1
 
   const party = living.map(partyCombatant)
-  const enemies = enc.enemies.map((t) => enemyCombatant(t, heroLevel, run.depth))
+  const enemies = enc.enemies.map((t) => enemyCombatant(t, heroLevel, run.depth, enc.lastStandWhenAlone))
 
   const deck: CardInstance[] = []
   const cardDefs: Record<CardDefId, CardDef> = {}

@@ -174,6 +174,7 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
     // two back-row archers behind a screening soldier — reach the back line
     id: 'archerNest',
     enemies: [soldier('screen'), archer('arch1'), archer('arch2', { side: 'right' })],
+    lastStandWhenAlone: true, // 3+ fight: the last foe standing rallies (×2 dmg, ×½ taken, steps to front)
     flags: { mandatory: false, allowFlee: true, isBoss: false },
     winCondition: { kind: 'allEnemiesDefeated' },
     rewardOptions: money(38), rewardXp: 32, ...bg('bg-combat-ridge-path'),
@@ -208,6 +209,7 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
     // a shield wall screening an archer — a bulky target-priority puzzle (solo: 3 foes, not 4)
     id: 'shieldWallElite',
     enemies: [shield('shield1'), shield('shield2', { side: 'right' }), archer('arch1', { row: 'back' })],
+    lastStandWhenAlone: true, // 3+ fight: the last foe standing rallies (×2 dmg, ×½ taken, steps to front)
     flags: { mandatory: false, allowFlee: true, isBoss: false },
     winCondition: { kind: 'allEnemiesDefeated' },
     rewardOptions: money(80), rewardXp: 55, battleMusic: 'music/battle-intense', ...bg('bg-combat-rocky-pass'),
@@ -221,6 +223,7 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
       shield('shield', { side: 'left' }),
       archer('arch', { side: 'right' }),
     ],
+    lastStandWhenAlone: true, // 3+ elite: the last foe standing rallies (×2 dmg, ×½ taken, steps to front)
     flags: { mandatory: false, allowFlee: true, isBoss: false },
     winCondition: { kind: 'allEnemiesDefeated' },
     rewardOptions: money(90), rewardXp: 60, battleMusic: 'music/battle-intense', ...bg('bg-combat-rocky-pass'),
@@ -229,6 +232,7 @@ export const ELAH_ENCOUNTERS: Record<string, EncounterDef> = {
     // the Philistine line — a dress rehearsal for the giant's company (solo: 3 foes, not 4)
     id: 'philistineVanguard',
     enemies: [soldier('sol1'), shield('shield', { side: 'left' }), archer('arch', { row: 'back', side: 'right' })],
+    lastStandWhenAlone: true, // 3+ fight: the last foe standing rallies (×2 dmg, ×½ taken, steps to front)
     flags: { mandatory: false, allowFlee: true, isBoss: false },
     winCondition: { kind: 'allEnemiesDefeated' },
     rewardOptions: money(60), rewardXp: 45, battleMusic: 'music/battle-intense', ...bg('bg-combat-rocky-pass'),

@@ -306,6 +306,8 @@ export interface CombatantView {
   block: number
   /** Divine Protection: turns left + per-hit negate chance (0-1), when shielded */
   shield?: { turns: number; chance: number }
+  /** "last stand" rally: a cornered lone foe deals ×2 and takes ×½ (intentValue already doubled) */
+  lastStand?: boolean
   row: 'front' | 'back'
   intentKind?: string
   intentValue?: number
@@ -355,6 +357,10 @@ export function selectCombat(state: GameState): CombatView | null {
 
   const toView = (id: string): CombatantView => {
     const x = c.combatants[id]!
+    const lastStand = x.statuses.some((s) => s.id === 'lastStand' && s.stacks > 0)
+    // honest telegraph: a rallied foe deals ×2, so show the doubled per-hit on attack intents
+    const isAttack = x.intent?.kind === 'attack' || x.intent?.kind === 'attackMulti'
+    const intentValue = x.intent?.value !== undefined && lastStand && isAttack ? x.intent.value * 2 : x.intent?.value
     return {
       id: x.id,
       nameKey: x.faction === 'enemy' ? `enemy.${x.archetype}` : `enemy.${x.archetype}`,
@@ -367,9 +373,10 @@ export function selectCombat(state: GameState): CombatView | null {
       maxHp: x.maxHp,
       block: x.block,
       shield: x.shield,
+      lastStand,
       row: x.row,
       intentKind: x.intent?.kind,
-      intentValue: x.intent?.value,
+      intentValue,
       intentHits: x.intent?.hits,
       intentStacks: x.intent?.stacks,
     }

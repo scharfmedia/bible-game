@@ -221,6 +221,22 @@ function applyStatusTo(c: CombatState, id: CombatantId, status: StatusId, stacks
 }
 
 /**
+ * "Last stand": the instant a flagged foe becomes the SOLE living (revealed) enemy it rallies — steps
+ * to the front (so the buff isn't swallowed by a back-row penalty) and gains the reusable `lastStand`
+ * buff (deals ×2, takes ×½, applied in physicalAmount). Idempotent: re-checked wherever combat
+ * continues (finalizeIfEnded), but applied once. The buff is GENERIC — any future trigger can grant
+ * `lastStand` to any combatant; this is just the "alone" trigger.
+ */
+function refreshLastStand(c: CombatState): CombatStep {
+  const living = c.enemyOrder.map((id) => c.combatants[id]!).filter((x) => x.alive && !x.hidden)
+  if (living.length !== 1) return step(c)
+  const lone = living[0]!
+  if (!lone.lastStandWhenAlone || statusStacks(lone, 'lastStand') > 0) return step(c)
+  const combat = applyStatusTo(withCombatant(c, lone.id, (x) => ({ ...x, row: 'front' })), lone.id, 'lastStand', 1)
+  return step(combat, [{ type: 'statusApplied', targetId: lone.id, status: 'lastStand', stacks: 1 }])
+}
+
+/**
  * Magnitude of a numeric op. `spirit` cards scale by Spirit potency (verse cards fizzle to 0 when
  * carnal — no floor; other spirit cards keep a floor). `flesh` cards scale by the attacker's level.
  */
@@ -710,7 +726,8 @@ function tickStatuses(c: CombatState): CombatState {
     combat = withCombatant(combat, id, (x) => {
       if (!x.alive) return x
       const statuses = x.statuses
-        .map((s) => (s.id === 'strength' ? s : { ...s, stacks: s.stacks - 1 }))
+        // strength + lastStand persist (no per-round decay); the rest count down
+        .map((s) => (s.id === 'strength' || s.id === 'lastStand' ? s : { ...s, stacks: s.stacks - 1 }))
         .filter((s) => s.stacks > 0)
       return { ...x, statuses }
     })
@@ -731,7 +748,7 @@ function finalizeIfEnded(c: CombatState): CombatStep {
 
   let combat = c
   const win = isWon(combat)
-  if (!win.won) return step(combat)
+  if (!win.won) return refreshLastStand(combat) // combat continues: a lone surviving foe may now rally
 
   // demons bound to a dead human flee (brute path)
   combat = fleeBoundDemons(combat)

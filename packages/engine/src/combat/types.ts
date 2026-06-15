@@ -69,6 +69,9 @@ export interface Combatant {
   boundToId?: CombatantId
   /** bosses/elites cannot be removed by the `banish` miracle (Finger of God) */
   banishImmune?: boolean
+  /** trigger flag: when this foe becomes the SOLE living enemy it rallies — gains the `lastStand`
+   *  buff (deals ×2, takes ×½) and steps to the front. Set per-encounter (see refreshLastStand). */
+  lastStandWhenAlone?: boolean
 }
 
 export type Phase =

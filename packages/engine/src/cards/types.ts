@@ -7,8 +7,10 @@ export type CardType = 'attack' | 'skill' | 'power' | 'spiritual' | 'verse' | 's
 
 export type TargetKind = 'enemy' | 'allEnemies' | 'ally' | 'self' | 'allAllies' | 'none'
 
-/** Milestone-1 status library (kept small and composable). */
-export type StatusId = 'weak' | 'vulnerable' | 'strength' | 'bound'
+/** Milestone-1 status library (kept small and composable). 'lastStand' is a reusable "rally" buff:
+ *  while held, the combatant deals ×2 damage and takes ×½ (see damage.ts physicalAmount). Any trigger
+ *  can grant it; today the sole-surviving-foe trigger does (combat.ts refreshLastStand). */
+export type StatusId = 'weak' | 'vulnerable' | 'strength' | 'bound' | 'lastStand'
 
 export type FruitAffinity = 'mercy' | 'faith' | 'knowledge'
 

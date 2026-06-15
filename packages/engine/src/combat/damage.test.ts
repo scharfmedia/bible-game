@@ -56,6 +56,15 @@ describe('physicalAmount — flesh pipeline (no defense, no cap)', () => {
     const weak = mk({ statuses: [{ id: 'weak', stacks: 1 }] })
     expect(physicalAmount(0, weak, mk()).amount).toBe(0)
   })
+
+  it('lastStand rally: attacker deals ×2, defender takes ×½', () => {
+    const rallied = mk({ statuses: [{ id: 'lastStand', stacks: 1 }] })
+    expect(physicalAmount(10, rallied, mk()).amount).toBe(20) // out ×2
+    expect(physicalAmount(10, mk(), rallied).amount).toBe(5) // in ×½ (floored)
+    // stacks with strength on the outgoing side: (10 + 2×scale) then ×2
+    const strongRally = mk({ scale: 1, statuses: [{ id: 'lastStand', stacks: 1 }, { id: 'strength', stacks: 2 }] })
+    expect(physicalAmount(10, strongRally, mk()).amount).toBe(24) // (10+2)×2
+  })
 })
 
 describe('absorb', () => {
