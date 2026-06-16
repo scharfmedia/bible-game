@@ -18,6 +18,18 @@ export const CARDS: Record<string, CardDef> = {
   subdue: { id: 'subdue', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: 'card.subdue.name', textKey: 'card.subdue.text', rarity: 'uncommon', nonLethal: true, effects: [{ kind: 'damage', amount: 8 }] },
   focus: { id: 'focus', type: 'skill', layer: 'flesh', cost: 0, target: 'none', nameKey: 'card.focus.name', textKey: 'card.focus.text', rarity: 'uncommon', effects: [{ kind: 'gainEnergy', amount: 1 }] },
 
+  // --- card-manipulation skills (resolved via a "pick cards from a pile" modal in the UI) ---
+  // "Iron sharpeneth iron" (Prov 27:17) — temper a chosen card into its '+' form for this battle.
+  sharpen: { id: 'sharpen', type: 'skill', layer: 'flesh', cost: 1, target: 'none', nameKey: 'card.sharpen.name', textKey: 'card.sharpen.text', rarity: 'uncommon', effects: [{ kind: 'hone', count: 1 }] },
+  // "Lay aside every weight" (Heb 12:1) — banish clutter (chosen cards) to the exhaust pile. Exhausts.
+  cast_off: { id: 'cast_off', type: 'skill', layer: 'flesh', cost: 1, target: 'none', exhaust: true, nameKey: 'card.cast_off.name', textKey: 'card.cast_off.text', rarity: 'uncommon', effects: [{ kind: 'exhaustChosen', count: 2 }] },
+  // "Prepare ye the way" (Isa 40:3) — set a chosen card on top of the draw pile, drawn first next round.
+  prepare: { id: 'prepare', type: 'skill', layer: 'flesh', cost: 0, target: 'none', nameKey: 'card.prepare.name', textKey: 'card.prepare.text', rarity: 'uncommon', effects: [{ kind: 'topDeck', count: 1 }] },
+
+  // --- enemy-injected clutter (never owned/bought): a "thorn" that only clogs the deck (Matt 13:22).
+  //     Unplayable; cleared only by an `exhaustChosen` card (Cast Off). ---
+  spike: { id: 'spike', type: 'status', layer: 'flesh', cost: 0, target: 'none', unplayable: true, nameKey: 'card.spike.name', textKey: 'card.spike.text', effects: [] },
+
   // --- MIRACLE cards: earned ONLY by solving scripture (study at a fireplace → ownedVerseCardIds →
   //     persistent across runs). All `layer:'spirit'`: chance + magnitude scale with the hidden Spirit
   //     stat, and they fizzle when carnal. They are never in the pool/starter deck. ---
@@ -51,6 +63,10 @@ export const CARD_POOL_START: string[] = [
   'shove',
   'rally',
   'focus',
+  // card-manipulation skills — offered in rewards/shops
+  'sharpen',
+  'cast_off',
+  'prepare',
 ]
 
 /** Cards added to the hero's pool upon reaching each level. Spirit cards are NOT here — they are
@@ -73,5 +89,10 @@ export const HERO_START_DECK: string[] = [
   'subdue', // mercy is possible from the very first robber fight
   'second_wind',
   'flurry',
+  // card-manipulation skills — seeded into the starter deck so the new modals are immediately
+  // playable/testable. (Easily removed: these are also in CARD_POOL_START for normal acquisition.)
+  'sharpen',
+  'cast_off',
+  'prepare',
   // No spirit cards by default — miracle cards are earned by solving scripture (study at a fireplace).
 ]

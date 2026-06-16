@@ -69,10 +69,13 @@ describe('champion profile', () => {
 })
 
 describe('dreadSpirit profile', () => {
-  const d = (round: number) => pickIntent(mk({ aiProfileId: 'dreadSpirit', isDemon: true }), { round })
-  it('curses with vulnerability, then strikes into the opening', () => {
-    expect(d(1)).toEqual({ kind: 'debuff', status: 'vulnerable', stacks: 1 })
-    expect(d(2)).toEqual({ kind: 'attack', value: 10 })
+  const d = (round: number, over: Partial<Combatant> = {}) => pickIntent(mk({ aiProfileId: 'dreadSpirit', isDemon: true, ...over }), { round })
+  it('sows clutter, curses with vulnerability, then strikes into the opening', () => {
+    expect(d(1)).toEqual({ kind: 'clutter', value: 1 })
+    expect(d(2)).toEqual({ kind: 'debuff', status: 'vulnerable', stacks: 1 })
     expect(d(3)).toEqual({ kind: 'attack', value: 10 })
+  })
+  it('enraged (below half HP) it sows more clutter', () => {
+    expect(d(1, { hp: 10, maxHp: 100 })).toEqual({ kind: 'clutter', value: 2 })
   })
 })

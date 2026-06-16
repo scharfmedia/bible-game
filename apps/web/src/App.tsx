@@ -21,6 +21,7 @@ import { StoryScroll } from './components/StoryScroll'
 import { MusicController } from './components/MusicController'
 import { SleepOverlay } from './components/SleepOverlay'
 import { PrayOverlay } from './components/PrayOverlay'
+import { DeckModal } from './components/DeckModal'
 
 const SCREENS: Record<ScreenId, ComponentType> = {
   start: StartScreen,
@@ -44,6 +45,7 @@ export function App() {
   const dialogueActive = useGame((s) => Boolean(s.state.run?.world.dialogue))
   const storyActive = useGame((s) => Boolean(s.state.run?.world.story))
   const praying = useGame((s) => s.praying)
+  const deckOpen = useGame((s) => s.deckOpen)
   const Screen = SCREENS[screen] ?? StartScreen
 
   return (
@@ -64,6 +66,7 @@ export function App() {
       {prompt?.kind === 'verseChallenge' && <VerseModal challengeId={prompt.challengeId} />}
       {dialogueActive && <DialogueOverlay />}
       {storyActive && <StoryScroll />}
+      {deckOpen && <DeckModal />}
       <SleepOverlay />
       <PrayOverlay />
     </div>

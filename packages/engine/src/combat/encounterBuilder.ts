@@ -78,15 +78,16 @@ export function buildEncounter(run: RunState, encounterId: EncounterId, nodeId: 
   const enemies = enc.enemies.map((t) => enemyCombatant(t, heroLevel, run.depth, enc.lastStandWhenAlone))
 
   const deck: CardInstance[] = []
-  const cardDefs: Record<CardDefId, CardDef> = {}
+  // Embed the WHOLE card catalog (it is tiny + fully serializable). The deck below still only
+  // materializes the player's cards, but combat must also resolve defs it doesn't start with:
+  // enemy-injected clutter (Spike) and the `+` forms a `hone` card swaps in mid-battle.
+  const cardDefs: Record<CardDefId, CardDef> = { ...run.content.cards }
   let energyMax = 0
   for (const m of living) {
     energyMax += m.contributesEnergy
     const defs = run.deckByMember[m.memberId] ?? []
     defs.forEach((defId, i) => {
       deck.push({ iid: `${m.memberId}#${i}`, defId, ownerId: m.memberId })
-      const def = run.content.cards[defId]
-      if (def) cardDefs[defId] = def
     })
   }
 

@@ -5,11 +5,13 @@ import { assetBg } from '@bible/assets'
 import { previewCardDamage } from '@bible/engine'
 import { bgUrl } from '../asset'
 import { useGame } from '../store/gameStore'
-import { selectCombat, type CombatantView } from '../selectors'
+import { selectCombat, selectCombatPile, type CombatantView, type HandCardView } from '../selectors'
 import { CardView } from '../components/Card'
 import { Hud } from '../components/Hud'
+import { CardListModal } from '../components/CardListModal'
+import { CardPickModal, type PickSpec } from '../components/CardPickModal'
 
-const INTENT_ICON: Record<string, string> = { attack: '⚔️', attackMulti: '⚔️', dread: '🌑', block: '🛡️', buff: '⬆️', debuff: '⬇️', special: '…', unknown: '❔' }
+const INTENT_ICON: Record<string, string> = { attack: '⚔️', attackMulti: '⚔️', dread: '🌑', block: '🛡️', buff: '⬆️', debuff: '⬇️', clutter: '🌫️', special: '…', unknown: '❔' }
 
 export function CombatScreen() {
   const { t } = useTranslation()
@@ -19,6 +21,9 @@ export function CombatScreen() {
   const lastEvents = useGame((s) => s.lastEvents)
   const tick = useGame((s) => s.tick)
   const [pending, setPending] = useState<{ kind: 'card'; iid: string } | { kind: 'grace'; ability: string } | null>(null)
+  // a bottom-corner pile to inspect (read-only), and a "pick cards" prompt for hone/cast-off/prepare
+  const [pileModal, setPileModal] = useState<'draw' | 'discard' | 'exhaust' | null>(null)
+  const [pickModal, setPickModal] = useState<{ iid: string; pick: PickSpec } | null>(null)
 
   // Auto-begin the action phase each round: the engine opens combat (and every new round) in a brief
   // "decision" window before the hand is drawn — draw it automatically so the player never presses ▶.
@@ -47,11 +52,18 @@ export function CombatScreen() {
     return p ? p.total : null
   }
 
-  const clickCard = (iid: string, target: string) => {
-    if (pending?.kind === 'card' && pending.iid === iid) return setPending(null) // click again → cancel
-    if (target === 'enemy') setPending({ kind: 'card', iid })
+  const clickCard = (card: HandCardView) => {
+    if (card.unplayable) return // clutter (Spike): cannot be played
+    if (pending?.kind === 'card' && pending.iid === card.iid) return setPending(null) // click again → cancel
+    if (card.pick) {
+      // hone / cast off / prepare: open the card picker; the card commits only on confirm
+      setPending(null)
+      setPickModal({ iid: card.iid, pick: card.pick })
+      return
+    }
+    if (card.target === 'enemy') setPending({ kind: 'card', iid: card.iid })
     else {
-      dispatch({ type: 'combat/playCard', iid })
+      dispatch({ type: 'combat/playCard', iid: card.iid })
       setPending(null)
     }
   }
@@ -144,8 +156,8 @@ export function CombatScreen() {
 
       <div className="combat-hud">
         <div className="hud-left">
-          <div className="energy-orb"><b>{view.energy.current}</b><span>/{view.energy.max}</span></div>
-          <div className="card-stack draw"><span className="stack-count">{view.drawCount}</span><label>{t('ui.combat.draw')}</label></div>
+          <div className="energy-orb"><b>{view.energy.current}</b><span>/{view.energy.max}</span><label>{t('ui.combat.energy')}</label></div>
+          <button type="button" className="card-stack draw" onClick={() => setPileModal('draw')} title={t('ui.combat.draw')}><span className="stack-count">{view.drawCount}</span><label>{t('ui.combat.draw')}</label></button>
         </div>
 
         <div className="hand-fan">
@@ -154,9 +166,9 @@ export function CombatScreen() {
               <CardView
                 key={card.iid}
                 card={card}
-                playable={view.energy.current >= card.cost}
+                playable={!card.unplayable && view.energy.current >= card.cost}
                 selected={pending?.kind === 'card' && pending.iid === card.iid}
-                onClick={() => clickCard(card.iid, card.target)}
+                onClick={() => clickCard(card)}
                 fan={fanOf(i)}
                 z={i}
               />
@@ -174,9 +186,23 @@ export function CombatScreen() {
             {view.canFlee && <button className="btn ghost small" onClick={() => dispatch({ type: 'combat/flee' })}>{t('ui.combat.flee')}</button>}
             <button className="btn end-turn" onClick={() => dispatch({ type: 'combat/endTurn' })}>{t('ui.combat.endTurn')}</button>
           </div>
-          <div className="card-stack discard"><span className="stack-count">{view.discardCount}</span><label>{t('ui.combat.discard')}</label></div>
+          <div className="pile-row">
+            <button type="button" className="card-stack discard" onClick={() => setPileModal('discard')} title={t('ui.combat.discard')}><span className="stack-count">{view.discardCount}</span><label>{t('ui.combat.discard')}</label></button>
+            <button type="button" className="card-stack exhaust" onClick={() => setPileModal('exhaust')} title={t('ui.combat.exhaust')}><span className="stack-count">{view.exhaustCount}</span><label>{t('ui.combat.exhaust')}</label></button>
+          </div>
         </div>
       </div>
+
+      {pileModal && (
+        <CardListModal
+          titleKey={`ui.deck.pile.${pileModal}`}
+          cards={selectCombatPile(state, pileModal)}
+          onClose={() => setPileModal(null)}
+        />
+      )}
+      {pickModal && (
+        <CardPickModal playedIid={pickModal.iid} pick={pickModal.pick} onClose={() => setPickModal(null)} />
+      )}
     </div>
   )
 }

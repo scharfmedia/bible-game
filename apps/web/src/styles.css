@@ -310,14 +310,18 @@ body {
 
 /* bottom HUD: energy + draw stack (left), fanned hand (centre), end-turn + discard stack (right) */
 .combat-hud { position: relative; z-index: 3; height: 202px; display: grid; grid-template-columns: 160px 1fr 210px; align-items: end; gap: 0.5rem; padding: 0 1.3rem 0.7rem; background: linear-gradient(0deg, rgba(8,10,6,0.92) 35%, transparent); }
-.hud-left { display: flex; align-items: flex-end; gap: 0.9rem; padding-bottom: 0.5rem; }
+/* energy sits high on the left, lifted above the draw pile and given room to breathe */
+.hud-left { align-self: stretch; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.5rem 0 0.6rem; }
 .hud-right { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; padding-bottom: 0.5rem; }
 .hud-right-row { display: flex; align-items: flex-end; gap: 0.5rem; }
 .grace-row { display: flex; gap: 0.4rem; }
+/* discard + exhaust sit together at the bottom-right */
+.pile-row { display: flex; align-items: flex-end; gap: 0.8rem; }
 
-.energy-orb { width: 66px; height: 66px; border-radius: 50%; background: radial-gradient(circle at 36% 30%, #4a8a3e, #143a10 72%); border: 2px solid var(--gold); box-shadow: 0 0 16px rgba(120,200,90,0.4), inset 0 0 10px rgba(0,0,0,0.5); display: flex; align-items: baseline; justify-content: center; color: #d9f4cf; }
-.energy-orb b { font-size: 1.6rem; color: #fff; }
-.energy-orb span { font-size: 0.85rem; color: #bfe6b0; }
+.energy-orb { position: relative; width: 94px; height: 94px; border-radius: 50%; background: radial-gradient(circle at 36% 30%, #4a8a3e, #143a10 72%); border: 3px solid var(--gold); box-shadow: 0 0 26px rgba(120,200,90,0.5), inset 0 0 14px rgba(0,0,0,0.5); display: flex; align-items: baseline; justify-content: center; color: #d9f4cf; }
+.energy-orb b { font-size: 2.5rem; color: #fff; line-height: 1; }
+.energy-orb span { font-size: 1.1rem; color: #bfe6b0; }
+.energy-orb label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 5px; font-size: 0.58rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
 
 /* draw / discard piles drawn as a small stack of cards */
 .card-stack { position: relative; width: 46px; height: 64px; flex: none; }
@@ -326,6 +330,11 @@ body {
 .card-stack::after { transform: translate(4px, 2px) rotate(5deg); opacity: 0.82; }
 .card-stack .stack-count { position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid var(--gold); background: linear-gradient(180deg, #313c25, #181f12); font-weight: 700; color: var(--gold-bright); box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
 .card-stack label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 4px; font-size: 0.54rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+/* the piles are clickable — they open a read-only inspection modal */
+button.card-stack { background: none; padding: 0; font: inherit; cursor: pointer; }
+.card-stack:hover { filter: brightness(1.18); }
+.card-stack:hover .stack-count { border-color: var(--gold-bright); }
+.card-stack.exhaust .stack-count { color: var(--muted); border-color: var(--panel-edge); filter: saturate(0.4); }
 
 .btn.end-turn { font-size: 1rem; padding: 0.55rem 1.4rem; background: linear-gradient(180deg, var(--gold), #b8923f); color: #1a160c; font-weight: 700; border: 1px solid #ffffff55; border-radius: 10px; box-shadow: 0 3px 10px rgba(0,0,0,0.5); }
 .btn.end-turn:hover { filter: brightness(1.08); }
@@ -354,9 +363,11 @@ body {
 .upgrade-preview { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 0.8rem 0; }
 .upgrade-arrow { font-size: 1.8rem; font-weight: 700; color: var(--gold-bright); }
 /* shop */
-.shop-panel { max-width: 640px; }
+.shop-panel { max-width: 640px; max-height: 88vh; overflow-y: auto; }
 .shop-buy { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .shop-price { font-size: 0.78rem; font-weight: 700; color: var(--gold-bright); }
+/* card-removal list can be long (it grows with your deck) — scroll it so the Back button stays put */
+.shop-remove-row { max-height: 52vh; overflow-y: auto; flex-wrap: wrap; }
 .warn { color: var(--gold); }
 .card-cost { position: absolute; top: -11px; left: -11px; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #f6e08a, var(--gold)); color: #1a160c; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem; border: 2px solid #ffffff66; box-shadow: 0 2px 5px rgba(0,0,0,0.5); z-index: 2; }
 .card-art { height: 74px; border-radius: 7px; margin: 2px 0 6px; background: linear-gradient(135deg, #3a4a30, #1c2416); border: 1px solid rgba(0,0,0,0.4); }
@@ -400,6 +411,16 @@ body {
 /* ---------- verse modal ---------- */
 .modal-overlay { position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); }
 .panel.verse { width: min(560px, 92vw); }
+
+/* ---------- deck / pile / card-pick modals ---------- */
+.panel.deck-modal { width: min(900px, 94vw); max-height: 86vh; overflow-y: auto; }
+.deck-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.4rem; }
+.deck-modal-head h3 { margin: 0; }
+.deck-modal-empty { text-align: center; padding: 1.6rem 0; }
+.modal-card { position: relative; }
+.modal-card.unplayable { opacity: 0.55; filter: grayscale(0.5); }
+.modal-card.honed .card { border-color: var(--gold-bright); box-shadow: 0 0 10px rgba(201, 176, 99, 0.5); }
+.modal-card-badge { position: absolute; top: -6px; right: -6px; z-index: 3; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--gold); color: #1a1a22; font-size: 0.7rem; font-weight: 700; box-shadow: 0 1px 4px rgba(0,0,0,0.5); }
 .verse-text { font-style: italic; line-height: 1.6; background: rgba(0,0,0,0.3); border-left: 3px solid var(--gold); padding: 0.8rem 1rem; border-radius: 4px; }
 .verse-inputs { display: flex; flex-wrap: wrap; justify-content: center; }
 

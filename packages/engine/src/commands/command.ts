@@ -56,7 +56,7 @@ export type Command =
   | { type: 'combat/reposition'; moves: Array<{ id: CombatantId; row?: Row; side?: Side }> }
   | { type: 'combat/flee' }
   | { type: 'combat/beginAction' }
-  | { type: 'combat/playCard'; iid: string; targetId?: CombatantId }
+  | { type: 'combat/playCard'; iid: string; targetId?: CombatantId; cardTargetIids?: string[] }
   | { type: 'combat/useGrace'; ability: GraceAbilityId; targetId?: CombatantId }
   | { type: 'combat/endTurn' }
   // ---- reward (post-combat): claim spoils individually, pick one card (or skip), then leave ----

@@ -18,6 +18,8 @@ export type IntentKind =
   | 'block'
   | 'buff'
   | 'debuff'
+  /** sows clutter: injects `value` unplayable cards into the party's discard pile */
+  | 'clutter'
   | 'special'
   | 'unknown'
 

@@ -9,7 +9,7 @@ import { getGrace } from '../grace/grace'
 import { miracleChance, scaleSpiritValue } from '../spirit/spirit'
 import type { SpiritEvent } from '../spirit/spirit'
 import { chance, fork, nextFloat, pick, shuffle, type RngState } from '../rng/rng'
-import type { CombatantId, GraceAbilityId } from '../types'
+import type { CardDefId, CombatantId, GraceAbilityId, MemberId } from '../types'
 import { pickIntent } from './ai'
 import { absorb, physicalAmount, statusStacks } from './damage'
 import type {
@@ -66,8 +66,58 @@ const aliveHumanEnemies = (c: CombatState): Combatant[] =>
 
 // ---- card / effect resolution -----------------------------------------------------------
 
+/** The def a copy currently resolves to — its honed (`+`) form once a `hone` effect has marked it,
+ *  else its base def. The single seam through which honing affects cost/effects/exhaust/display. */
 function cardDef(c: CombatState, inst: CardInstance): CardDef | undefined {
-  return c.cardDefs[inst.defId]
+  return c.cardDefs[inst.honedDefId ?? inst.defId]
+}
+
+/** Find a card copy by iid across the live piles (hand / draw / discard — not exhaust). */
+function findInstance(c: CombatState, iid: string): CardInstance | undefined {
+  return c.hand.find((x) => x.iid === iid) ?? c.drawPile.find((x) => x.iid === iid) ?? c.discardPile.find((x) => x.iid === iid)
+}
+
+/** Map a single card copy (by iid) in whichever live pile holds it. No-op if not found. */
+function withCardInstance(c: CombatState, iid: string, fn: (x: CardInstance) => CardInstance): CombatState {
+  const upd = (pile: CardInstance[]): CardInstance[] => {
+    const idx = pile.findIndex((x) => x.iid === iid)
+    if (idx < 0) return pile
+    const next = [...pile]
+    next[idx] = fn(next[idx]!)
+    return next
+  }
+  return { ...c, hand: upd(c.hand), drawPile: upd(c.drawPile), discardPile: upd(c.discardPile) }
+}
+
+/** Pull a card copy out of whichever live pile holds it (hand / draw / discard). */
+function removeFromPiles(c: CombatState, iid: string): { combat: CombatState; inst?: CardInstance } {
+  for (const pile of ['hand', 'drawPile', 'discardPile'] as const) {
+    const idx = c[pile].findIndex((x) => x.iid === iid)
+    if (idx >= 0) {
+      const inst = c[pile][idx]!
+      const next = [...c[pile]]
+      next.splice(idx, 1)
+      return { combat: { ...c, [pile]: next }, inst }
+    }
+  }
+  return { combat: c }
+}
+
+/** Mint `count` fresh card copies of `defId` and append them to a party pile (enemy clutter). The
+ *  cards carry a living member's `ownerId` so death-purge stays consistent. Uses `nextIid` for ids. */
+function injectCards(c: CombatState, defId: CardDefId, count: number, pile: 'draw' | 'discard', ownerId: MemberId): CombatStep {
+  if (count <= 0) return step(c)
+  let nextIid = c.nextIid
+  const added: CardInstance[] = []
+  const iids: string[] = []
+  for (let i = 0; i < count; i++) {
+    const iid = `${defId}#inj${nextIid++}`
+    added.push({ iid, defId, ownerId })
+    iids.push(iid)
+  }
+  const key = pile === 'draw' ? 'drawPile' : 'discardPile'
+  const combat: CombatState = { ...c, [key]: [...c[key], ...added], nextIid }
+  return step(combat, [{ type: 'cardsInjected', defId, iids, pile }])
 }
 
 function resolveTargets(
@@ -255,6 +305,7 @@ function applyEffect(
   defaultTarget: TargetKind,
   spirit: number,
   card: CardDef,
+  cardTargetIids: string[] = [],
 ): CombatStep {
   const source = getC(c, sourceId)
   if (!source) return step(c)
@@ -352,6 +403,47 @@ function applyEffect(
         combat = withCombatant(combat, tid, (x) => ({ ...x, shield: { turns: op.turns, chance: ch } }))
         events.push({ type: 'protected', targetId: tid, turns: op.turns, chance: ch })
       }
+      return step(combat, events)
+    }
+    case 'hone': {
+      // Temporarily upgrade up to `count` chosen cards to their `+` form for the rest of the battle.
+      // Only cards with an `upgradeTo` (and not already honed) qualify — re-honing is a no-op because
+      // a honed copy resolves to a `+` def, which has no further `upgradeTo`.
+      const honed: string[] = []
+      for (const tid of cardTargetIids.slice(0, op.count)) {
+        const inst = findInstance(combat, tid)
+        if (!inst || inst.honedDefId) continue
+        const toId = combat.cardDefs[inst.defId]?.upgradeTo
+        if (!toId || !combat.cardDefs[toId]) continue
+        combat = withCardInstance(combat, tid, (x) => ({ ...x, honedDefId: toId }))
+        honed.push(tid)
+      }
+      if (honed.length) events.push({ type: 'cardsHoned', iids: honed })
+      return step(combat, events)
+    }
+    case 'exhaustChosen': {
+      // Banish up to `count` chosen cards to the exhaust pile for the rest of the battle.
+      const moved: string[] = []
+      for (const tid of cardTargetIids.slice(0, op.count)) {
+        const r = removeFromPiles(combat, tid)
+        if (!r.inst) continue
+        combat = { ...r.combat, exhaustPile: [...r.combat.exhaustPile, r.inst] }
+        moved.push(tid)
+      }
+      if (moved.length) events.push({ type: 'cardsExhausted', iids: moved })
+      return step(combat, events)
+    }
+    case 'topDeck': {
+      // Place up to `count` chosen cards on TOP of the draw pile. Process in reverse so the first
+      // chosen card ends up on the very top (drawn first next round).
+      const moved: string[] = []
+      for (const tid of cardTargetIids.slice(0, op.count).reverse()) {
+        const r = removeFromPiles(combat, tid)
+        if (!r.inst) continue
+        combat = { ...r.combat, drawPile: [r.inst, ...r.combat.drawPile] }
+        moved.push(tid)
+      }
+      if (moved.length) events.push({ type: 'cardsTopDecked', iids: moved })
       return step(combat, events)
     }
   }
@@ -543,7 +635,7 @@ export function flee(c: CombatState): CombatStep {
   return step(after.combat, [{ type: 'fleeAttempt', success: false }, ...after.events], after.spiritEvents)
 }
 
-export function playCard(c: CombatState, iid: string, chosenId: CombatantId | undefined, spirit: number): CombatStep {
+export function playCard(c: CombatState, iid: string, chosenId: CombatantId | undefined, spirit: number, cardTargetIids: string[] = []): CombatStep {
   const begun = ensureActing(c)
   let combat = begun.combat
   const preEvents = begun.events
@@ -553,6 +645,7 @@ export function playCard(c: CombatState, iid: string, chosenId: CombatantId | un
   if (!inst) return reject(c, 'card-not-in-hand')
   const def = cardDef(combat, inst)
   if (!def) return reject(c, 'unknown-card')
+  if (def.unplayable) return reject(c, 'card-unplayable')
 
   const cost = inst.costOverride ?? def.cost
   if (combat.energy.current < cost) return reject(c, 'not-enough-energy')
@@ -579,7 +672,7 @@ export function playCard(c: CombatState, iid: string, chosenId: CombatantId | un
   if (def.type === 'verse') spiritEvents.push({ kind: 'playVerseCard' })
 
   for (const op of def.effects) {
-    const r = applyEffect(combat, op, sourceId, chosenId, def.target, spirit, def)
+    const r = applyEffect(combat, op, sourceId, chosenId, def.target, spirit, def, cardTargetIids)
     combat = r.combat
     // stamp the played iid onto fizzle events
     events.push(...r.events.map((e) => (e.type === 'cardFizzled' ? { ...e, iid } : e)))
@@ -716,6 +809,10 @@ function executeIntent(c: CombatState, enemyId: CombatantId): CombatStep {
     case 'debuff':
       // afflict the front party member (weak/vulnerable)
       return step(applyStatusTo(c, target.id, intent.status ?? 'weak', intent.stacks ?? 1))
+    case 'clutter':
+      // sow unplayable clutter into the party's discard pile (it reshuffles in and clogs the deck).
+      // The cards carry a living member's id so death-purge stays consistent.
+      return injectCards(c, 'spike', intent.value ?? 1, 'discard', target.memberId ?? target.id)
     default:
       return step(c)
   }

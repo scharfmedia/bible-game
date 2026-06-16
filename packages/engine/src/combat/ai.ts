@@ -48,8 +48,10 @@ function profileIntent(enemy: Combatant, profileId: string, round: number): Inte
       return { kind: 'attack', value: enraged ? atk * 2 : atk }
     }
     case 'dreadSpirit': {
-      // a tormentor: curses the hero with vulnerability, then strikes harder into the opening
-      const kind = at(['debuff', 'attack', 'attack'] as const)
+      // a tormentor: sows intrusive "thorns" (clutter) into your deck, curses you with vulnerability,
+      // then strikes harder into the opening. Enraged, it sows more thorns to bury you in clutter.
+      const kind = at(['clutter', 'debuff', 'attack'] as const)
+      if (kind === 'clutter') return { kind: 'clutter', value: enraged ? 2 : 1 }
       if (kind === 'debuff') return { kind: 'debuff', status: 'vulnerable', stacks: 1 }
       return { kind: 'attack', value: atk }
     }

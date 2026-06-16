@@ -71,6 +71,10 @@ describe('Jericho Road — content & integration', () => {
     const fought = dispatch(s, { type: 'world/enter' }) // click the entrance
     expect(fought.screen).toBe('combat')
     expect(fought.combat?.encounterId).toBe('roadRobbers')
+    // the WHOLE card catalog is embedded in the combat (so enemy-injected clutter + honed '+'
+    // forms resolve even though they aren't in the player's deck)
+    expect(Object.keys(fought.combat!.cardDefs)).toHaveLength(Object.keys(content.cards).length)
+    expect(fought.combat!.cardDefs.spike).toBeDefined()
   })
 
   it('plays a long route to the Narrow Gate (mercy → hidden route → inn → boss)', () => {

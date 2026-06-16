@@ -331,6 +331,28 @@ export interface HandCardView {
   miracle?: { kind: 'banish' | 'protect'; chance: number; turns?: number }
   /** scaled values for interpolating the card text (dmg/block/heal/chance) */
   values: Record<string, number>
+  /** this copy has been temporarily upgraded to its '+' form for the battle */
+  honed?: boolean
+  /** clutter (e.g. Spike): can never be played — render greyed and ignore clicks */
+  unplayable?: boolean
+  /** the card needs a "pick cards from a pile" modal before it resolves (hone / cast off / prepare) */
+  pick?: { kind: 'hone' | 'exhaustChosen' | 'topDeck'; count: number }
+}
+
+/** A card copy as shown in a pile/deck/pick modal (read-only, plus honed/honeable/unplayable marks). */
+export interface CombatCardView {
+  iid: string
+  defId: string
+  nameKey: string
+  textKey: string
+  cost: number
+  layer: 'flesh' | 'spirit' | 'both'
+  verse: boolean
+  values?: Record<string, number>
+  honed: boolean
+  /** eligible to be honed (has a '+' form and isn't already honed) — used by the hone picker */
+  honeable: boolean
+  unplayable: boolean
 }
 
 export interface CombatView {
@@ -341,6 +363,7 @@ export interface CombatView {
   grace: { current: number; max: number }
   drawCount: number
   discardCount: number
+  exhaustCount: number
   phase: string
   outcome: string
   roundActionTaken: boolean
@@ -386,22 +409,31 @@ export function selectCombat(state: GameState): CombatView | null {
     party: c.partyOrder.map(toView),
     enemies: c.enemyOrder.map(toView).filter((e) => e.alive),
     hand: c.hand.map((ci) => {
-      const def = c.cardDefs[ci.defId]!
-      const dmg = previewCardDamage(c, ci.defId, ci.ownerId, spirit)
+      // resolve the copy's CURRENT def — its '+' form if it's been honed this battle
+      const defId = ci.honedDefId ?? ci.defId
+      const def = c.cardDefs[defId]!
+      const dmg = previewCardDamage(c, defId, ci.ownerId, spirit)
       const mir = previewMiracle(def, spirit)
       const ownerScale = c.combatants[ci.ownerId]?.scale ?? c.partyOrder.map((id) => c.combatants[id]).find((x) => x?.alive)?.scale ?? 1
+      const pickOp = def.effects.find((e) => e.kind === 'hone' || e.kind === 'exhaustChosen' || e.kind === 'topDeck') as
+        | { kind: 'hone' | 'exhaustChosen' | 'topDeck'; count: number }
+        | undefined
       return {
-        iid: ci.iid, defId: ci.defId, ownerId: ci.ownerId, nameKey: def.nameKey, textKey: def.textKey,
+        iid: ci.iid, defId, ownerId: ci.ownerId, nameKey: def.nameKey, textKey: def.textKey,
         cost: ci.costOverride ?? def.cost, layer: def.layer, type: def.type, target: def.target,
         damage: dmg ? { perHit: dmg.perHit, hits: dmg.hits, spiritual: dmg.spirit } : undefined,
         miracle: mir ? { kind: mir.kind, chance: mir.chance, turns: 'turns' in mir ? mir.turns : undefined } : undefined,
         values: cardDisplayValues(def, ownerScale, spirit),
+        honed: !!ci.honedDefId,
+        unplayable: def.unplayable ?? false,
+        pick: pickOp ? { kind: pickOp.kind, count: pickOp.count } : undefined,
       }
     }),
     energy: c.energy,
     grace: c.grace,
     drawCount: c.drawPile.length,
     discardCount: c.discardPile.length,
+    exhaustCount: c.exhaustPile.length,
     phase: c.phase,
     outcome: c.outcome,
     roundActionTaken: c.roundActionTaken,
@@ -409,6 +441,58 @@ export function selectCombat(state: GameState): CombatView | null {
     graceAbilities: c.partyOrder.flatMap((id) => c.combatants[id]?.graceAbilityIds ?? []),
     battleBg: c.battleBg,
   }
+}
+
+type CombatStateT = NonNullable<GameState['combat']>
+type CombatCardInstance = CombatStateT['hand'][number]
+
+/** Build a read-only card-view for a combat pile copy (resolves honing, marks honeable/unplayable). */
+function combatCardView(c: CombatStateT, spirit: number, inst: CombatCardInstance): CombatCardView {
+  const defId = inst.honedDefId ?? inst.defId
+  const def = c.cardDefs[defId]
+  const baseDef = c.cardDefs[inst.defId]
+  const ownerScale = c.combatants[inst.ownerId]?.scale ?? c.partyOrder.map((id) => c.combatants[id]).find((x) => x?.alive)?.scale ?? 1
+  return {
+    iid: inst.iid,
+    defId,
+    nameKey: def?.nameKey ?? defId,
+    textKey: def?.textKey ?? '',
+    cost: inst.costOverride ?? def?.cost ?? 0,
+    layer: def?.layer ?? 'flesh',
+    verse: def?.type === 'verse',
+    values: def ? cardDisplayValues(def, ownerScale, spirit) : undefined,
+    honed: !!inst.honedDefId,
+    honeable: !inst.honedDefId && !!baseDef?.upgradeTo,
+    unplayable: def?.unplayable ?? false,
+  }
+}
+
+/** The contents of one combat pile (for the click-to-inspect draw/discard/exhaust modals). */
+export function selectCombatPile(state: GameState, pile: 'draw' | 'hand' | 'discard' | 'exhaust'): CombatCardView[] {
+  const c = state.combat
+  if (!c) return []
+  const spirit = state.run?.spirit.spirit ?? 0
+  const arr = pile === 'draw' ? c.drawPile : pile === 'hand' ? c.hand : pile === 'discard' ? c.discardPile : c.exhaustPile
+  return arr.map((inst) => combatCardView(c, spirit, inst))
+}
+
+/** Candidate cards a hone/cast-off/prepare card may target — across the live piles, minus the card
+ *  being played. Hone is further restricted to honeable copies. */
+export function selectCardPickCandidates(state: GameState, playedIid: string, kind: 'hone' | 'exhaustChosen' | 'topDeck'): CombatCardView[] {
+  const c = state.combat
+  if (!c) return []
+  const spirit = state.run?.spirit.spirit ?? 0
+  const live = [...c.hand, ...c.drawPile, ...c.discardPile].filter((x) => x.iid !== playedIid)
+  const views = live.map((inst) => combatCardView(c, spirit, inst))
+  return kind === 'hone' ? views.filter((v) => v.honeable) : views
+}
+
+/** The hero's static run deck (used by the top-bar Deck modal on the map and in battle). */
+export function selectRunDeck(state: GameState): CardOfferView[] {
+  const run = state.run
+  if (!run) return []
+  const deck = run.deckByMember[run.heroMemberId] ?? []
+  return deck.map((defId) => cardOffer(run, defId))
 }
 
 export interface RestView {

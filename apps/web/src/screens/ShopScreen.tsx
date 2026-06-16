@@ -33,7 +33,7 @@ export function ShopScreen() {
         {removing ? (
           <>
             <h3 className="reward-card-title">{t('ui.shop.removeTitle', { price: view.removePrice })}</h3>
-            <div className="card-row">
+            <div className="card-row shop-remove-row">
               {view.deck.map((c) => (
                 <CardFace
                   key={c.index}

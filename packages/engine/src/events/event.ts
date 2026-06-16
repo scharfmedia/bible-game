@@ -49,6 +49,11 @@ export type GameEvent =
   | { type: 'cardDrawn'; iid: string }
   | { type: 'cardPlayed'; iid: string; defId: CardDefId }
   | { type: 'cardFizzled'; iid: string; defId: CardDefId; reason: 'lowSpirit' }
+  // card manipulation (hone / cast off / prepare the way) + enemy clutter injection
+  | { type: 'cardsHoned'; iids: string[] }
+  | { type: 'cardsExhausted'; iids: string[] }
+  | { type: 'cardsTopDecked'; iids: string[] }
+  | { type: 'cardsInjected'; defId: CardDefId; iids: string[]; pile: 'draw' | 'discard' }
   | { type: 'damageDealt'; targetId: CombatantId; amount: number; blocked: number; capped: boolean }
   | { type: 'blockGained'; targetId: CombatantId; amount: number }
   | { type: 'healed'; targetId: CombatantId; amount: number }

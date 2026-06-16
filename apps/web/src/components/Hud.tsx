@@ -24,6 +24,7 @@ export function Hud() {
   const spirit = state.run?.spirit.spirit ?? 0
   const audioMode = useGame((s) => s.state.profile.settings.audioMode)
   const cycleAudioMode = useGame((s) => s.cycleAudioMode)
+  const setDeckOpen = useGame((s) => s.setDeckOpen)
   if (!summary) return null
   const tier = potencyTier(spirit)
   const hpPct = Math.max(0, Math.min(100, (summary.hp / summary.maxHp) * 100))
@@ -48,6 +49,14 @@ export function Hud() {
       </div>
       <div className="hud-right">
         <div className="hud-right-row">
+          <button
+            className="hud-icon-btn"
+            onClick={() => setDeckOpen(true)}
+            title={t('ui.deck.title')}
+            aria-label={t('ui.deck.title')}
+          >
+            📚
+          </button>
           <button
             className="hud-icon-btn"
             onClick={() => cycleAudioMode()}

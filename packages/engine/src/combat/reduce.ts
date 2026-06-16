@@ -55,7 +55,7 @@ export function reduceCombat(state: GameState, cmd: Command): ReduceResult {
       result = ensureActing(combat)
       break
     case 'combat/playCard':
-      result = playCard(combat, cmd.iid, cmd.targetId, spirit)
+      result = playCard(combat, cmd.iid, cmd.targetId, spirit, cmd.cardTargetIids)
       break
     case 'combat/useGrace':
       result = useGrace(combat, cmd.ability, cmd.targetId, spirit)

@@ -30,6 +30,9 @@ interface GameStore {
   /** transient UI flag: the prayer cinematic (golden overlay + psalm crawl) is playing */
   praying: boolean
   setPraying: (praying: boolean) => void
+  /** transient UI flag: the top-bar Deck viewer modal is open (works on map + in battle) */
+  deckOpen: boolean
+  setDeckOpen: (open: boolean) => void
   dispatch: (cmd: Command) => void
   createHero: (name: string) => void
   startRun: (characterId: string, worldId?: string) => void
@@ -56,9 +59,11 @@ export const useGame = create<GameStore>((set, get) => ({
   resumableIds: [],
   sleeping: false,
   praying: false,
+  deckOpen: false,
 
   setSleeping: (sleeping) => set({ sleeping }),
   setPraying: (praying) => set({ praying }),
+  setDeckOpen: (deckOpen) => set({ deckOpen }),
 
   dispatch: (cmd) => {
     const { state, tick } = get()

@@ -35,6 +35,15 @@ export type EffectOp =
   | { kind: 'banish'; floor: number; cap: number }
   /** MIRACLE: grant the target a `shield` for `turns` — each incoming hit has a Spirit-scaled chance to be reduced to 1 */
   | { kind: 'protect'; turns: number; floor: number; cap: number; target?: TargetKind }
+  /** CARD-TARGET: temporarily upgrade up to `count` chosen cards (→ their `upgradeTo` form) for the
+   *  rest of this battle. The UI supplies the chosen card iids; only cards with a `+` form qualify. */
+  | { kind: 'hone'; count: number }
+  /** CARD-TARGET: banish up to `count` chosen cards to the exhaust pile for the rest of the battle
+   *  (the counter to enemy-injected clutter). The UI supplies the chosen card iids. */
+  | { kind: 'exhaustChosen'; count: number }
+  /** CARD-TARGET: place up to `count` chosen cards on TOP of the draw pile (drawn first next round).
+   *  The UI supplies the chosen card iids. */
+  | { kind: 'topDeck'; count: number }
 
 export interface CardDef {
   id: CardDefId
@@ -48,6 +57,9 @@ export interface CardDef {
   art?: AssetRef
   rarity?: 'starter' | 'common' | 'uncommon' | 'rare'
   exhaust?: boolean
+  /** clutter cards (e.g. enemy-injected Spike) that can NEVER be played — they only clog the piles
+   *  until banished (e.g. by an `exhaustChosen` card). Rendered greyed/unplayable in hand. */
+  unplayable?: boolean
   /** non-lethal against human targets (Mercy / subdue) — can reduce to 1 HP but never kill */
   nonLethal?: boolean
   /** verse cards are latent until earned via gap-fill (verseChallengeId references the challenge) */
@@ -65,4 +77,7 @@ export interface CardInstance {
   /** the party member who contributed this card — KEY for clean death-purge from all piles */
   ownerId: MemberId
   costOverride?: number
+  /** set by a `hone` effect: while present, this copy resolves to (and plays/displays as) this def
+   *  for the rest of the battle — its `defId`'s `upgradeTo` form. Travels with the instance. */
+  honedDefId?: CardDefId
 }
