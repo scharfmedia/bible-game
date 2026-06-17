@@ -22,7 +22,6 @@ export function SceneScreen() {
   const toggleInventory = useGame((s) => s.toggleInventory)
   const itemInteraction = useGame((s) => s.itemInteraction)
   const aimItemAt = useGame((s) => s.aimItemAt)
-  const clearItemInteraction = useGame((s) => s.clearItemInteraction)
 
   const [bloom, setBloom] = useState<string | null>(null)
   const [fan, setFan] = useState<{ hotspotId: string; x: number; y: number } | null>(null)
@@ -71,7 +70,7 @@ export function SceneScreen() {
   const clearSelection = () => {
     setBloom(null)
     setFan(null)
-    if (itemInteraction) clearItemInteraction() // clicking the backdrop also cancels item aiming
+    // dropping a held item / closing the bag on an empty click is owned by InventoryLayer's handler
   }
   const openFan = (id: string, x: number, y: number) => {
     window.clearTimeout(dwellTimer.current)

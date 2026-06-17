@@ -73,14 +73,21 @@ export function InventoryLayer() {
     return () => document.body.classList.remove('holding-item')
   }, [carrying])
 
-  // Click "into nowhere" while carrying → drop the item. Real targets (hotspots/units/slots/hero) and
-  // the wheel coins call e.stopPropagation(), so this only fires for clicks on empty space.
+  // Click on empty space while carrying. Real targets (hotspots/units/slots/hero) + wheel coins call
+  // e.stopPropagation(), so this only fires for genuinely empty clicks. Two-step so a full-screen bag
+  // on a small device doesn't block the zones behind it: the FIRST empty click (while still holding,
+  // bag open) just closes the bag — the item stays in hand — so the next click can target a zone; a
+  // further empty click then drops the item. (Reads fresh state to avoid a stale closure.)
   useEffect(() => {
     if (!carrying) return
-    const onClick = () => clearItemInteraction()
+    const onClick = () => {
+      const s = useGame.getState()
+      if (s.itemInteraction?.phase === 'holding' && s.inventoryOpen) s.setInventoryOpen(false)
+      else s.clearItemInteraction()
+    }
     window.addEventListener('click', onClick)
     return () => window.removeEventListener('click', onClick)
-  }, [carrying, clearItemInteraction])
+  }, [carrying])
 
   // Close the bag + cancel the carry whenever the screen changes (combat→reward→map, etc.).
   useEffect(() => {
