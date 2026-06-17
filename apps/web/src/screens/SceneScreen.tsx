@@ -19,7 +19,7 @@ export function SceneScreen() {
   const view = useMemo(() => selectScene(state), [state])
   const dispatch = useGame((s) => s.dispatch)
   const lastEvents = useGame((s) => s.lastEvents)
-  const setInventoryOpen = useGame((s) => s.setInventoryOpen)
+  const toggleInventory = useGame((s) => s.toggleInventory)
   const itemInteraction = useGame((s) => s.itemInteraction)
   const aimItemAt = useGame((s) => s.aimItemAt)
   const clearItemInteraction = useGame((s) => s.clearItemInteraction)
@@ -172,7 +172,7 @@ export function SceneScreen() {
         {t('ui.scene.leave')}
       </button>
 
-      <button className="bag-button" onClick={(e) => { e.stopPropagation(); setInventoryOpen(true) }} aria-label={t('ui.inventory.title')}>
+      <button className="bag-button" onClick={(e) => { e.stopPropagation(); toggleInventory() }} aria-label={t('ui.inventory.title')}>
         🎒
       </button>
     </div>

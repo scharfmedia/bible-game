@@ -25,7 +25,7 @@ export function Hud() {
   const audioMode = useGame((s) => s.state.profile.settings.audioMode)
   const cycleAudioMode = useGame((s) => s.cycleAudioMode)
   const setDeckOpen = useGame((s) => s.setDeckOpen)
-  const setInventoryOpen = useGame((s) => s.setInventoryOpen)
+  const toggleInventory = useGame((s) => s.toggleInventory)
   const itemInteraction = useGame((s) => s.itemInteraction)
   const aimItemAt = useGame((s) => s.aimItemAt)
   if (!summary) return null
@@ -63,7 +63,7 @@ export function Hud() {
         <div className="hud-right-row">
           <button
             className="hud-icon-btn"
-            onClick={() => setInventoryOpen(true)}
+            onClick={() => toggleInventory()}
             title={t('ui.inventory.title')}
             aria-label={t('ui.inventory.title')}
           >

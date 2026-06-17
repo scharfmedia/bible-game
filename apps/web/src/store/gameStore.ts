@@ -53,6 +53,8 @@ interface GameStore {
   /** transient UI flag: the bag/inventory panel is open (works on map, scene, and in battle) */
   inventoryOpen: boolean
   setInventoryOpen: (open: boolean) => void
+  /** the bag button: open if closed, close (and drop any carried item) if already open */
+  toggleInventory: () => void
   /** the cursor-carry item flow (null = idle). */
   itemInteraction: ItemInteraction
   /** pick an item up onto the cursor (start the carry flow) */
@@ -99,6 +101,7 @@ export const useGame = create<GameStore>((set, get) => ({
   setPraying: (praying) => set({ praying }),
   setDeckOpen: (deckOpen) => set({ deckOpen }),
   setInventoryOpen: (inventoryOpen) => set({ inventoryOpen }),
+  toggleInventory: () => set((s) => (s.inventoryOpen ? { inventoryOpen: false, itemInteraction: null } : { inventoryOpen: true })),
   holdItem: (itemId) => set({ itemInteraction: { phase: 'holding', itemId } }),
   aimItemAt: (target, anchor) =>
     set((s) =>
