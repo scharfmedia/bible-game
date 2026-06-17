@@ -119,10 +119,12 @@ export function InventoryLayer() {
     if (msg) setToast(msg)
   }, [tick, lastEvents, t, content])
 
-  // Any toast auto-dismisses after a short delay.
+  // Any toast auto-dismisses; longer text (e.g. an item's Inspect description) lingers longer so it
+  // stays readable, while short "used X" feedback stays snappy.
   useEffect(() => {
     if (!toast) return
-    const id = window.setTimeout(() => setToast(null), 2600)
+    const ms = Math.min(4500, 2200 + toast.length * 24)
+    const id = window.setTimeout(() => setToast(null), ms)
     return () => window.clearTimeout(id)
   }, [toast])
 
