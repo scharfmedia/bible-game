@@ -2,9 +2,9 @@ import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import type { HandCardView } from '../selectors'
 
-// How far the resting hand is tucked DOWN past the bottom edge — only the title + most of the art
-// peek above the "ground"; hovering or selecting lifts the card fully into view (Slay-the-Spire hand).
-const REST_TUCK = 40
+// How far the resting hand is tucked DOWN past the bottom edge — only the title + upper art peek
+// above the "ground"; hovering or selecting lifts the card fully into view (Slay-the-Spire hand).
+const REST_TUCK = 80
 
 // A held card in the fanned hand. The resting fan transform (x/y/rotate) is supplied by the
 // combat screen; hovering or selecting lifts the card upright above the fan. Framer owns the
@@ -31,7 +31,9 @@ export function CardView({
 }) {
   const { t } = useTranslation()
   const verse = card.type === 'verse'
-  const lifted = { x: fan.x, y: -86, rotate: 0, scale: 1.2, zIndex: 50, opacity: 1 }
+  // gentle low raise: the selected/hovered card pops just above the resting hand (title + art read
+  // clearly; the lower description may sit under the bottom edge) rather than flying up the screen
+  const lifted = { x: fan.x, y: 18, rotate: 0, scale: 1.06, zIndex: 50, opacity: 1 }
   const rest = { x: fan.x, y: fan.y + REST_TUCK, rotate: fan.rotate, scale: 1, zIndex: z, opacity: 1 }
   // Play exit: a quick fade for reduced motion, else launch toward the target (enemy) or up (self).
   const exit = reduced
