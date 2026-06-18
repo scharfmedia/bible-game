@@ -2,6 +2,10 @@ import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import type { HandCardView } from '../selectors'
 
+// How far the resting hand is tucked DOWN past the bottom edge — only the title + most of the art
+// peek above the "ground"; hovering or selecting lifts the card fully into view (Slay-the-Spire hand).
+const REST_TUCK = 40
+
 // A held card in the fanned hand. The resting fan transform (x/y/rotate) is supplied by the
 // combat screen; hovering or selecting lifts the card upright above the fan. Framer owns the
 // transform (so no CSS-transform centring to clobber).
@@ -27,8 +31,8 @@ export function CardView({
 }) {
   const { t } = useTranslation()
   const verse = card.type === 'verse'
-  const lifted = { x: fan.x, y: -72, rotate: 0, scale: 1.18, zIndex: 50, opacity: 1 }
-  const rest = { x: fan.x, y: fan.y, rotate: fan.rotate, scale: 1, zIndex: z, opacity: 1 }
+  const lifted = { x: fan.x, y: -86, rotate: 0, scale: 1.2, zIndex: 50, opacity: 1 }
+  const rest = { x: fan.x, y: fan.y + REST_TUCK, rotate: fan.rotate, scale: 1, zIndex: z, opacity: 1 }
   // Play exit: a quick fade for reduced motion, else launch toward the target (enemy) or up (self).
   const exit = reduced
     ? { opacity: 0, transition: { duration: 0.12 } }
@@ -42,7 +46,7 @@ export function CardView({
       }
   return (
     <motion.button
-      className={['card', card.layer, playable ? 'playable' : 'unplayable', selected ? 'selected' : '', verse ? 'verse' : ''].join(' ')}
+      className={['card', card.layer, 'rarity-' + card.rarity, playable ? 'playable' : 'unplayable', selected ? 'selected' : '', verse ? 'verse' : ''].join(' ')}
       onClick={onClick}
       disabled={!playable && !selected}
       initial={{ opacity: 0, x: fan.x, y: 130, rotate: fan.rotate }}
@@ -63,8 +67,8 @@ export function CardView({
           {card.miracle.kind === 'banish' ? '✨' : '🛡✨'} {Math.round(card.miracle.chance * 100)}%
         </div>
       )}
-      <div className={'card-art ' + card.layer} />
       <div className="card-name">{t(card.nameKey)}</div>
+      <div className={'card-art ' + card.layer} />
       <div className="card-text">{t(card.textKey, card.values)}</div>
     </motion.button>
   )

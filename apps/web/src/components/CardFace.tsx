@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import type { CardRarity } from '../selectors'
 
 /**
  * A plain (motion-free) card face for menu contexts — reward picks, the fireplace upgrade picker,
@@ -12,6 +13,8 @@ export interface CardFaceProps {
   textKey: string
   /** verse cards get the special frame */
   verse?: boolean
+  /** drives the ornament-frame colour (starter/common/uncommon/rare); defaults to common */
+  rarity?: CardRarity
   /** scaled values for interpolating the card text (dmg/block/heal/chance) */
   values?: Record<string, number>
   selected?: boolean
@@ -19,18 +22,18 @@ export interface CardFaceProps {
   onClick?: () => void
 }
 
-export function CardFace({ cost, layer, nameKey, textKey, values, verse, selected, disabled, onClick }: CardFaceProps) {
+export function CardFace({ cost, layer, nameKey, textKey, values, verse, rarity, selected, disabled, onClick }: CardFaceProps) {
   const { t } = useTranslation()
   return (
     <button
       type="button"
-      className={['card', 'card-face', layer, selected ? 'selected' : '', verse ? 'verse' : ''].join(' ')}
+      className={['card', 'card-face', layer, 'rarity-' + (rarity ?? 'common'), selected ? 'selected' : '', verse ? 'verse' : ''].join(' ')}
       onClick={onClick}
       disabled={disabled || !onClick}
     >
       <div className="card-cost">{cost}</div>
-      <div className={'card-art ' + layer} />
       <div className="card-name">{t(nameKey)}</div>
+      <div className={'card-art ' + layer} />
       <div className="card-text">{t(textKey, values)}</div>
     </button>
   )

@@ -65,6 +65,7 @@ export function RewardScreen() {
                       textKey={c.textKey}
                       values={c.values}
                       verse={c.verse}
+                      rarity={c.rarity}
                       onClick={() => takeCard(c.defId)}
                     />
                   ))}

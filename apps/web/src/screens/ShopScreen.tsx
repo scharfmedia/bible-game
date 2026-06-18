@@ -42,6 +42,7 @@ export function ShopScreen() {
                   nameKey={c.nameKey}
                   textKey=""
                   verse={c.verse}
+                  rarity={c.rarity}
                   disabled={!view.canRemove}
                   onClick={view.canRemove ? () => remove(c.index) : undefined}
                 />
@@ -68,6 +69,7 @@ export function ShopScreen() {
                       textKey={c.textKey}
                       values={c.values}
                       verse={c.verse}
+                      rarity={c.rarity}
                       disabled={c.sold || !c.affordable}
                       onClick={!c.sold && c.affordable ? () => buyCard(c.defId) : undefined}
                     />

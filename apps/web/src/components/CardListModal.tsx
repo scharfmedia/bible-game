@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { CardFace } from './CardFace'
+import type { CardRarity } from '../selectors'
 
 /**
  * A read-only modal listing a set of cards (a combat pile, or the run deck). Reuses the menu
@@ -14,6 +15,7 @@ export interface ModalCard {
   cost: number
   layer: 'flesh' | 'spirit' | 'both'
   verse?: boolean
+  rarity?: CardRarity
   values?: Record<string, number>
   honed?: boolean
   unplayable?: boolean
@@ -42,7 +44,7 @@ export function CardListModal({ titleKey, cards, onClose }: { titleKey: string; 
                 key={c.iid ?? `${c.nameKey}-${i}`}
                 className={['modal-card', c.honed ? 'honed' : '', c.unplayable ? 'unplayable' : ''].join(' ')}
               >
-                <CardFace cost={c.cost} layer={c.layer} nameKey={c.nameKey} textKey={c.textKey} values={c.values} verse={c.verse} />
+                <CardFace cost={c.cost} layer={c.layer} nameKey={c.nameKey} textKey={c.textKey} values={c.values} verse={c.verse} rarity={c.rarity} />
                 {c.honed && <span className="modal-card-badge" title={t('ui.deck.honed')}>✦</span>}
               </div>
             ))}

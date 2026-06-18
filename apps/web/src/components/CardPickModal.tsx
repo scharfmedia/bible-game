@@ -58,6 +58,7 @@ export function CardPickModal({ playedIid, pick, onClose }: { playedIid: string;
                 textKey={c.textKey}
                 values={c.values}
                 verse={c.verse}
+                rarity={c.rarity}
                 selected={sel.includes(c.iid)}
                 onClick={() => toggle(c.iid)}
               />

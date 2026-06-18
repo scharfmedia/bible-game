@@ -134,7 +134,8 @@ export function selectStory(state: GameState): StoryView | null {
 }
 
 export interface SpoilView { id: string; kind: 'money' | 'relic'; label: string; claimed: boolean }
-export interface CardOfferView { defId: string; nameKey: string; textKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean; values?: Record<string, number> }
+export type CardRarity = 'starter' | 'common' | 'uncommon' | 'rare'
+export interface CardOfferView { defId: string; nameKey: string; textKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean; rarity: CardRarity; values?: Record<string, number> }
 
 /** Scaled card-text interpolation values at the run's current hero level + Spirit (for menu cards). */
 function runCardValues(run: NonNullable<GameState['run']>, defId: string): Record<string, number> | undefined {
@@ -162,6 +163,7 @@ function cardOffer(run: NonNullable<GameState['run']>, defId: string): CardOffer
     cost: def?.cost ?? 0,
     layer: def?.layer ?? 'flesh',
     verse: def?.type === 'verse',
+    rarity: def?.rarity ?? 'common',
     values: runCardValues(run, defId),
   }
 }
@@ -323,6 +325,7 @@ export interface HandCardView {
   textKey: string
   cost: number
   layer: 'flesh' | 'spirit'
+  rarity: CardRarity
   type: string
   target: string
   /** nominal scaled damage at rest (level/Spirit scaled); undefined for non-damage cards */
@@ -348,6 +351,7 @@ export interface CombatCardView {
   cost: number
   layer: 'flesh' | 'spirit' | 'both'
   verse: boolean
+  rarity: CardRarity
   values?: Record<string, number>
   honed: boolean
   /** eligible to be honed (has a '+' form and isn't already honed) — used by the hone picker */
@@ -426,6 +430,7 @@ export function selectCombat(state: GameState): CombatView | null {
         values: cardDisplayValues(def, ownerScale, spirit),
         honed: !!ci.honedDefId,
         unplayable: def.unplayable ?? false,
+        rarity: def.rarity ?? 'common',
         pick: pickOp ? { kind: pickOp.kind, count: pickOp.count } : undefined,
       }
     }),
@@ -460,6 +465,7 @@ function combatCardView(c: CombatStateT, spirit: number, inst: CombatCardInstanc
     cost: inst.costOverride ?? def?.cost ?? 0,
     layer: def?.layer ?? 'flesh',
     verse: def?.type === 'verse',
+    rarity: def?.rarity ?? 'common',
     values: def ? cardDisplayValues(def, ownerScale, spirit) : undefined,
     honed: !!inst.honedDefId,
     honeable: !inst.honedDefId && !!baseDef?.upgradeTo,
@@ -539,6 +545,7 @@ export interface UpgradeOption {
   cost: number
   layer: 'flesh' | 'spirit' | 'both'
   verse: boolean
+  rarity: CardRarity
   toNameKey: string
   toTextKey: string
   toCost: number
@@ -547,9 +554,9 @@ export interface UpgradeOption {
   toValues?: Record<string, number>
 }
 
-export interface ShopCardView { defId: string; nameKey: string; textKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean; price: number; sold: boolean; affordable: boolean; values?: Record<string, number> }
+export interface ShopCardView { defId: string; nameKey: string; textKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean; rarity: CardRarity; price: number; sold: boolean; affordable: boolean; values?: Record<string, number> }
 export interface ShopItemView { itemId: string; nameKey: string; price: number; sold: boolean; affordable: boolean }
-export interface ShopDeckCardView { index: number; nameKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean }
+export interface ShopDeckCardView { index: number; nameKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean; rarity: CardRarity }
 export interface ShopView {
   nodeId: string
   nameKey: string
@@ -590,6 +597,7 @@ export function selectShop(state: GameState): ShopView | null {
         cost: def?.cost ?? 0,
         layer: def?.layer ?? 'flesh',
         verse: def?.type === 'verse',
+        rarity: def?.rarity ?? 'common',
         price: o.price,
         sold: o.sold,
         affordable: gold >= o.price && !deckFull,
@@ -605,7 +613,7 @@ export function selectShop(state: GameState): ShopView | null {
     })),
     deck: deck.map((id, index) => {
       const def = run.content.cards[id]
-      return { index, nameKey: def?.nameKey ?? id, cost: def?.cost ?? 0, layer: def?.layer ?? 'flesh', verse: def?.type === 'verse' }
+      return { index, nameKey: def?.nameKey ?? id, cost: def?.cost ?? 0, layer: def?.layer ?? 'flesh', verse: def?.type === 'verse', rarity: def?.rarity ?? 'common' }
     }),
   }
 }
@@ -627,6 +635,7 @@ export function selectUpgradeable(state: GameState): UpgradeOption[] {
       cost: def.cost,
       layer: def.layer,
       verse: def.type === 'verse',
+      rarity: def.rarity ?? 'common',
       toNameKey: to.nameKey,
       toTextKey: to.textKey,
       toCost: to.cost,
