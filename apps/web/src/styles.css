@@ -399,11 +399,14 @@ body {
 
 /* draw / discard piles drawn as a small stack of cards */
 .card-stack { position: relative; width: 46px; height: 64px; flex: none; }
-.card-stack::before, .card-stack::after { content: ''; position: absolute; inset: 0; border-radius: 6px; border: 1px solid var(--panel-edge); background: linear-gradient(180deg, #2a3320, #161c10); }
-.card-stack::before { transform: translate(-4px, 4px) rotate(-6deg); opacity: 0.65; }
-.card-stack::after { transform: translate(4px, 2px) rotate(5deg); opacity: 0.82; }
-.card-stack .stack-count { position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid var(--gold); background: linear-gradient(180deg, #3a4630, #181f12); font-weight: 700; color: var(--gold-bright); text-shadow: 0 1px 2px rgba(0,0,0,0.7); box-shadow: 0 2px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.12); }
-.card-stack label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 4px; font-size: 0.54rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+/* a tidy deck: card backs stepped down-right behind the top (count) card */
+.card-stack::before, .card-stack::after { content: ''; position: absolute; inset: 0; border-radius: 6px; border: 1px solid var(--panel-edge); background: linear-gradient(160deg, #2c3522, #121809); box-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+.card-stack::before { transform: translate(5px, 6px); opacity: 0.45; }
+.card-stack::after { transform: translate(2.5px, 3px); opacity: 0.75; }
+.card-stack .stack-count { position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid var(--gold); background: linear-gradient(160deg, #3a4630, #181f12); font-weight: 700; color: var(--gold-bright); text-shadow: 0 1px 2px rgba(0,0,0,0.7); box-shadow: 0 2px 7px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.14), inset 0 0 0 2px rgba(0,0,0,0.2); }
+/* a faint card-back motif on the top card so it reads as a card, not just a chip */
+.card-stack .stack-count::after { content: ''; position: absolute; inset: 5px; border-radius: 3px; border: 1px solid rgba(216,185,98,0.22); pointer-events: none; }
+.card-stack label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 9px; font-size: 0.54rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
 /* the piles are clickable — they open a read-only inspection modal */
 button.card-stack { background: none; padding: 0; font: inherit; cursor: pointer; }
 .card-stack:hover { filter: brightness(1.18); }
