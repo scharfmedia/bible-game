@@ -19,7 +19,8 @@ export function CardView({
   z,
   flyTo,
   reduced,
-  dragging,
+  aiming,
+  launched,
 }: {
   card: HandCardView
   playable: boolean
@@ -31,18 +32,21 @@ export function CardView({
   // when set, the card flies toward this point on play (enemy-targeted) instead of straight up
   flyTo?: { x: number; y: number }
   reduced?: boolean
-  // this card is currently being dragged (its ghost follows the cursor) — dim it, suppress hover
-  dragging?: boolean
+  // this card is currently being aimed (the targeting arrow drags from it) — highlight, suppress hover
+  aiming?: boolean
+  // this card has been launched: its copy is mid-flight to the target, so hide it in the hand (the
+  // real card is removed once the flying copy lands and the play resolves)
+  launched?: boolean
 }) {
   const { t } = useTranslation()
   const verse = card.type === 'verse'
   // gentle low raise: the selected/hovered card pops just above the resting hand (title + art read
   // clearly; the lower description may sit under the bottom edge) rather than flying up the screen
   const lifted = { x: fan.x, y: 18, rotate: 0, scale: 1.06, zIndex: 50, opacity: 1 }
-  const rest = { x: fan.x, y: fan.y + REST_TUCK, rotate: fan.rotate, scale: 1, zIndex: z, opacity: dragging ? 0.16 : 1 }
-  // Play exit: dragged cards fade quietly (the ghost carries the slingshot); reduced motion fades;
-  // otherwise launch toward the target (enemy) or up (self).
-  const exit = dragging
+  const rest = { x: fan.x, y: fan.y + REST_TUCK, rotate: fan.rotate, scale: 1, zIndex: z, opacity: 1 }
+  // Play exit: an aimed/launched (drag-played) card fades quietly (the slinging copy carries the motion);
+  // reduced motion fades; otherwise launch toward the target (enemy) or up (self).
+  const exit = aiming || launched
     ? { opacity: 0, scale: 0.9, transition: { duration: 0.12 } }
     : reduced
     ? { opacity: 0, transition: { duration: 0.12 } }
@@ -56,13 +60,14 @@ export function CardView({
       }
   return (
     <motion.button
-      className={['card', card.layer, 'rarity-' + card.rarity, playable ? 'playable' : 'unplayable', selected ? 'selected' : '', verse ? 'verse' : '', dragging ? 'dragging' : ''].join(' ')}
+      className={['card', card.layer, 'rarity-' + card.rarity, playable ? 'playable' : 'unplayable', selected ? 'selected' : '', verse ? 'verse' : '', aiming ? 'aiming' : '', launched ? 'launched' : ''].join(' ')}
+      data-iid={card.iid}
       onPointerDown={onPointerDown}
       disabled={!playable && !selected}
       initial={{ opacity: 0, x: fan.x, y: 130, rotate: fan.rotate }}
       animate={selected ? lifted : rest}
       exit={exit}
-      whileHover={playable && !selected && !dragging ? lifted : undefined}
+      whileHover={playable && !selected && !aiming && !launched ? lifted : undefined}
       transition={{ type: 'spring', stiffness: 300, damping: 26 }}
     >
       <div className="card-cost">{card.cost}</div>

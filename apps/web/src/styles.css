@@ -313,8 +313,19 @@ body {
 .unit.back { margin-bottom: 52px; }
 .unit.back .sprite { font-size: 3.4rem; opacity: 0.9; }
 .unit.targetable { cursor: pointer; }
-/* a defeated combatant keeps its slot (fades out in place) so survivors never slide — position is fixed */
-.unit.dead { opacity: 0; pointer-events: none; transition: opacity 0.45s ease; }
+/* a defeated combatant keeps its slot (survivors never slide — position is fixed) but reads clearly as
+   gone. KILLED = greyed, slumped, struck-through remnant + 💀; SUBDUED (spared non-lethally) = a softer,
+   desaturated, knocked-out slump + 💫 (no strike-through — they live). */
+.unit.dead, .unit.subdued { pointer-events: none; }
+.unit.dead .unit-figure, .unit.dead .unit-plate,
+.unit.subdued .unit-figure, .unit.subdued .unit-plate { opacity: 0.45; transition: opacity 0.5s ease, filter 0.5s ease; }
+.unit.dead .unit-figure, .unit.dead .unit-plate { filter: grayscale(1) brightness(0.6); }
+.unit.subdued .unit-figure, .unit.subdued .unit-plate { filter: saturate(0.5) brightness(0.9); }
+.unit.dead .sprite, .unit.subdued .sprite { animation: none; transition: transform 0.5s ease; }
+.unit.dead .sprite { transform: scale(0.9) rotate(7deg); }
+.unit.subdued .sprite { transform: scale(0.92) rotate(-12deg); }
+.unit.dead .unit-name { text-decoration: line-through; }
+.unit-defeated { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); z-index: 4; font-size: 1.5rem; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); pointer-events: none; }
 .unit-figure { position: relative; display: flex; align-items: flex-end; justify-content: center; height: 92px; }
 .sprite { font-size: 4.6rem; line-height: 1; filter: drop-shadow(0 8px 10px rgba(0,0,0,0.65)); }
 /* party units breathe gently so the field feels alive; enemies stay still unless targetable */
@@ -404,8 +415,20 @@ button.card-stack { background: none; padding: 0; font: inherit; cursor: pointer
   color: var(--ink); padding: 0.4rem; display: flex; flex-direction: column; cursor: grab; text-align: center; touch-action: none;
   box-shadow: 0 7px 16px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08);
 }
-/* the drag ghost (a card-face that tracks the cursor, then slings to the target) sits above everything */
+/* the slingshot copy (a card-face that flies from the hand into the target on release) sits on top */
 .card-ghost { position: fixed; left: 0; top: 0; z-index: 80; pointer-events: none; will-change: transform; filter: drop-shadow(0 16px 26px rgba(0,0,0,0.6)); }
+/* the card being aimed stays in the hand with a gold ring */
+.card.aiming { box-shadow: 0 0 0 2px var(--gold-bright), 0 8px 18px rgba(0,0,0,0.55); }
+/* a launched card (its copy is mid-flight) is hidden in the hand and not re-grabbable */
+.card.launched { opacity: 0 !important; pointer-events: none; }
+/* the targeting arrow dragged from a card to the cursor (turns red over a valid enemy) */
+.aim-svg { position: fixed; inset: 0; z-index: 78; pointer-events: none; overflow: visible; }
+.aim-path { fill: none; stroke: var(--gold-bright); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 3 11; filter: drop-shadow(0 0 5px rgba(244,231,161,0.6)); }
+.aim-head { fill: var(--gold-bright); filter: drop-shadow(0 0 5px rgba(244,231,161,0.6)); }
+.aim-svg.valid .aim-path { stroke: #ff7a6e; }
+.aim-svg.valid .aim-head { fill: #ff7a6e; }
+/* the burst flash where a slung card lands (centred on the hit point) */
+.card-impact { position: fixed; width: 84px; height: 84px; margin: -42px 0 0 -42px; border-radius: 50%; pointer-events: none; z-index: 79; mix-blend-mode: screen; background: radial-gradient(circle, rgba(255,246,224,0.95), rgba(255,170,90,0.6) 42%, rgba(255,120,60,0.22) 64%, transparent 74%); }
 /* an ornate inset frame line whose colour reflects the card's RARITY */
 .card::before { content: ''; position: absolute; inset: 3px; border-radius: 9px; border: 1px solid #9aa4ad; pointer-events: none; }
 .card.rarity-starter::before { border-color: #6f6a5a; }

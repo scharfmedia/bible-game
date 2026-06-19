@@ -39,6 +39,8 @@ export interface Combatant {
   /** killing a human griefs the Spirit; demons are the real enemy (Eph 6:12) */
   isHuman: boolean
   alive: boolean
+  /** when defeated, was it non-lethal (spared / subdued) rather than killed — drives the KO-vs-dead UI */
+  subdued?: boolean
   hp: number
   maxHp: number
   /** block — absorbs damage, resets at the owner's turn start (the only mitigation) */

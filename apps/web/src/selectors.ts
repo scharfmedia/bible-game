@@ -303,6 +303,8 @@ export interface CombatantView {
   isHuman: boolean
   isDemon: boolean
   alive: boolean
+  /** defeated non-lethally (spared) rather than killed — KO visual vs dead */
+  subdued?: boolean
   hp: number
   maxHp: number
   block: number
@@ -396,6 +398,7 @@ export function selectCombat(state: GameState): CombatView | null {
       isHuman: x.isHuman,
       isDemon: x.isDemon ?? false,
       alive: x.alive,
+      subdued: x.subdued,
       hp: x.hp,
       maxHp: x.maxHp,
       block: x.block,

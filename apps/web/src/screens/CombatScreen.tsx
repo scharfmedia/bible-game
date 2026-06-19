@@ -8,6 +8,7 @@ import { useGame } from '../store/gameStore'
 import { selectCombat, selectCombatPile, type CombatantView, type HandCardView } from '../selectors'
 import { CardView } from '../components/Card'
 import { CardFace } from '../components/CardFace'
+import { AimPointer } from '../components/AimPointer'
 import { Hud } from '../components/Hud'
 import { CardListModal } from '../components/CardListModal'
 import { CardPickModal, type PickSpec } from '../components/CardPickModal'
@@ -97,7 +98,9 @@ export function CombatScreen() {
   }
   const clickEnemy = (id: string, isHuman: boolean) => {
     if (pending?.kind === 'card') {
-      dispatch({ type: 'combat/playCard', iid: pending.iid, targetId: id })
+      const card = view.hand.find((h) => h.iid === pending.iid)
+      if (card) drag.sling(card, id) // same arc throw + landing-synced damage as a drag-played card
+      else dispatch({ type: 'combat/playCard', iid: pending.iid, targetId: id })
       setPending(null)
     } else if (pending?.kind === 'grace' && pending.ability === 'mercy' && isHuman) {
       dispatch({ type: 'combat/useGrace', ability: 'mercy', targetId: id })
@@ -202,7 +205,8 @@ export function CombatScreen() {
                 z={i}
                 flyTo={card.target === 'enemy' || card.target === 'allEnemies' ? { x: 210, y: -280 } : undefined}
                 reduced={fb.reduced}
-                dragging={drag.draggingIid === card.iid}
+                aiming={drag.aimingIid === card.iid && !drag.ghost}
+                launched={drag.launchedIid === card.iid}
               />
             ))}
           </AnimatePresence>
@@ -236,9 +240,12 @@ export function CombatScreen() {
         <CardPickModal playedIid={pickModal.iid} pick={pickModal.pick} onClose={() => setPickModal(null)} />
       )}
 
-      {/* the drag ghost: a card-face that follows the cursor while dragging, then slings to the target */}
+      {/* the targeting arrow dragged from the card to the cursor while aiming */}
+      {drag.aim && <AimPointer from={drag.aim.from} x={drag.aim.x} y={drag.aim.y} valid={drag.aim.valid} />}
+
+      {/* on release, a copy of the card slings from the hand into the target, then smashes in */}
       {drag.ghost && (
-        <motion.div className="card-ghost" style={{ x: drag.ghost.x, y: drag.ghost.y }}>
+        <motion.div className="card-ghost" style={{ x: drag.ghost.x, y: drag.ghost.y, scale: drag.ghost.scale, opacity: drag.ghost.opacity, rotate: drag.ghost.rotate }}>
           <CardFace
             cost={drag.ghost.card.cost}
             layer={drag.ghost.card.layer}
@@ -251,6 +258,18 @@ export function CombatScreen() {
             values={drag.ghost.card.values}
           />
         </motion.div>
+      )}
+
+      {/* impact burst at the spot the slung card lands */}
+      {drag.impact && (
+        <motion.div
+          key={drag.impact.seq}
+          className="card-impact"
+          style={{ left: drag.impact.x, top: drag.impact.y }}
+          initial={{ scale: 0.3, opacity: 0.95 }}
+          animate={{ scale: 2, opacity: 0 }}
+          transition={{ duration: 0.34, ease: 'easeOut' }}
+        />
       )}
     </div>
   )
@@ -308,7 +327,7 @@ function CombatUnit({
       layout
       data-cid={c.id}
       data-faction={c.faction}
-      className={['unit', side, c.row, tgt ? 'targetable' : '', c.isDemon ? 'demon' : '', c.alive ? '' : 'dead'].join(' ')}
+      className={['unit', side, c.row, tgt ? 'targetable' : '', c.isDemon ? 'demon' : '', c.alive ? '' : c.subdued ? 'subdued' : 'dead'].join(' ')}
       initial={{ opacity: 0, scale: 0.6 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ type: 'spring', stiffness: 200, damping: 18 }}
@@ -326,6 +345,7 @@ function CombatUnit({
           ) : null}
         </div>
       )}
+      {!c.alive && <div className="unit-defeated" title={c.subdued ? 'subdued' : 'defeated'}>{c.subdued ? '💫' : '💀'}</div>}
       <div className="unit-figure">
         {predicted !== null && <div className="dmg-predict">−{predicted}</div>}
         <motion.div className="sprite-react" key={reaction?.seq ?? 'idle'} animate={reactionAnim(reaction, side, reduced)} transition={{ duration: 0.34 }}>

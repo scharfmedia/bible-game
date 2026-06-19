@@ -194,7 +194,7 @@ function damageTarget(
   let outCombat = { ...c, rng, combatants: { ...c.combatants, [targetId]: next } }
 
   if (subdue) {
-    next = { ...next, alive: false }
+    next = { ...next, alive: false, subdued: true }
     outCombat = { ...outCombat, combatants: { ...outCombat.combatants, [targetId]: next } }
     events.push({ type: 'combatantDied', id: targetId, isHuman: true, mode: 'subdued' })
     spiritEvents.push({ kind: 'spareHuman' })
@@ -233,7 +233,7 @@ function killCombatant(c: CombatState, id: CombatantId, viaMercy: boolean): Comb
       killedHumanDelta = 1
     }
   }
-  let out = withCombatant(c, id, (x) => ({ ...x, alive: false, hp: 0 }))
+  let out = withCombatant(c, id, (x) => ({ ...x, alive: false, hp: 0, subdued: mode === 'subdued' }))
   if (killedHumanDelta) out = { ...out, humansKilled: out.humansKilled + killedHumanDelta }
   events.push({ type: 'combatantDied', id, isHuman: victim.isHuman, mode })
   return step(out, events, spiritEvents)
