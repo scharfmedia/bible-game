@@ -189,7 +189,11 @@ export function CombatScreen() {
       <div className="combat-hud">
         <div className="hud-left">
           <motion.div className="energy-orb" animate={energyControls}><b>{view.energy.current}</b><span>/{view.energy.max}</span><label>{t('ui.combat.energy')}</label></motion.div>
-          <button type="button" className="card-stack draw" onClick={() => setPileModal('draw')} title={t('ui.combat.draw')}><span className="stack-count">{view.drawCount}</span><label>{t('ui.combat.draw')}</label></button>
+          {/* draw pile + flee beside it, flee vertically centred on the pile */}
+          <div className="pile-with-btn">
+            <button type="button" className="card-stack draw" onClick={() => setPileModal('draw')} title={t('ui.combat.draw')}><span className="stack-count">{view.drawCount}</span><label>{t('ui.combat.draw')}</label></button>
+            {view.canFlee && <button className="btn ghost small" onClick={() => dispatch({ type: 'combat/flee' })}>{t('ui.combat.flee')}</button>}
+          </div>
         </div>
 
         <div className="hand-fan">
@@ -212,20 +216,17 @@ export function CombatScreen() {
           </AnimatePresence>
         </div>
 
+        {/* bottom-right, levelled with the orb: [hold + discard] [exhaust] [End Turn] */}
         <div className="hud-right">
-          <div className="grace-row">
+          {/* hold (grace) beside the discard pile, vertically centred on it */}
+          <div className="pile-with-btn">
             {[...new Set(view.graceAbilities)].map((g) => (
               <button key={g} className="btn grace small" onClick={() => useGraceAbility(g)}>{t(`grace.${g}.name`)}</button>
             ))}
-          </div>
-          <div className="hud-right-row">
-            {view.canFlee && <button className="btn ghost small" onClick={() => dispatch({ type: 'combat/flee' })}>{t('ui.combat.flee')}</button>}
-            <button className="btn end-turn" onClick={() => dispatch({ type: 'combat/endTurn' })}>{t('ui.combat.endTurn')}</button>
-          </div>
-          <div className="pile-row">
             <button type="button" className="card-stack discard" onClick={() => setPileModal('discard')} title={t('ui.combat.discard')}><span className="stack-count">{view.discardCount}</span><label>{t('ui.combat.discard')}</label></button>
-            <button type="button" className="card-stack exhaust" onClick={() => setPileModal('exhaust')} title={t('ui.combat.exhaust')}><span className="stack-count">{view.exhaustCount}</span><label>{t('ui.combat.exhaust')}</label></button>
           </div>
+          <button type="button" className="card-stack exhaust" onClick={() => setPileModal('exhaust')} title={t('ui.combat.exhaust')}><span className="stack-count">{view.exhaustCount}</span><label>{t('ui.combat.exhaust')}</label></button>
+          <button className="btn end-turn" onClick={() => dispatch({ type: 'combat/endTurn' })}>{t('ui.combat.endTurn')}</button>
         </div>
       </div>
 

@@ -235,7 +235,7 @@ export const en: Messages = {
   'enemy.demon': 'Spirit of Greed',
 
   // -- grace --
-  'grace.mercy.name': 'Stay the Hand',
+  'grace.mercy.name': 'Hold',
   'grace.mercy.desc': 'Subdue a human without killing (Luke 6:36).',
 
   // -- cards --
@@ -561,7 +561,7 @@ export const de: Messages = {
   'enemy.thief': 'Verzweifelter Dieb',
   'enemy.demon': 'Geist der Habgier',
 
-  'grace.mercy.name': 'Halte die Hand zurück',
+  'grace.mercy.name': 'Halten',
   'grace.mercy.desc': 'Überwältige einen Menschen, ohne zu töten (Lukas 6,36).',
 
   'card.strike.name': 'Schlag',
