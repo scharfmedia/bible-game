@@ -151,7 +151,6 @@ export function useCombatFeedback(): CombatFeedback {
       t += STEP_MS
     }
     timersRef.current.push(setTimeout(() => commit({ cue: 'party' }), t + HIT_DELAY))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tick])
 
   // clear pending timers on unmount

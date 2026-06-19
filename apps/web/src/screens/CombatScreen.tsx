@@ -62,18 +62,15 @@ export function CombatScreen() {
 
   useEffect(() => {
     if (fb.shake && !fb.reduced) void shakeControls.start({ x: [0, -6, 6, -4, 0], transition: { duration: 0.26 } })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fb.shake])
   useEffect(() => {
     if (fb.energyPulse && !fb.reduced) void energyControls.start({ scale: [1, 1.16, 1], transition: { duration: 0.3 } })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fb.energyPulse])
   useEffect(() => {
     if (!fb.turnCue) return
     setBanner(fb.turnCue)
     const id = setTimeout(() => setBanner(null), 950)
     return () => clearTimeout(id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fb.turnCue?.seq])
 
   if (!view) return null
