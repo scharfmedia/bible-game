@@ -13,8 +13,8 @@ import type { HandCardView } from '../selectors'
 // reaction lands in sync with the hit. A press that never moves is a tap → the normal click/select flow.
 
 const DRAG_THRESHOLD = 8 // px of movement before a press counts as a drag
-const CARD_W = 114 // matches .card width in styles.css (keeps the slingshot copy centred)
-const CARD_H = 162
+const CARD_W = 160 // matches the scaled .hand-fan/.card-ghost width in styles.css (keeps the slingshot copy centred)
+const CARD_H = 227
 // release Y above this fraction of the viewport counts as "in the field" (for self/non-targeted cards)
 const FIELD_FRACTION = 0.72
 const CLICK_DUR = 0.32 // fixed flight time for a click-targeted play (no flick velocity to scale from)

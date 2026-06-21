@@ -5,7 +5,7 @@ import type { HandCardView } from '../selectors'
 
 // How far the resting hand is tucked DOWN past the bottom edge — only the title + upper art peek
 // above the "ground"; hovering or selecting lifts the card fully into view (Slay-the-Spire hand).
-const REST_TUCK = 80
+const REST_TUCK = 112
 
 // A held card in the fanned hand. The resting fan transform (x/y/rotate) is supplied by the
 // combat screen; hovering or selecting lifts the card upright above the fan. Framer owns the
@@ -73,7 +73,7 @@ export function CardView({
       data-iid={card.iid}
       onPointerDown={onPointerDown}
       disabled={!playable && !selected}
-      initial={{ opacity: 0, x: fan.x, y: 130, rotate: fan.rotate }}
+      initial={{ opacity: 0, x: fan.x, y: 180, rotate: fan.rotate }}
       animate={selected ? lifted : rest}
       variants={{ exit: exitVariant }}
       exit="exit"

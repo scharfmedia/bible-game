@@ -310,7 +310,13 @@ body {
 /* generous side padding pulls both sides in off the browser edges; the enemy side is right-anchored
    and grows leftward (toward centre), so a 2–3 enemy row still fits without overflowing the edge */
 .battlefield { position: relative; z-index: 2; flex: 1; display: flex; justify-content: space-between; align-items: flex-end; padding: 2rem 9% 1.5rem; }
-.side { display: flex; gap: 2rem; align-items: flex-end; }
+/* nudge the standing combatants down so they plant on the ground instead of hovering above the path */
+.side { display: flex; gap: 2rem; align-items: flex-end; transform: translateY(64px); }
+
+/* Flee / Hold live in the top corners (just under the top bar), clear of the figures + the hand */
+.corner-action { position: absolute; top: 70px; z-index: 6; display: flex; gap: 0.4rem; }
+.corner-action.left { left: 16px; }
+.corner-action.right { right: 16px; }
 
 /* a combatant is a CHARACTER standing on the field (not a card): figure + ground shadow + nameplate */
 .unit { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; cursor: default; }
@@ -370,15 +376,15 @@ body {
 @media (prefers-reduced-motion: reduce) { .unit .sprite { animation: none; } }
 
 /* enemy next-turn telegraph: a crimson "red-sword" pill above the unit */
-.intent { position: absolute; top: -18px; z-index: 3; display: flex; gap: 6px; align-items: center; background: rgba(28,10,8,0.9); border: 1px solid #d05a4e; border-radius: 12px; padding: 4px 14px; font-size: 1.8rem; box-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 0 10px rgba(192,69,60,0.45); }
-.intent b { color: #ff9a8a; font-size: 1.9rem; font-weight: 800; text-shadow: 0 1px 2px #000; }
-.dmg-float { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); font-size: 3.4rem; font-weight: 800; color: #ff6b5e; text-shadow: 0 2px 6px #000; pointer-events: none; z-index: 4; }
+.intent { position: absolute; top: -12px; z-index: 3; display: flex; gap: 4px; align-items: center; background: rgba(28,10,8,0.9); border: 1px solid #d05a4e; border-radius: 9px; padding: 2px 8px; font-size: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 0 10px rgba(192,69,60,0.45); }
+.intent b { color: #ff9a8a; font-size: 1.05rem; font-weight: 800; text-shadow: 0 1px 2px #000; }
+.dmg-float { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); font-size: 1.9rem; font-weight: 800; color: #ff6b5e; text-shadow: 0 2px 6px #000; pointer-events: none; z-index: 4; }
 
 .unit-plate { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.unit-name { font-size: 1.4rem; font-weight: 600; color: #efe9d6; text-shadow: 0 1px 3px #000; background: rgba(0,0,0,0.42); padding: 2px 14px; border-radius: 8px; }
-.unit .hp-bar { position: relative; width: 220px; height: 22px; background: #3a1414; border-radius: 8px; overflow: hidden; border: 1px solid rgba(0,0,0,0.6); box-shadow: inset 0 0 4px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.5); }
+.unit-name { font-size: 1rem; font-weight: 600; color: #efe9d6; text-shadow: 0 1px 3px #000; background: rgba(0,0,0,0.42); padding: 2px 11px; border-radius: 7px; }
+.unit .hp-bar { position: relative; width: 156px; height: 15px; background: #3a1414; border-radius: 7px; overflow: hidden; border: 1px solid rgba(0,0,0,0.6); box-shadow: inset 0 0 4px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.5); }
 .unit .hp-fill { height: 100%; background: linear-gradient(180deg, #74d36e, #3f9a3c); transition: width 0.3s ease; box-shadow: inset 0 1px 0 rgba(255,255,255,0.2); }
-.unit .hp-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
+.unit .hp-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; line-height: 1; font-size: 0.8rem; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
 .badges { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; min-height: 28px; }
 .badge { font-size: 1.15rem; padding: 2px 10px; border-radius: 8px; background: rgba(0,0,0,0.55); }
 .badge.block { color: #9fd1ff; }
@@ -387,7 +393,7 @@ body {
 .badge.row { color: var(--spirit); }
 
 /* bottom HUD: energy + draw stack (left), fanned hand (centre), end-turn + discard stack (right) */
-.combat-hud { position: relative; z-index: 3; height: 202px; display: grid; grid-template-columns: 250px 1fr 320px; align-items: end; gap: 0.5rem; padding: 0 1.3rem 0.7rem; background: linear-gradient(0deg, rgba(8,10,6,0.92) 35%, transparent); }
+.combat-hud { position: relative; z-index: 3; height: 210px; display: grid; grid-template-columns: 250px 1fr 320px; align-items: end; gap: 0.5rem; padding: 0 1.3rem 0.7rem; background: linear-gradient(0deg, rgba(8,10,6,0.92) 35%, transparent); }
 /* energy orb at bottom-left + the draw pile (with flee) beside it */
 .hud-left { display: flex; flex-direction: row; align-items: flex-end; gap: 1.5rem; padding: 0 0 1.4rem; }
 /* bottom-right cluster, levelled with the energy orb: [hold + discard] [exhaust] [End Turn] */
@@ -431,6 +437,16 @@ button.card-stack { background: none; padding: 0; font: inherit; cursor: pointer
 
 /* the held, fanned hand */
 .hand-fan { position: relative; height: 100%; }
+/* The in-battle hand (and its drag/slingshot ghost) is scaled ~1.4× larger than the base card so it
+   reads against the enlarged combatants. Scoped to .hand-fan / .card-ghost so the reward/shop/
+   fireplace pickers (.card-face, elsewhere) keep the base 114×162 size. */
+.hand-fan .card, .card-ghost .card { width: 160px; height: 227px; margin-left: -80px; border-radius: 16px; }
+.hand-fan .card-cost, .card-ghost .card-cost { width: 42px; height: 42px; font-size: 1.4rem; top: -15px; left: -15px; }
+.hand-fan .card-name, .card-ghost .card-name { font-size: 1.06rem; padding: 4px 17px; }
+.hand-fan .card-art, .card-ghost .card-art { height: 112px; }
+.hand-fan .card-text, .card-ghost .card-text { font-size: 0.9rem; }
+.hand-fan .card-damage, .card-ghost .card-damage { font-size: 1.2rem; min-width: 36px; padding: 3px 10px; top: -15px; right: -13px; }
+.hand-fan .card-damage .hits, .card-ghost .card-damage .hits { font-size: 0.92rem; }
 .card {
   position: absolute; bottom: 22px; left: 50%; margin-left: -57px; width: 114px; height: 162px; transform-origin: bottom center;
   border-radius: 12px; border: 1px solid var(--panel-edge); background: linear-gradient(180deg, #2f3724, #14180f);
@@ -489,7 +505,7 @@ button.card-stack { background: none; padding: 0; font: inherit; cursor: pointer
 .card-damage { position: absolute; top: -11px; right: -9px; min-width: 26px; padding: 2px 7px; border-radius: 11px; background: rgba(22,10,8,0.9); border: 2px solid #c0453c; color: #ff9a8a; font-weight: 800; font-size: 0.86rem; display: flex; align-items: center; gap: 2px; box-shadow: 0 2px 5px rgba(0,0,0,0.5); z-index: 2; }
 .card-damage.spirit { border-color: #6f8fd0; color: #bcd0ff; }
 .card-damage .hits { font-size: 0.66rem; opacity: 0.85; }
-.dmg-predict { position: absolute; top: -6px; left: 50%; transform: translateX(-50%); z-index: 5; font-size: 2.6rem; font-weight: 800; color: #ffd36b; text-shadow: 0 2px 6px #000, 0 0 3px #000; pointer-events: none; }
+.dmg-predict { position: absolute; top: -6px; left: 50%; transform: translateX(-50%); z-index: 5; font-size: 1.5rem; font-weight: 800; color: #ffd36b; text-shadow: 0 2px 6px #000, 0 0 3px #000; pointer-events: none; }
 
 .targeting-hint { position: absolute; z-index: 6; top: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); border: 1px solid var(--gold); border-radius: 9px; padding: 0.35rem 1rem; color: var(--gold-bright); }
 
@@ -704,8 +720,8 @@ input[type='range']::-moz-range-thumb:hover { background: var(--gold-bright); }
 .hotspot.aiming { box-shadow: inset 0 0 0 2px rgba(244,231,161,0.55); border-radius: 8px; }
 
 /* heal preview + floater (green siblings of .dmg-predict / .dmg-float) */
-.heal-predict { position: absolute; top: -6px; left: 50%; transform: translateX(-50%); z-index: 5; font-size: 2.6rem; font-weight: 800; color: #7fe6a6; text-shadow: 0 2px 6px #000, 0 0 3px #000; pointer-events: none; }
-.heal-float { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); font-size: 3.4rem; font-weight: 800; color: #7fe6a6; text-shadow: 0 2px 6px #000; pointer-events: none; z-index: 4; }
+.heal-predict { position: absolute; top: -6px; left: 50%; transform: translateX(-50%); z-index: 5; font-size: 1.5rem; font-weight: 800; color: #7fe6a6; text-shadow: 0 2px 6px #000, 0 0 3px #000; pointer-events: none; }
+.heal-float { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); font-size: 1.9rem; font-weight: 800; color: #7fe6a6; text-shadow: 0 2px 6px #000; pointer-events: none; z-index: 4; }
 
 /* the item-targeting hint sits a little lower so it never overlaps the combat card hint */
 .targeting-hint.inv-hint { top: 120px; }

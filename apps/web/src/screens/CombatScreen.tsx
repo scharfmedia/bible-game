@@ -177,7 +177,7 @@ export function CombatScreen() {
   const fanOf = (i: number) => {
     const offset = i - (N - 1) / 2
     // wide, near-flat fan: cards spread out and only slightly overlap (cf. screenshots/battle-ui.jpg)
-    return { x: offset * 100, y: Math.pow(Math.abs(offset), 1.5) * 5, rotate: offset * 4 }
+    return { x: offset * 140, y: Math.pow(Math.abs(offset), 1.5) * 7, rotate: offset * 4 }
   }
 
   return (
@@ -235,14 +235,20 @@ export function CombatScreen() {
 
       {pending && <div className="targeting-hint">{t('ui.combat.pickTarget')}</div>}
 
+      {/* corner actions, away from the figures: Flee top-left, Hold (grace) top-right */}
+      {view.canFlee && (
+        <button className="btn ghost small corner-action left" onClick={() => { setHandDiscarding(true); dispatch({ type: 'combat/flee' }) }}>{t('ui.combat.flee')}</button>
+      )}
+      <div className="corner-action right">
+        {[...new Set(view.graceAbilities)].map((g) => (
+          <button key={g} className="btn grace small" onClick={() => useGraceAbility(g)}>{t(`grace.${g}.name`)}</button>
+        ))}
+      </div>
+
       <div className="combat-hud">
         <div className="hud-left">
           <motion.div className="energy-orb" style={energyOrbStyle(view.energy.current, view.energy.max)} animate={energyControls}><b>{view.energy.current}</b><span>/{view.energy.max}</span><label>{t('ui.combat.energy')}</label></motion.div>
-          {/* draw pile + flee beside it, flee vertically centred on the pile */}
-          <div className="pile-with-btn">
-            <button type="button" className="card-stack draw" onClick={() => setPileModal('draw')} title={t('ui.combat.draw')}><span className="stack-count">{view.drawCount}</span><label>{t('ui.combat.draw')}</label></button>
-            {view.canFlee && <button className="btn ghost small" onClick={() => { setHandDiscarding(true); dispatch({ type: 'combat/flee' }) }}>{t('ui.combat.flee')}</button>}
-          </div>
+          <button type="button" className="card-stack draw" onClick={() => setPileModal('draw')} title={t('ui.combat.draw')}><span className="stack-count">{view.drawCount}</span><label>{t('ui.combat.draw')}</label></button>
         </div>
 
         <div className="hand-fan">
@@ -265,18 +271,10 @@ export function CombatScreen() {
           </AnimatePresence>
         </div>
 
-        {/* bottom-right, levelled with the orb: [hold + discard] [exhaust] [End Turn] */}
+        {/* bottom-right, levelled with the orb: one combined discard pile (incl. exhausted) + End Turn */}
         <div className="hud-right">
-          {/* hold (grace) beside the two piles, vertically centred on them */}
-          <div className="pile-with-btn">
-            {[...new Set(view.graceAbilities)].map((g) => (
-              <button key={g} className="btn grace small" onClick={() => useGraceAbility(g)}>{t(`grace.${g}.name`)}</button>
-            ))}
-            <div className="piles">
-              <button type="button" className="card-stack discard" onClick={() => setPileModal('discard')} title={t('ui.combat.discard')}><span className="stack-count">{view.discardCount}</span><label>{t('ui.combat.discard')}</label></button>
-              <button type="button" className="card-stack exhaust" onClick={() => setPileModal('exhaust')} title={t('ui.combat.exhaust')}><span className="stack-count">{view.exhaustCount}</span><label>{t('ui.combat.exhaust')}</label></button>
-            </div>
-          </div>
+          {/* the single right-side pile shows discarded AND exhausted cards (count + viewer combined) */}
+          <button type="button" className="card-stack discard" onClick={() => setPileModal('discard')} title={t('ui.combat.discard')}><span className="stack-count">{view.discardCount + view.exhaustCount}</span><label>{t('ui.combat.discard')}</label></button>
           {/* End Turn: reduced motion resolves the enemy turn instantly (batch); otherwise hand off to
               the UI-paced stepped turn (begin → the self-clocking effect advances one enemy at a time) */}
           <button className="btn end-turn" onClick={() => { setHandDiscarding(true); dispatch({ type: fb.reduced ? 'combat/endTurn' : 'combat/beginEnemyTurn' }) }}>{t('ui.combat.endTurn')}</button>
@@ -286,7 +284,8 @@ export function CombatScreen() {
       {pileModal && (
         <CardListModal
           titleKey={`ui.deck.pile.${pileModal}`}
-          cards={selectCombatPile(state, pileModal)}
+          // the discard pile now also lists exhausted cards (the exhaust pile was merged into it)
+          cards={pileModal === 'discard' ? [...selectCombatPile(state, 'discard'), ...selectCombatPile(state, 'exhaust')] : selectCombatPile(state, pileModal)}
           onClose={() => setPileModal(null)}
         />
       )}
