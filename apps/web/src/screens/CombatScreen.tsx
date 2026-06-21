@@ -124,6 +124,10 @@ export function CombatScreen() {
   const clickCard = (card: HandCardView) => {
     if (itemInteraction) clearItemInteraction() // picking a card cancels any in-flight item flow
     if (card.unplayable) return // clutter (Spike): cannot be played
+    // unaffordable → no-op (the card is shown greyed). The button's `disabled` doesn't reliably block
+    // the drag-hook's tap path, so we gate here too — otherwise a tap could still select / open the
+    // pick modal / play a card the player has no energy for.
+    if (view.energy.current < card.cost) return
     if (pending?.kind === 'card' && pending.iid === card.iid) return setPending(null) // click again → cancel
     if (card.pick) {
       // hone / cast off / prepare: open the card picker; the card commits only on confirm
@@ -179,6 +183,13 @@ export function CombatScreen() {
     // wide, near-flat fan: cards spread out and only slightly overlap (cf. screenshots/battle-ui.jpg)
     return { x: offset * 140, y: Math.pow(Math.abs(offset), 1.5) * 7, rotate: offset * 4 }
   }
+
+  // While acting, if NO card in hand can still be played (every one is unplayable or unaffordable —
+  // covers both "out of energy" and "out of playable cards"), nudge the player toward End Turn.
+  const endTurnReady =
+    view.outcome === 'ongoing' &&
+    view.phase === 'partyAction' &&
+    !view.hand.some((c) => !c.unplayable && view.energy.current >= c.cost)
 
   return (
     <div className="screen combat" style={{ backgroundImage: assetBg(view.battleBg) ?? bgUrl('004-battlefield-enchanted-forest.png') }}>
@@ -246,9 +257,10 @@ export function CombatScreen() {
       </div>
 
       <div className="combat-hud">
+        {/* draw pile hugs the bottom-left corner; the energy orb sits up + to its right */}
         <div className="hud-left">
-          <motion.div className="energy-orb" style={energyOrbStyle(view.energy.current, view.energy.max)} animate={energyControls}><b>{view.energy.current}</b><span>/{view.energy.max}</span><label>{t('ui.combat.energy')}</label></motion.div>
           <button type="button" className="card-stack draw" onClick={() => setPileModal('draw')} title={t('ui.combat.draw')}><span className="stack-count">{view.drawCount}</span><label>{t('ui.combat.draw')}</label></button>
+          <motion.div className="energy-orb" style={energyOrbStyle(view.energy.current, view.energy.max)} animate={energyControls}><b>{view.energy.current}</b><span>/{view.energy.max}</span><label>{t('ui.combat.energy')}</label></motion.div>
         </div>
 
         <div className="hand-fan">
@@ -271,13 +283,13 @@ export function CombatScreen() {
           </AnimatePresence>
         </div>
 
-        {/* bottom-right, levelled with the orb: one combined discard pile (incl. exhausted) + End Turn */}
+        {/* discard pile hugs the bottom-right corner; End Turn sits up + to its left (more reachable) */}
         <div className="hud-right">
-          {/* the single right-side pile shows discarded AND exhausted cards (count + viewer combined) */}
-          <button type="button" className="card-stack discard" onClick={() => setPileModal('discard')} title={t('ui.combat.discard')}><span className="stack-count">{view.discardCount + view.exhaustCount}</span><label>{t('ui.combat.discard')}</label></button>
           {/* End Turn: reduced motion resolves the enemy turn instantly (batch); otherwise hand off to
               the UI-paced stepped turn (begin → the self-clocking effect advances one enemy at a time) */}
-          <button className="btn end-turn" onClick={() => { setHandDiscarding(true); dispatch({ type: fb.reduced ? 'combat/endTurn' : 'combat/beginEnemyTurn' }) }}>{t('ui.combat.endTurn')}</button>
+          <button className={'btn end-turn' + (endTurnReady ? ' ready' : '')} onClick={() => { setHandDiscarding(true); dispatch({ type: fb.reduced ? 'combat/endTurn' : 'combat/beginEnemyTurn' }) }}>{t('ui.combat.endTurn')}</button>
+          {/* the single right-side pile shows discarded AND exhausted cards (count + viewer combined) */}
+          <button type="button" className="card-stack discard" onClick={() => setPileModal('discard')} title={t('ui.combat.discard')}><span className="stack-count">{view.discardCount + view.exhaustCount}</span><label>{t('ui.combat.discard')}</label></button>
         </div>
       </div>
 

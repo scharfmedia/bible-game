@@ -312,6 +312,9 @@ body {
 .battlefield { position: relative; z-index: 2; flex: 1; display: flex; justify-content: space-between; align-items: flex-end; padding: 2rem 9% 1.5rem; }
 /* nudge the standing combatants down so they plant on the ground instead of hovering above the path */
 .side { display: flex; gap: 2rem; align-items: flex-end; transform: translateY(64px); }
+/* the lone party member reads better set further in from the left edge (≈ double the battlefield inset);
+   the enemy side stays anchored right so multi-enemy rows are unaffected */
+.side.party { margin-left: 9%; }
 
 /* Flee / Hold live in the top corners (just under the top bar), clear of the figures + the hand */
 .corner-action { position: absolute; top: 70px; z-index: 6; display: flex; gap: 0.4rem; }
@@ -392,12 +395,17 @@ body {
 .badge.laststand { color: #ff9d5c; background: rgba(120,30,0,0.6); font-weight: 700; }
 .badge.row { color: var(--spirit); }
 
-/* bottom HUD: energy + draw stack (left), fanned hand (centre), end-turn + discard stack (right) */
-.combat-hud { position: relative; z-index: 3; height: 210px; display: grid; grid-template-columns: 250px 1fr 320px; align-items: end; gap: 0.5rem; padding: 0 1.3rem 0.7rem; background: linear-gradient(0deg, rgba(8,10,6,0.92) 35%, transparent); }
-/* energy orb at bottom-left + the draw pile (with flee) beside it */
-.hud-left { display: flex; flex-direction: row; align-items: flex-end; gap: 1.5rem; padding: 0 0 1.4rem; }
-/* bottom-right cluster, levelled with the energy orb: [hold + discard] [exhaust] [End Turn] */
-.hud-right { display: flex; flex-direction: row; align-items: flex-end; justify-content: flex-end; gap: 1.1rem; padding: 0 0 1.4rem; }
+/* bottom HUD: draw stack hugs the bottom-left corner with the energy orb up+right of it; the fanned
+   hand sits centre; the discard stack hugs the bottom-right corner with End Turn up+left of it. */
+.combat-hud { position: relative; z-index: 3; height: 210px; display: grid; grid-template-columns: 280px 1fr 340px; align-items: end; gap: 0.5rem; padding: 0 2.2rem 0.5rem; background: linear-gradient(0deg, rgba(8,10,6,0.92) 35%, transparent); }
+/* [draw pile, inset from the edge] [energy orb, raised + further right] */
+.hud-left { display: flex; flex-direction: row; align-items: flex-end; gap: 3.4rem; padding: 0 0 1rem; }
+.hud-left .energy-orb { margin-bottom: 40px; }
+/* [End Turn, raised + further left] [discard pile, inset from the edge] */
+.hud-right { display: flex; flex-direction: row; align-items: flex-end; justify-content: flex-end; gap: 3.4rem; padding: 0 0 1rem; }
+.hud-right .end-turn { margin-bottom: 62px; }
+/* lift the draw + discard piles a touch off the bottom edge (the raised orb / End Turn stay put) */
+.hud-left .card-stack, .hud-right .card-stack { margin-bottom: 20px; }
 .hud-right-row { display: flex; align-items: flex-end; gap: 0.8rem; }
 /* a pile with its button (flee / hold) beside it — the button is vertically centred on the 64px pile */
 .pile-with-btn { display: flex; align-items: center; gap: 0.85rem; }
@@ -431,8 +439,17 @@ button.card-stack { background: none; padding: 0; font: inherit; cursor: pointer
 .card-stack:hover .stack-count { border-color: var(--gold-bright); }
 .card-stack.exhaust .stack-count { color: var(--muted); border-color: var(--panel-edge); filter: saturate(0.4); }
 
-.btn.end-turn { font-size: 1rem; padding: 0.55rem 1.4rem; background: linear-gradient(180deg, var(--gold-bright), var(--gold) 45%, #a8842f); color: #1a160c; font-weight: 700; letter-spacing: 0.03em; border: 1px solid var(--gold-bright); border-radius: 10px; box-shadow: 0 3px 12px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 0 0 2px rgba(0,0,0,0.12); text-shadow: 0 1px 1px rgba(255,255,255,0.4); transition: transform 0.12s, filter 0.2s; }
+.btn.end-turn { font-size: 1.3rem; padding: 0.85rem 2.2rem; background: linear-gradient(180deg, var(--gold-bright), var(--gold) 45%, #a8842f); color: #1a160c; font-weight: 700; letter-spacing: 0.03em; border: 1px solid var(--gold-bright); border-radius: 12px; box-shadow: 0 3px 12px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 0 0 2px rgba(0,0,0,0.12); text-shadow: 0 1px 1px rgba(255,255,255,0.4); transition: transform 0.12s, filter 0.2s; }
 .btn.end-turn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+/* "ready" cue: nothing left to play this turn → the button pulses with a bright halo to draw the eye */
+.btn.end-turn.ready { animation: endTurnReady 2.6s ease-in-out infinite; }
+/* a slow, gentle breathing halo — never fully off (no harsh blink), soft peak for the eyes */
+@keyframes endTurnReady {
+  0%, 100% { box-shadow: 0 3px 12px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 0 0 2px rgba(0,0,0,0.12), 0 0 10px 1px rgba(255,243,196,0.25); }
+  50% { box-shadow: 0 3px 12px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 0 0 2px rgba(0,0,0,0.12), 0 0 22px 5px rgba(255,243,196,0.6); }
+}
+/* reduced motion: no pulse — keep a steady bright halo + ring so the cue still reads */
+.app.reduced-motion .btn.end-turn.ready { animation: none; box-shadow: 0 3px 12px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 0 0 2px rgba(0,0,0,0.12), 0 0 22px 5px rgba(255,243,196,0.8); outline: 2px solid var(--gold-bright); }
 .btn.ghost { background: rgba(0,0,0,0.4); border: 1px solid var(--panel-edge); color: var(--ink); }
 
 /* the held, fanned hand */
