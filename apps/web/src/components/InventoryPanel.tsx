@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { resolveAsset } from '@bible/assets'
 import { useGame } from '../store/gameStore'
+import { viewportToStage } from '../lib/stageCoords'
 import { selectInventory, type InvSlotView } from '../selectors'
 
 // The bag: a NON-modal right-anchored grid of fixed slots (WoW-style; one item per slot, stackable
@@ -49,9 +50,11 @@ export function InventoryPanel() {
 
   const onHover = (slot: InvSlotView, e: React.MouseEvent) => {
     if (carrying) return // keep slots calm while carrying — no tooltip, no hover-open
+    // top is consumed as a `top` inside the scaled .stage → use the design-space delta
     const base = asideRef.current?.getBoundingClientRect()
     const r = e.currentTarget.getBoundingClientRect()
-    setHovered({ slot, top: r.top - (base?.top ?? 0) })
+    const top = viewportToStage(0, r.top).y - (base ? viewportToStage(0, base.top).y : 0)
+    setHovered({ slot, top })
   }
 
   const startPress = (slot: InvSlotView, e: React.PointerEvent) => {

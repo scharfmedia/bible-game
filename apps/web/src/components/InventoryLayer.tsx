@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { resolveAsset } from '@bible/assets'
 import { VERBS, type Verb } from '@bible/engine'
 import { useGame } from '../store/gameStore'
+import { viewportToStage } from '../lib/stageCoords'
 import { selectInventory } from '../selectors'
 import { InventoryPanel, KIND_ICON } from './InventoryPanel'
 import { RadialMenu, type RadialAction } from './RadialMenu'
@@ -63,7 +64,8 @@ export function InventoryLayer() {
       setCursor(null)
       return
     }
-    const onMove = (e: MouseEvent) => setCursor({ x: e.clientX, y: e.clientY })
+    // store the cursor in stage design space — the held-item ghost lives inside the scaled .stage
+    const onMove = (e: MouseEvent) => setCursor(viewportToStage(e.clientX, e.clientY))
     window.addEventListener('mousemove', onMove)
     return () => window.removeEventListener('mousemove', onMove)
   }, [carrying])

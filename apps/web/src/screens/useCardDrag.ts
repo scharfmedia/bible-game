@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { animate, useMotionValue, type MotionValue } from 'framer-motion'
+import { DESIGN_W, DESIGN_H } from '../lib/appHeight'
+import { viewportToStage } from '../lib/stageCoords'
 import type { HandCardView } from '../selectors'
 
 // Card-attack animation (pure feel — no gameplay impact; the same combat/playCard runs either way).
@@ -13,8 +15,8 @@ import type { HandCardView } from '../selectors'
 // reaction lands in sync with the hit. A press that never moves is a tap → the normal click/select flow.
 
 const DRAG_THRESHOLD = 8 // px of movement before a press counts as a drag
-const CARD_W = 160 // matches the scaled .hand-fan/.card-ghost width in styles.css (keeps the slingshot copy centred)
-const CARD_H = 227
+const CARD_W = 140 // matches the scaled .hand-fan/.card-ghost width in styles.css (keeps the slingshot copy centred)
+const CARD_H = 199
 // release Y above this fraction of the viewport counts as "in the field" (for self/non-targeted cards)
 const FIELD_FRACTION = 0.72
 const CLICK_DUR = 0.32 // fixed flight time for a click-targeted play (no flick velocity to scale from)
@@ -48,9 +50,13 @@ export interface CardDrag {
   impact: { x: number; y: number; seq: number } | null
 }
 
+// Positions below are returned in STAGE DESIGN space (the aim arrow / ghost render inside the scaled
+// .stage). enemyAt stays in viewport space — document.elementFromPoint hit-tests against the real
+// (post-transform) layout, so it takes the raw pointer coordinates.
+
 // the enemy under a point — only a LIVE enemy unit counts (dead units keep their slot but are skipped)
-function enemyAt(x: number, y: number): string | null {
-  const el = (document.elementFromPoint(x, y) as HTMLElement | null)?.closest('[data-cid]') as HTMLElement | null
+function enemyAt(clientX: number, clientY: number): string | null {
+  const el = (document.elementFromPoint(clientX, clientY) as HTMLElement | null)?.closest('[data-cid]') as HTMLElement | null
   if (!el || el.dataset.faction !== 'enemy' || el.classList.contains('dead')) return null
   return el.dataset.cid ?? null
 }
@@ -59,7 +65,7 @@ function centerOf(cid: string): { x: number; y: number } | null {
   const el = document.querySelector(`[data-cid="${cid}"]`)
   if (!el) return null
   const r = el.getBoundingClientRect()
-  return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+  return viewportToStage(r.left + r.width / 2, r.top + r.height / 2)
 }
 
 // the hand card's on-screen anchor — 'top' for the arrow origin, 'center' for the slingshot start
@@ -67,7 +73,7 @@ function cardAnchor(iid: string, which: 'top' | 'center'): { x: number; y: numbe
   const el = document.querySelector(`[data-iid="${iid}"]`)
   if (!el) return null
   const r = el.getBoundingClientRect()
-  return { x: r.left + r.width / 2, y: which === 'top' ? r.top + 8 : r.top + r.height / 2 }
+  return viewportToStage(r.left + r.width / 2, which === 'top' ? r.top + 8 : r.top + r.height / 2)
 }
 
 export function useCardDrag(): CardDrag {
@@ -185,13 +191,15 @@ export function useCardDrag(): CardDrag {
         // fizzle — all stay tap-only (a tap runs the normal select/click flow on release)
         if (card.pick || card.unplayable || !hRef.current.isPlayable(card)) return
         moved = true
-        aimFrom = cardAnchor(card.iid, 'top') ?? { x: ev.clientX, y: ev.clientY }
-        aimX.set(ev.clientX)
-        aimY.set(ev.clientY)
+        aimFrom = cardAnchor(card.iid, 'top') ?? viewportToStage(ev.clientX, ev.clientY)
+        const a0 = viewportToStage(ev.clientX, ev.clientY)
+        aimX.set(a0.x)
+        aimY.set(a0.y)
         setAiming({ iid: card.iid, card, from: aimFrom })
       }
-      aimX.set(ev.clientX)
-      aimY.set(ev.clientY)
+      const a = viewportToStage(ev.clientX, ev.clientY)
+      aimX.set(a.x)
+      aimY.set(a.y)
       const now = performance.now()
       const dt = now - lastT
       if (dt > 0) {
@@ -221,8 +229,9 @@ export function useCardDrag(): CardDrag {
         setAiming(null) // cancel — the card un-highlights; nothing is played
         return
       }
-      const src = cardAnchor(card.iid, 'center') ?? aimFrom ?? { x: releaseX, y: releaseY }
-      const dest = (enemyId && centerOf(enemyId)) || { x: releaseX, y: releaseY - 220 }
+      const releaseStage = viewportToStage(releaseX, releaseY)
+      const src = cardAnchor(card.iid, 'center') ?? aimFrom ?? releaseStage
+      const dest = (enemyId && centerOf(enemyId)) || { x: releaseStage.x, y: releaseStage.y - 220 }
       // throw time from the PEAK gesture speed (people decelerate to aim, so the release instant is ~0):
       // a slow drag lobs (~0.42s), a hard flick snaps (~0.22s, not blink-fast).
       const fast = Math.min(1, Math.max(0, (peak - 600) / 2400))
@@ -242,8 +251,8 @@ export function useCardDrag(): CardDrag {
 
   const sling = (card: HandCardView, targetId: string) => {
     if (!mountedRef.current) return
-    const src = cardAnchor(card.iid, 'center') ?? { x: window.innerWidth / 2, y: window.innerHeight - 120 }
-    const dest = centerOf(targetId) ?? { x: window.innerWidth / 2, y: window.innerHeight / 2 }
+    const src = cardAnchor(card.iid, 'center') ?? { x: DESIGN_W / 2, y: DESIGN_H - 120 }
+    const dest = centerOf(targetId) ?? { x: DESIGN_W / 2, y: DESIGN_H / 2 }
     fly(card, src, dest, CLICK_DUR, targetId)
   }
 

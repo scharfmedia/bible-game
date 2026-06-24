@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { AudioMode } from '@bible/engine'
 import { useGame } from '../store/gameStore'
+import { useSw } from '../pwa/SwProvider'
 
 const MODE_LABEL: Record<AudioMode, string> = {
   on: 'ui.audio.mode.on',
@@ -19,6 +20,12 @@ export function SettingsScreen() {
   const setLocale = useGame((s) => s.setLocale)
   const setMusicVolume = useGame((s) => s.setMusicVolume)
   const cycleAudioMode = useGame((s) => s.cycleAudioMode)
+  const { needRefresh, checking, reload, checkForUpdate } = useSw()
+
+  const onUpdateClick = () => {
+    if (needRefresh) reload()
+    else void checkForUpdate()
+  }
 
   return (
     <div className="screen centered">
@@ -74,6 +81,18 @@ export function SettingsScreen() {
           >
             {reducedMotion ? t('ui.common.yes') : t('ui.common.no')}
           </button>
+        </div>
+
+        <div className="settings-row">
+          <span className="settings-label">{t('ui.settings.version')}</span>
+          <div className="row gap-sm">
+            <span className="muted">
+              {__APP_VERSION__} · {__GIT_SHA__}
+            </span>
+            <button className="btn small" disabled={checking} onClick={onUpdateClick}>
+              {checking ? t('ui.update.checking') : needRefresh ? t('ui.update.reload') : t('ui.update.check')}
+            </button>
+          </div>
         </div>
 
         <div className="row gap">

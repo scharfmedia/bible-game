@@ -180,8 +180,9 @@ export function CombatScreen() {
   const N = view.hand.length
   const fanOf = (i: number) => {
     const offset = i - (N - 1) / 2
-    // wide, near-flat fan: cards spread out and only slightly overlap (cf. screenshots/battle-ui.jpg)
-    return { x: offset * 140, y: Math.pow(Math.abs(offset), 1.5) * 7, rotate: offset * 4 }
+    // wide, near-flat fan: cards spread out and only slightly overlap (cf. screenshots/battle-ui.jpg).
+    // Step is < card width (140px) so neighbours overlap; keep in sync if the card width changes.
+    return { x: offset * 122, y: Math.pow(Math.abs(offset), 1.5) * 7, rotate: offset * 4 }
   }
 
   // While acting, if NO card in hand can still be played (every one is unplayable or unaffordable —

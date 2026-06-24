@@ -23,6 +23,7 @@ import { SleepOverlay } from './components/SleepOverlay'
 import { PrayOverlay } from './components/PrayOverlay'
 import { DeckModal } from './components/DeckModal'
 import { InventoryLayer } from './components/InventoryLayer'
+import { UpdateBanner } from './components/UpdateBanner'
 
 const SCREENS: Record<ScreenId, ComponentType> = {
   start: StartScreen,
@@ -56,22 +57,30 @@ export function App() {
           screen layer so it never remounts on a screen change. */}
       <MusicController />
 
-      {/* EXACTLY ONE screen is mounted at a time — a keyed fade-in (the key change remounts it).
-          Deliberately NOT AnimatePresence: overlapping enter/exit layers were leaving an invisible
-          outgoing layer on top of the map (worst after the two combat→reward→map transitions),
-          swallowing every click. With no overlap, a leaving screen unmounts instantly and can never
-          block input. */}
-      <motion.div key={screen} className="screen-layer" initial={{ opacity: 0, scale: 1.01 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3, ease: 'easeOut' }}>
-        <Screen />
-      </motion.div>
+      {/* The game is laid out at a fixed design size and uniformly scaled to fit (transform: scale
+          via --ui-scale on .stage), so the UI looks identical on every screen — only the scale
+          changes. `.app` is the full-viewport letterbox container that centers the stage. */}
+      <div className="stage">
+        {/* EXACTLY ONE screen is mounted at a time — a keyed fade-in (the key change remounts it).
+            Deliberately NOT AnimatePresence: overlapping enter/exit layers were leaving an invisible
+            outgoing layer on top of the map (worst after the two combat→reward→map transitions),
+            swallowing every click. With no overlap, a leaving screen unmounts instantly and can never
+            block input. */}
+        <motion.div key={screen} className="screen-layer" initial={{ opacity: 0, scale: 1.01 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3, ease: 'easeOut' }}>
+          <Screen />
+        </motion.div>
 
-      {prompt?.kind === 'verseChallenge' && <VerseModal challengeId={prompt.challengeId} />}
-      {dialogueActive && <DialogueOverlay />}
-      {storyActive && <StoryScroll />}
-      {deckOpen && <DeckModal />}
-      <InventoryLayer />
-      <SleepOverlay />
-      <PrayOverlay />
+        {prompt?.kind === 'verseChallenge' && <VerseModal challengeId={prompt.challengeId} />}
+        {dialogueActive && <DialogueOverlay />}
+        {storyActive && <StoryScroll />}
+        {deckOpen && <DeckModal />}
+        <InventoryLayer />
+        <SleepOverlay />
+        <PrayOverlay />
+      </div>
+
+      {/* System-level (unscaled, viewport-anchored) — readable regardless of the game's scale. */}
+      <UpdateBanner />
     </div>
   )
 }

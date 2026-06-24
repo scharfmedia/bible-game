@@ -1,7 +1,11 @@
 import { motion } from 'framer-motion'
+import { DESIGN_W, DESIGN_H } from '../lib/appHeight'
+import { viewportToStage } from '../lib/stageCoords'
 
 // A generic radial "coin" menu: actions fan out around an anchor point with a staggered spring.
 // Shared by the scene VerbFan (point-and-click verbs) and the inventory item-action fan.
+// Anchors arrive in viewport coordinates; the wheel renders inside the scaled .stage, so map them
+// into design space and clamp to the design canvas.
 
 export interface RadialAction {
   id: string
@@ -27,8 +31,9 @@ export function RadialMenu({
   // Clamp the wheel's centre so all coins stay on-screen even when the target sits in a corner/edge
   // (e.g. the top-left HUD hero block, or a bag slot against the right edge).
   const margin = r + 32
-  const cx = typeof window !== 'undefined' ? Math.min(Math.max(x, margin), window.innerWidth - margin) : x
-  const cy = typeof window !== 'undefined' ? Math.min(Math.max(y, margin), window.innerHeight - margin) : y
+  const p = viewportToStage(x, y)
+  const cx = Math.min(Math.max(p.x, margin), DESIGN_W - margin)
+  const cy = Math.min(Math.max(p.y, margin), DESIGN_H - margin)
   return (
     <div className="verb-fan" style={{ left: cx, top: cy }} onClick={(e) => { e.stopPropagation(); onClose?.() }}>
       {actions.map((a, i) => {

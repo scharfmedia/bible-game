@@ -40,6 +40,8 @@ export function StartScreen() {
       <a className="support-link" href="https://buymeacoffee.com/missellelive" target="_blank" rel="noopener noreferrer">
         {t('ui.start.support')}
       </a>
+
+      <span className="app-version">v{__APP_VERSION__}</span>
     </div>
   )
 }
