@@ -159,11 +159,14 @@ body {
 .hud-bar-left { display: flex; align-items: center; gap: 0.5rem; }
 .hud-bar-right { display: flex; align-items: center; gap: 0.5rem; }
 .hud-icons { display: flex; align-items: center; gap: 0.35rem; }
-/* centre block: where the pilgrim is (adventure · node) on ONE line, shown on the map AND in battle */
-.hud-bar-center { flex: 1 1 auto; min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 0.6rem; }
+/* centre block: where the pilgrim is (adventure · node) on ONE line + the abandon button beside it for
+   context, shown on the map AND in battle */
+.hud-bar-center { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 0.7rem; padding: 0 0.6rem; }
+.hud-location { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hud-adventure { font-size: 0.82rem; font-weight: 700; color: var(--gold-bright); }
 .hud-loc-sep { color: var(--muted); margin: 0 0.4rem; opacity: 0.7; }
 .hud-loc-node { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.hud-abandon-btn { flex: none; padding: 0.22rem 0.62rem; font-size: 0.72rem; border-radius: 7px; }
 
 /* hero portrait: a gold-framed disc holding a placeholder initial (swap the glyph for an <img> later) */
 .hud-portrait-wrap { position: relative; flex: none; }
@@ -707,8 +710,6 @@ input[type='range']::-moz-range-thumb:hover { background: var(--gold-bright); }
 /* ---- HUD audio toggle ---- */
 .hud-icon-btn { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(180deg, #2a3326, #1a2016); border: 1px solid var(--panel-edge); color: var(--ink); font-size: 0.9rem; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.12s, box-shadow 0.2s, border-color 0.2s; }
 .hud-icon-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.4); border-color: var(--gold-bright); }
-.hud-icon-btn.danger { border-color: #7a3b34; }
-.hud-icon-btn.danger:hover { border-color: #c0453c; }
 /* abandon-run confirm (portalled from the HUD) */
 .panel.hud-abandon-modal { width: 360px; text-align: center; }
 .hud-abandon-modal h3 { margin-bottom: 0.4rem; }

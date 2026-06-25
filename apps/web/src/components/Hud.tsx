@@ -30,6 +30,7 @@ export function Hud() {
   const combat = useGame((s) => s.state.combat)
   const audioMode = useGame((s) => s.state.profile.settings.audioMode)
   const cycleAudioMode = useGame((s) => s.cycleAudioMode)
+  const dispatch = useGame((s) => s.dispatch)
   const setDeckOpen = useGame((s) => s.setDeckOpen)
   const toggleInventory = useGame((s) => s.toggleInventory)
   const itemInteraction = useGame((s) => s.itemInteraction)
@@ -89,9 +90,15 @@ export function Hud() {
           visible during battle (the HUD renders on both the map and the combat screen). */}
       {location && (
         <div className="hud-bar-center">
-          <span className="hud-adventure">{t(`ui.worldSelect.${location.worldId.replace('-', '')}.title`)}</span>
-          {location.nodeNameKey && <span className="hud-loc-sep">·</span>}
-          {location.nodeNameKey && <span className="hud-loc-node">{t(location.nodeNameKey)}</span>}
+          <span className="hud-location">
+            <span className="hud-adventure">{t(`ui.worldSelect.${location.worldId.replace('-', '')}.title`)}</span>
+            {location.nodeNameKey && <span className="hud-loc-sep">·</span>}
+            {location.nodeNameKey && <span className="hud-loc-node">{t(location.nodeNameKey)}</span>}
+          </span>
+          {/* abandon sits beside the location so it reads as "abandon THIS run" (guarded by a confirm) */}
+          <button className="btn danger hud-abandon-btn" onClick={() => setConfirmAbandon(true)} title={t('ui.map.abandon')}>
+            {t('ui.map.abandon')}
+          </button>
         </div>
       )}
       <div className="hud-bar-right">
@@ -126,14 +133,14 @@ export function Hud() {
           >
             {AUDIO_ICON[audioMode]}
           </button>
-          {/* abandon the run — moved here from the old map bottom bar. Guarded by a confirm. */}
+          {/* leave to the title/menu WITHOUT abandoning — the run stays saved, so "Continue" resumes it */}
           <button
-            className="hud-icon-btn danger"
-            onClick={() => setConfirmAbandon(true)}
-            title={t('ui.map.abandon')}
-            aria-label={t('ui.map.abandon')}
+            className="hud-icon-btn"
+            onClick={() => dispatch({ type: 'navigate', screen: 'start' })}
+            title={t('ui.common.menu')}
+            aria-label={t('ui.common.menu')}
           >
-            🏳️
+            ☰
           </button>
         </div>
       </div>
