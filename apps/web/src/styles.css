@@ -349,9 +349,10 @@ body {
 .battlefield { position: relative; z-index: 2; flex: 1; display: flex; justify-content: space-between; align-items: flex-end; padding: 2rem 9% 1.5rem; }
 /* nudge the standing combatants down so they plant on the ground instead of hovering above the path */
 .side { display: flex; gap: 2rem; align-items: flex-end; transform: translateY(64px); }
-/* the lone party member reads better set further in from the left edge (≈ double the battlefield inset);
-   the enemy side stays anchored right so multi-enemy rows are unaffected */
+/* both sides read better set further in from their edge (≈ double the battlefield inset) rather than
+   hugging the rim — keeps a lone foe from sitting "too far back" against the right edge */
 .side.party { margin-left: 9%; }
+.side.enemies { margin-right: 9%; }
 
 /* Flee / Hold live in the top corners (just under the top bar), clear of the figures + the hand */
 .corner-action { position: absolute; top: 70px; z-index: 6; display: flex; gap: 0.4rem; }
