@@ -946,9 +946,13 @@ function isWon(c: CombatState): { won: boolean } {
     case 'allEnemiesDefeated':
       return { won: Object.values(c.combatants).every((x) => x.faction !== 'enemy' || !x.alive) }
     case 'allDemonsDestroyed': {
-      if (aliveDemons(c).length === 0) return { won: true }
-      // brute: no living humans left → bound demons lose their hosts and flee
-      if (aliveHumanEnemies(c).length === 0) return { won: true }
+      const demons = aliveDemons(c)
+      if (demons.length === 0) return { won: true }
+      // brute path: a demon BOUND to a human host flees when that host dies (see fleeBoundDemons). So
+      // if every surviving demon is bound AND no human enemies remain, they all flee → win. A lone
+      // UNBOUND demon (e.g. a Spirit of Dread) has no host to lose and must actually be destroyed —
+      // without the bound check a humanless demon fight "wins" itself the moment this check first runs.
+      if (demons.every((d) => d.boundToId != null) && aliveHumanEnemies(c).length === 0) return { won: true }
       return { won: false }
     }
     case 'survive':

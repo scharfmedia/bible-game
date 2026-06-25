@@ -184,6 +184,30 @@ describe('thief encounter — the brute path (teaches by contrast)', () => {
   })
 })
 
+// ---- regression: a lone, unbound demon must be destroyed (not auto-won) ------------------
+
+describe('lone unbound demon (allDemonsDestroyed)', () => {
+  // a single Spirit-of-Dread-style foe: a visible demon with NO human host and NO binding
+  const loneDemonInit = (over: Partial<CombatInit> = {}): CombatInit =>
+    thiefInit({ enemies: [demon({ hidden: false, boundToId: undefined })], ...over })
+
+  it('does not auto-win on the enemy turn just because there are no humans', () => {
+    let { combat } = startCombat(loneDemonInit())
+    combat = ensureActing(combat).combat
+    const after = endTurn(combat, 0) // player ends the turn → the demon takes its turn
+    expect(after.combat.combatants.demon!.alive).toBe(true)
+    expect(after.combat.outcome).toBe('ongoing') // regression: this used to flip to a win
+  })
+
+  it('wins once the demon is actually destroyed (peaceful — no human killed)', () => {
+    let { combat } = startCombat(loneDemonInit())
+    combat = ensureActing(combat).combat
+    const played = playCard(combat, findInHand(combat, 'light'), 'demon', 200)
+    expect(played.combat.combatants.demon!.alive).toBe(false)
+    expect(played.combat.outcome).toBe('peaceful')
+  })
+})
+
 // ---- risk area: party-death card purge ---------------------------------------------------
 
 describe('companion death purges their cards from every pile + drops shared energy', () => {
