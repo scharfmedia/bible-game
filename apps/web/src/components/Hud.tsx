@@ -92,17 +92,13 @@ export function Hud() {
           </span>
         )}
       </div>
-      {/* where the pilgrim is — adventure + current node. Lives in the shared top bar so it's also
-          visible during battle (the HUD renders on both the map and the combat screen). */}
+      {/* current node only — the adventure name lives in the map cartouche; here it's the locator that
+          carries into battle (the HUD renders on both the map and the combat screen) + the abandon button. */}
       {location && (
         <div className="hud-bar-center">
-          <span className="hud-location">
-            <span className="hud-adventure">{t(`ui.worldSelect.${location.worldId.replace('-', '')}.title`)}</span>
-            {location.nodeNameKey && <span className="hud-loc-sep">·</span>}
-            {location.nodeNameKey && <span className="hud-loc-node">{t(location.nodeNameKey)}</span>}
-          </span>
+          {location.nodeNameKey && <span className="hud-loc-node">{t(location.nodeNameKey)}</span>}
           {/* abandon sits beside the location so it reads as "abandon THIS run" (guarded by a confirm) */}
-          <button className="btn danger hud-abandon-btn" onClick={() => setConfirmAbandon(true)} title={t('ui.map.abandon')}>
+          <button className="btn hud-abandon-btn" onClick={() => setConfirmAbandon(true)} title={t('ui.map.abandon')}>
             {t('ui.map.abandon')}
           </button>
         </div>

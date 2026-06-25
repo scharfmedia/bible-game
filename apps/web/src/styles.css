@@ -159,14 +159,13 @@ body {
 .hud-bar-left { display: flex; align-items: center; gap: 0.5rem; }
 .hud-bar-right { display: flex; align-items: center; gap: 0.5rem; }
 .hud-icons { display: flex; align-items: center; gap: 0.35rem; }
-/* centre block: where the pilgrim is (adventure · node) on ONE line + the abandon button beside it for
-   context, shown on the map AND in battle */
+/* centre block: the current node only (the adventure name lives in the map cartouche) + abandon button,
+   shown on the map AND in battle */
 .hud-bar-center { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 0.7rem; padding: 0 0.6rem; }
-.hud-location { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hud-adventure { font-size: 0.82rem; font-weight: 700; color: var(--gold-bright); }
-.hud-loc-sep { color: var(--muted); margin: 0 0.4rem; opacity: 0.7; }
-.hud-loc-node { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
-.hud-abandon-btn { flex: none; padding: 0.22rem 0.62rem; font-size: 0.72rem; border-radius: 7px; }
+.hud-loc-node { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.8rem; font-weight: 600; color: var(--gold); text-transform: uppercase; letter-spacing: 0.06em; }
+/* quiet by default so it doesn't pull the eye — the destructive red only shows on hover (+ the confirm) */
+.hud-abandon-btn { flex: none; padding: 0.22rem 0.62rem; font-size: 0.72rem; border-radius: 7px; background: linear-gradient(180deg, #2a2420, #1a1613); border: 1px solid var(--panel-edge); color: var(--muted); }
+.hud-abandon-btn:hover:not(:disabled) { border-color: #8a443c; color: #e0a59c; }
 
 /* hero portrait: a gold-framed disc holding a placeholder initial (swap the glyph for an <img> later) */
 .hud-portrait-wrap { position: relative; flex: none; }
