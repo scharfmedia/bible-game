@@ -63,7 +63,8 @@ const CARD_ART: Record<string, string> = {
  *  card without a mapping still shows something on-theme. */
 export function cardArt(nameKey: string, layer: string): string {
   const id = nameKey.split('.')[1] ?? ''
-  // '+' honed variants reuse their base card's art (strip the _plus suffix).
-  const baseId = id.endsWith('_plus') ? id.slice(0, -'_plus'.length) : id
+  // '+'/'++'/'+++' honed variants reuse their base card's art (strip every _plus suffix).
+  let baseId = id
+  while (baseId.endsWith('_plus')) baseId = baseId.slice(0, -'_plus'.length)
   return CARD_ART[id] ?? CARD_ART[baseId] ?? (layer === 'spirit' ? '✨' : '🃏')
 }

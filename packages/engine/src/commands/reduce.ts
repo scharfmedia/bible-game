@@ -179,6 +179,9 @@ function selectHero(state: GameState, id: string): ReduceResult {
   return ok({ ...state, profile: { ...state.profile, lastSelectedId: id } }, [])
 }
 
+/** Gold every hero begins a run with — enough to reach the first shop. */
+const STARTER_GOLD = 50
+
 function startRun(
   state: GameState,
   characterId: string,
@@ -201,10 +204,11 @@ function startRun(
       : []
   const startDeck = [...content.heroStartDeck, ...verseCards]
   const hero = partyMemberFromCharacter(slot.character, startDeck, content.heroGraceAbilities)
-  // The "Enoch" testing hero also starts with a bag of usable items, so the inventory's use/combine
-  // flows can be exercised immediately (only items the bundle actually defines are seeded).
+  // Every run begins with a small purse so the first shop is reachable (STARTER_GOLD). The "Enoch"
+  // testing hero also starts with a bag of usable items + a deep purse, so the inventory's
+  // use/combine/shop flows can be exercised immediately (only items the bundle defines are seeded).
   const inventory =
-    slot.character.name === TEST_HERO_NAME ? testHeroInventory(content) : emptyInventory()
+    slot.character.name === TEST_HERO_NAME ? testHeroInventory(content) : { ...emptyInventory(), currency: STARTER_GOLD }
   const run: RunState = {
     seed,
     rng: seedRng(seed),
@@ -267,6 +271,7 @@ function testHeroInventory(content: ContentBundle) {
     ['oil', 1],
   ]
   for (const [id, n] of bag) if (content.items[id]) inv.stacks[id] = n
+  inv.currency = 999 // deep purse so the test hero can exercise shops freely
   return inv
 }
 

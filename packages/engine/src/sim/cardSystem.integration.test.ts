@@ -41,11 +41,12 @@ describe('post-combat reward (spoils + card pick)', () => {
 
   it('claiming the gold grants currency once (double-claim rejected)', () => {
     let s = toBeastReward(content)
+    const before = s.run!.inventory.currency
     s = apply(s, { type: 'combat/claimSpoil', spoilId: 'money' })
-    expect(s.run!.inventory.currency).toBe(20)
+    expect(s.run!.inventory.currency).toBe(before + 20)
     const again = reduce(s, { type: 'combat/claimSpoil', spoilId: 'money' })
     expect(again.events).toContainEqual({ type: 'rejected', reason: 'already-claimed' })
-    expect(again.state.run!.inventory.currency).toBe(20)
+    expect(again.state.run!.inventory.currency).toBe(before + 20)
   })
 
   it('taking a card adds it to the run deck; leaving returns to the map', () => {
@@ -173,7 +174,8 @@ describe('shop node', () => {
     expect(shop.cards.length).toBeGreaterThan(0)
     const offer = shop.cards[0]!
 
-    // broke → rejected
+    // broke → rejected (spend the starter purse down to 0 first)
+    s = { ...s, run: { ...s.run!, inventory: { ...s.run!.inventory, currency: 0 } } }
     expect(reduce(s, { type: 'world/shopBuyCard', nodeId: 'n1', defId: offer.defId }).events).toContainEqual({ type: 'rejected', reason: 'shop:too-poor' })
 
     // grant gold and buy

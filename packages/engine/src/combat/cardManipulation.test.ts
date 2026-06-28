@@ -8,7 +8,8 @@ import type { Combatant } from './types'
 
 const CARDS: Record<string, CardDef> = {
   strike: { id: 'strike', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: '', textKey: '', upgradeTo: 'strike_plus', effects: [{ kind: 'damage', amount: 6 }] },
-  strike_plus: { id: 'strike_plus', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'damage', amount: 9 }] },
+  strike_plus: { id: 'strike_plus', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: '', textKey: '', upgradeTo: 'strike_plus_plus', effects: [{ kind: 'damage', amount: 9 }] },
+  strike_plus_plus: { id: 'strike_plus_plus', type: 'attack', layer: 'flesh', cost: 1, target: 'enemy', nameKey: '', textKey: '', effects: [{ kind: 'damage', amount: 12 }] },
   guard: { id: 'guard', type: 'skill', layer: 'flesh', cost: 1, target: 'self', nameKey: '', textKey: '', effects: [{ kind: 'block', amount: 5 }] },
   sharpen: { id: 'sharpen', type: 'skill', layer: 'flesh', cost: 1, target: 'none', nameKey: '', textKey: '', effects: [{ kind: 'hone', count: 1 }] },
   cast_off: { id: 'cast_off', type: 'skill', layer: 'flesh', cost: 1, target: 'none', exhaust: true, nameKey: '', textKey: '', effects: [{ kind: 'exhaustChosen', count: 2 }] },
@@ -72,7 +73,7 @@ describe('hone (Sharpen)', () => {
     expect(combat.combatants.foe!.hp).toBe(50 - 9)
   })
 
-  it('only upgradeable, not-already-honed cards qualify (guard has no + form → no-op)', () => {
+  it('only upgradeable cards qualify (guard has no + form → no-op)', () => {
     let { combat } = startCombat(mkInit(['sharpen', 'guard', 'guard', 'guard', 'guard']))
     combat = ensureActing(combat).combat
     const guardIid = iidOf(combat, 'guard')
@@ -80,6 +81,16 @@ describe('hone (Sharpen)', () => {
     combat = r.combat
     expect(combat.hand.find((c) => c.iid === guardIid)?.honedDefId).toBeUndefined()
     expect(r.events.some((e) => e.type === 'cardsHoned')).toBe(false)
+  })
+
+  it('climbs a multi-level chain across plays (strike → + → ++)', () => {
+    let { combat } = startCombat(mkInit(['sharpen', 'sharpen', 'strike', 'strike', 'strike']))
+    combat = ensureActing(combat).combat
+    const target = iidOf(combat, 'strike')
+    combat = playCard(combat, iidOf(combat, 'sharpen'), undefined, 0, [target]).combat
+    expect(combat.hand.find((c) => c.iid === target)!.honedDefId).toBe('strike_plus')
+    combat = playCard(combat, iidOf(combat, 'sharpen'), undefined, 0, [target]).combat
+    expect(combat.hand.find((c) => c.iid === target)!.honedDefId).toBe('strike_plus_plus')
   })
 })
 

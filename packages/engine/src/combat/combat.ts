@@ -525,14 +525,15 @@ function applyEffect(
       return step(combat, events)
     }
     case 'hone': {
-      // Temporarily upgrade up to `count` chosen cards to their `+` form for the rest of the battle.
-      // Only cards with an `upgradeTo` (and not already honed) qualify — re-honing is a no-op because
-      // a honed copy resolves to a `+` def, which has no further `upgradeTo`.
+      // Temporarily upgrade up to `count` chosen cards by ONE level for the rest of the battle. Climbs
+      // a multi-level chain: a card already honed to its `+` can be honed again to `++`/`+++`, as long
+      // as its CURRENT resolved form still has an `upgradeTo`.
       const honed: string[] = []
       for (const tid of cardTargetIids.slice(0, op.count)) {
         const inst = findInstance(combat, tid)
-        if (!inst || inst.honedDefId) continue
-        const toId = combat.cardDefs[inst.defId]?.upgradeTo
+        if (!inst) continue
+        const currentId = inst.honedDefId ?? inst.defId
+        const toId = combat.cardDefs[currentId]?.upgradeTo
         if (!toId || !combat.cardDefs[toId]) continue
         combat = withCardInstance(combat, tid, (x) => ({ ...x, honedDefId: toId }))
         honed.push(tid)

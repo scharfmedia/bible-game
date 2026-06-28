@@ -54,7 +54,7 @@ export function FireplaceScreen() {
     <div className="screen fireplace centered" style={{ backgroundImage: assetBg(view.bgAsset) }}>
       {!view.bgAsset && <div className="firelight" />}
       <div className="scrim" />
-      <div className="panel narrow">
+      <div className={'panel narrow fireplace-panel' + (pickMode === 'upgrade' && !selected && upgradeable.length > 0 ? ' picking' : '')}>
         <h2>{t(view.nameKey)}</h2>
         <p className="muted reflect">{t(view.reflectKey)}</p>
         {notice && !pickMode && <p className="muted">{t(notice)}</p>}

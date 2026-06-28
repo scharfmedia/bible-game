@@ -90,6 +90,15 @@ body {
 
 .panel { position: relative; background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 14px; padding: 1.6rem; box-shadow: var(--shadow); backdrop-filter: blur(3px); margin: 1.5rem auto; width: 560px; }
 .panel.narrow { width: 440px; }
+/* fireplace: cap the panel and let only the upgrade-picker card list scroll (head/buttons stay put) —
+   the upgradeable list can be long now that most cards have a '+'. Same single-scroll model as the deck. */
+.fireplace-panel { display: flex; flex-direction: column; max-height: 660px; }
+/* widen for the upgrade card grid so it isn't a slim 2-per-row column (the button menu stays narrow) */
+.fireplace-panel.picking { width: 880px; }
+.fireplace-panel > * { flex: none; }
+/* 16px top clears the cost/damage badges that overhang each card by ~11px (else the first row's card
+   tops are clipped by the scroll edge — same top padding the deck modal uses). */
+.fireplace-panel .card-row { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 16px 12px 10px; margin: 0.4rem 0 0; }
 .panel h2, .panel h3 { margin-top: 0; color: var(--gold-bright); }
 
 /* ---------- buttons & inputs ---------- */
@@ -581,12 +590,29 @@ button.card-stack { background: none; padding: 0; font: inherit; cursor: pointer
 /* hone before→after preview */
 .upgrade-preview { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 0.8rem 0; }
 .upgrade-arrow { font-size: 1.8rem; font-weight: 700; color: var(--gold-bright); }
-/* shop */
-.shop-panel { max-width: 640px; max-height: 634px; overflow-y: auto; }
+/* shop — same scroll model as the deck modal: fixed head + footer, a single scrolling body (no
+   whole-panel scroll, no nested scroll regions / double scrollbars). */
+.shop-panel { width: 860px; max-height: 660px; display: flex; flex-direction: column; overflow: hidden; }
+.shop-head { flex: none; }
+.shop-head h2 { margin: 0 0 0.2rem; }
+.shop-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 14px 6px 6px; }
+/* split: cards (wide, ~2/3) on the left, items (narrow, ~1/3) on the right */
+.shop-split { display: grid; grid-template-columns: 2fr 1fr; gap: 1.2rem; align-items: start; }
+.shop-col { min-width: 0; }
+.shop-col-items { border-left: 1px solid var(--panel-edge); padding-left: 1.2rem; }
+/* items shown as a bag-style icon grid (icon tile + price), not full-width buttons */
+.shop-item-grid { justify-content: flex-start; gap: 12px; }
+.shop-item { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.shop-item .inv-slot { width: 66px; height: 66px; aspect-ratio: auto; font-size: 2rem; }
+.shop-item .inv-slot:disabled { opacity: 0.5; cursor: default; box-shadow: none; border-color: var(--panel-edge); }
+/* per-tile info box (reuses the bag tooltip look) — hidden until hover or focus (tap).
+   Scoped to `.shop-item .shop-tip` so it outranks `.inv-tooltip { display: flex }` regardless of order. */
+.shop-item .shop-tip { display: none; top: 50%; transform: translateY(-50%); }
+.shop-item:hover .shop-tip, .shop-item:focus-within .shop-tip { display: flex; }
+.shop-col .reward-card-title { margin-top: 0; }
+.shop-foot { flex: none; margin-top: 0.6rem; }
 .shop-buy { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .shop-price { font-size: 0.78rem; font-weight: 700; color: var(--gold-bright); }
-/* card-removal list can be long (it grows with your deck) — scroll it so the Back button stays put */
-.shop-remove-row { max-height: 374px; overflow-y: auto; flex-wrap: wrap; }
 .warn { color: var(--gold); }
 .card-cost { position: absolute; top: -11px; left: -11px; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #f6e08a, var(--gold)); color: #1a160c; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem; border: 2px solid #ffffff66; box-shadow: 0 2px 5px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.4); z-index: 2; }
 /* Slay-the-Spire card body: title band on top, big art in the middle, description at the bottom. */

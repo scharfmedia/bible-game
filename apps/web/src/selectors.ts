@@ -375,7 +375,7 @@ export interface CombatCardView {
   rarity: CardRarity
   values?: Record<string, number>
   honed: boolean
-  /** eligible to be honed (has a '+' form and isn't already honed) — used by the hone picker */
+  /** eligible to be honed: its CURRENT form still has a '+' (climbs multi-level chains) — hone picker */
   honeable: boolean
   unplayable: boolean
 }
@@ -481,7 +481,6 @@ type CombatCardInstance = CombatStateT['hand'][number]
 function combatCardView(c: CombatStateT, spirit: number, inst: CombatCardInstance): CombatCardView {
   const defId = inst.honedDefId ?? inst.defId
   const def = c.cardDefs[defId]
-  const baseDef = c.cardDefs[inst.defId]
   const ownerScale = c.combatants[inst.ownerId]?.scale ?? c.partyOrder.map((id) => c.combatants[id]).find((x) => x?.alive)?.scale ?? 1
   return {
     iid: inst.iid,
@@ -494,7 +493,9 @@ function combatCardView(c: CombatStateT, spirit: number, inst: CombatCardInstanc
     rarity: def?.rarity ?? 'common',
     values: def ? cardDisplayValues(def, ownerScale, spirit) : undefined,
     honed: !!inst.honedDefId,
-    honeable: !inst.honedDefId && !!baseDef?.upgradeTo,
+    // chain-aware: a card is honeable while its CURRENT form still has a further '+' (so Sharpen can
+    // climb a multi-level chain, e.g. Strike → Strike+ → Strike++ → Strike+++).
+    honeable: !!def?.upgradeTo,
     unplayable: def?.unplayable ?? false,
   }
 }
@@ -581,7 +582,7 @@ export interface UpgradeOption {
 }
 
 export interface ShopCardView { defId: string; nameKey: string; textKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean; rarity: CardRarity; price: number; sold: boolean; affordable: boolean; values?: Record<string, number> }
-export interface ShopItemView { itemId: string; nameKey: string; price: number; sold: boolean; affordable: boolean }
+export interface ShopItemView { itemId: string; nameKey: string; descKey: string; icon: string; kind: ItemKind; price: number; sold: boolean; affordable: boolean }
 export interface ShopDeckCardView { index: number; nameKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean; rarity: CardRarity }
 export interface ShopView {
   nodeId: string
@@ -630,13 +631,19 @@ export function selectShop(state: GameState): ShopView | null {
         values: runCardValues(run, o.defId),
       }
     }),
-    items: shop.items.map((o) => ({
-      itemId: o.itemId,
-      nameKey: run.content.items[o.itemId]?.nameKey ?? o.itemId,
-      price: o.price,
-      sold: o.sold,
-      affordable: gold >= o.price,
-    })),
+    items: shop.items.map((o) => {
+      const def = run.content.items[o.itemId]
+      return {
+        itemId: o.itemId,
+        nameKey: def?.nameKey ?? o.itemId,
+        descKey: def?.descKey ?? '',
+        icon: def?.icon ?? '',
+        kind: def?.kind ?? 'consumable',
+        price: o.price,
+        sold: o.sold,
+        affordable: gold >= o.price,
+      }
+    }),
     deck: deck.map((id, index) => {
       const def = run.content.cards[id]
       return { index, nameKey: def?.nameKey ?? id, cost: def?.cost ?? 0, layer: def?.layer ?? 'flesh', verse: def?.type === 'verse', rarity: def?.rarity ?? 'common' }
