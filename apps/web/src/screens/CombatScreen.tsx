@@ -17,6 +17,11 @@ import { useCardDrag, type CardDrag } from './useCardDrag'
 import { spriteUrl, spriteEmoji, spriteScale } from '../sprites'
 
 const INTENT_ICON: Record<string, string> = { attack: '⚔️', attackMulti: '⚔️', dread: '🌑', block: '🛡️', buff: '⬆️', debuff: '⬇️', clutter: '🌫️', special: '…', unknown: '❔' }
+// chips for buffs/debuffs on a combatant (lastStand keeps its own badge). 'buff' = green, 'debuff' = red tint.
+const STATUS_ICON: Record<string, string> = { strength: '💪', dexterity: '🤚', poison: '☠️', weak: '💢', vulnerable: '🎯', bound: '⛓️' }
+const STATUS_KIND: Record<string, 'buff' | 'debuff'> = { strength: 'buff', dexterity: 'buff', poison: 'debuff', weak: 'debuff', vulnerable: 'debuff', bound: 'debuff' }
+// persistent powers (Armor of God) — gold chips, distinct from the buff/debuff status chips
+const POWER_ICON: Record<string, string> = { steadfast: '🪨', belt_of_truth: '🥋', breastplate: '🛡️', shield_of_faith: '✝️', helmet_salvation: '⛑️', sword_of_spirit: '⚔️', gospel_shod: '👞', zeal: '🔥' }
 
 // Pause between each enemy's action during the UI-paced enemy turn (one engine step per gap). Long
 // enough to read the lunge → hit → HP-drop → damage float before the next foe steps up.
@@ -582,6 +587,16 @@ function CombatUnit({
           {c.shield && <span className="badge ward">🛡✨ {Math.round(c.shield.chance * 100)}% · {c.shield.turns}t</span>}
           {c.lastStand && <span className="badge laststand" title={t('ui.combat.lastStandHint')}>🔥 {t('ui.combat.lastStand')}</span>}
           {c.row === 'back' && <span className="badge row">{t('ui.combat.backRow')}</span>}
+          {c.statuses.map((s) => (
+            <span key={s.id} className={'badge status ' + (STATUS_KIND[s.id] ?? 'debuff')} title={`${t(`status.${s.id}.name`)} — ${t(`status.${s.id}.desc`)}`}>
+              {STATUS_ICON[s.id] ?? '◆'} {s.stacks}
+            </span>
+          ))}
+          {c.powers.map((p) => (
+            <span key={p.id} className="badge power" title={`${t(`power.${p.id}.name`)} — ${t(`power.${p.id}.desc`)}`}>
+              {POWER_ICON[p.id] ?? '✦'}{p.stacks > 1 ? ` ${p.stacks}` : ''}
+            </span>
+          ))}
         </div>
       </div>
     </motion.div>

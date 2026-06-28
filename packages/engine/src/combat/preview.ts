@@ -6,7 +6,7 @@ import type { CardDef } from '../cards/types'
 import { itemPseudoCard, type ItemDef } from '../inventory/types'
 import { miracleChance, scaleSpiritValue } from '../spirit/spirit'
 import type { CardDefId, CombatantId } from '../types'
-import { absorb, physicalAmount } from './damage'
+import { absorb, executeDamageBase, physicalAmount, scalingDamageBase, swordBonus } from './damage'
 import type { CombatState } from './types'
 
 export interface CardDamagePreview {
@@ -43,15 +43,26 @@ export function previewCardDamage(
   defenderId?: CombatantId,
   def: CardDef | undefined = c.cardDefs[defId],
 ): CardDamagePreview | null {
-  const op = def?.effects.find((e) => e.kind === 'damage')
-  if (!def || !op || op.kind !== 'damage') return null
+  const op = def?.effects.find((e) => e.kind === 'damage' || e.kind === 'damageScaling' || e.kind === 'execute')
+  if (!def || !op || (op.kind !== 'damage' && op.kind !== 'damageScaling' && op.kind !== 'execute')) return null
 
   const srcId = cardSource(c, ownerMemberId)
   const source = srcId ? c.combatants[srcId] : undefined
   if (!source) return null
   const defender = defenderId ? c.combatants[defenderId] : undefined
-  const hits = op.hits ?? 1
-  const base = bySpiritBase(def, op.amount, spirit, source.scale)
+  let hits = 1
+  let base: number
+  if (op.kind === 'damage') {
+    hits = op.hits ?? 1
+    // shared Sword-of-the-Spirit bonus (same helper applyEffect uses) so the preview can't drift.
+    base = bySpiritBase(def, op.amount, spirit, source.scale) + swordBonus(def, source, hits)
+  } else if (op.kind === 'damageScaling') {
+    // damageScaling — mirror applyEffect via the shared helper (poison read from the aimed defender)
+    base = scalingDamageBase(op, source, c, defender)
+  } else {
+    // execute — mirror applyEffect (bonus when the aimed defender is below the HP threshold) + Sword
+    base = executeDamageBase(op, source, defender) + swordBonus(def, source, 1)
+  }
 
   let perHit = base
   let blocked = 0
@@ -96,6 +107,7 @@ export function cardDisplayValues(card: CardDef, scale: number, spirit: number):
   const out: Record<string, number> = {}
   for (const op of card.effects) {
     if (op.kind === 'damage' && out.dmg === undefined) out.dmg = bySpiritBase(card, op.amount, spirit, scale)
+    else if (op.kind === 'execute' && out.dmg === undefined) out.dmg = op.amount * scale // baseline (the bonus is shown live on the card's damage badge)
     else if (op.kind === 'block' && out.block === undefined) out.block = bySpiritBase(card, op.amount, spirit, scale)
     else if (op.kind === 'heal' && out.heal === undefined) out.heal = bySpiritBase(card, op.amount, spirit, scale)
     else if ((op.kind === 'banish' || op.kind === 'protect') && out.chance === undefined) {

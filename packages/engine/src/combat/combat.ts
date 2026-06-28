@@ -3,7 +3,7 @@
 // SpiritEvent intents that the combat reducer applies to run.spirit (single-writer rule), and
 // reads the current spirit scalar (passed in) only to scale spiritual effects via potencyMult.
 
-import type { CardDef, CardInstance, EffectOp, StatusId, TargetKind } from '../cards/types'
+import type { CardDef, CardInstance, EffectOp, PowerId, StatusId, TargetKind } from '../cards/types'
 import { itemPseudoCard, type ItemDef } from '../inventory/types'
 import type { GameEvent } from '../events/event'
 import { getGrace } from '../grace/grace'
@@ -12,7 +12,8 @@ import type { SpiritEvent } from '../spirit/spirit'
 import { chance, fork, nextFloat, pick, shuffle, type RngState } from '../rng/rng'
 import type { CardDefId, CombatantId, GraceAbilityId, MemberId } from '../types'
 import { pickIntent } from './ai'
-import { absorb, physicalAmount, statusStacks } from './damage'
+import { absorb, dexterityBlockBonus, executeDamageBase, physicalAmount, powerStacks, scalingDamageBase, statusStacks, swordBonus } from './damage'
+import { POWERS, type HookName } from './powers'
 import type {
   CombatFlags,
   Combatant,
@@ -149,32 +150,44 @@ function resolveTargets(
   }
 }
 
-/** Apply raw damage to a target: block absorption, Divine Protection, HP, and death routing. */
+/** Apply raw damage to a target: block absorption, Divine Protection, HP, and death routing.
+ *  `fromDot` (poison) is internal affliction: it skips the physical pipeline (no strength/weak/
+ *  vulnerable/row, no lastStand mitigation) AND skips the block pool — only HP — but still routes a
+ *  lethal tick through killCombatant, so poisoning a human to death griefs Spirit like any blow. */
 function damageTarget(
   c: CombatState,
   sourceId: CombatantId,
   targetId: CombatantId,
   rawBase: number,
-  opts: { nonLethal: boolean },
+  opts: { nonLethal: boolean; fromDot?: boolean },
 ): CombatStep {
   const source = getC(c, sourceId)
   const target = getC(c, targetId)
   if (!source || !target || !target.alive) return step(c)
 
-  const hit = physicalAmount(rawBase, source, target)
-  const split = absorb(hit.amount, target.block)
+  const hit = opts.fromDot ? { amount: Math.max(0, Math.floor(rawBase)), capped: false } : physicalAmount(rawBase, source, target)
+  const split = opts.fromDot ? { blocked: 0, hpDamage: hit.amount, remainingBlock: target.block } : absorb(hit.amount, target.block)
 
   let hpDamage = split.hpDamage
   let rng = c.rng
   const events: GameEvent[] = []
-  // Divine Protection miracle: a successful Spirit-scaled roll caps this hit at 1 (party only).
-  if (target.faction === 'party' && target.shield && hpDamage > 1) {
+  // Divine Protection miracle: a successful Spirit-scaled roll caps this hit at 1 (party only). DoT is
+  // not a "hit" and bypasses the shield.
+  if (!opts.fromDot && target.faction === 'party' && target.shield && hpDamage > 1) {
     const [negate, ns] = chance(rng, target.shield.chance)
     rng = ns
     if (negate) {
       hpDamage = 1
       events.push({ type: 'shieldNegated', targetId })
     }
+  }
+  // Shield of Faith power: the FIRST HP-damaging hit each round on a party member is blunted by
+  // stacks×scale (a flat reduction, like Strength/Dexterity reads — not a hook). Once per round.
+  let usedShield = false
+  if (!opts.fromDot && target.faction === 'party' && hpDamage > 0 && !c.shieldUsedThisRound.includes(targetId) && powerStacks(target, 'shield_of_faith') > 0) {
+    hpDamage = Math.max(0, hpDamage - powerStacks(target, 'shield_of_faith') * target.scale)
+    usedShield = true
+    events.push({ type: 'shieldNegated', targetId })
   }
 
   const hp = target.hp - hpDamage
@@ -192,6 +205,7 @@ function damageTarget(
   }
 
   let outCombat = { ...c, rng, combatants: { ...c.combatants, [targetId]: next } }
+  if (usedShield) outCombat = { ...outCombat, shieldUsedThisRound: [...outCombat.shieldUsedThisRound, targetId] }
 
   if (subdue) {
     next = { ...next, alive: false, subdued: true }
@@ -271,6 +285,63 @@ function applyStatusTo(c: CombatState, id: CombatantId, status: StatusId, stacks
   })
 }
 
+/** install/stack a persistent power on a combatant (mirror of applyStatusTo). */
+function withPower(c: CombatState, id: CombatantId, power: PowerId, stacks: number): CombatState {
+  return withCombatant(c, id, (x) => {
+    const powers = x.powers ?? []
+    const existing = powers.find((p) => p.id === power)
+    const next = existing
+      ? powers.map((p) => (p.id === power ? { ...p, stacks: p.stacks + stacks } : p))
+      : [...powers, { id: power, stacks }]
+    return { ...x, powers: next }
+  })
+}
+
+/** A flesh pseudo-card giving applyEffect a `card` for power-emitted ops (flesh ⇒ scale by level). */
+const POWER_PSEUDO_CARD: CardDef = { id: 'power', type: 'power', layer: 'flesh', cost: 0, target: 'self', nameKey: '', textKey: '', effects: [] }
+
+/** Fire a power hook for ONE combatant: fold each held power's emitted EffectOps through the SAME
+ *  applyEffect interpreter cards use (like the def.effects loop in playCard). Pure. Re-entrancy-safe:
+ *  hooks fire only from the FSM (beginRound/playCard), never from inside applyEffect, so an emitted op
+ *  cannot re-fire a hook with the MVP hook set. */
+function firePowerHook(c: CombatState, hook: HookName, id: CombatantId): CombatStep {
+  const holder = getC(c, id)
+  if (!holder || !holder.alive || !holder.powers?.length) return step(c)
+  let combat = c
+  const events: GameEvent[] = []
+  const spiritEvents: SpiritEvent[] = []
+  for (const p of holder.powers) {
+    const fn = POWERS[p.id]?.hooks[hook]
+    if (!fn) continue
+    const self = getC(combat, id)
+    if (!self || !self.alive) continue
+    const ops = fn({ self, stacks: p.stacks, combat })
+    if (!ops.length) continue
+    for (const op of ops) {
+      const r = applyEffect(combat, op, id, undefined, 'self', 0, POWER_PSEUDO_CARD)
+      combat = r.combat
+      events.push(...r.events)
+      spiritEvents.push(...r.spiritEvents)
+    }
+    events.push({ type: 'powerTriggered', sourceId: id, power: p.id })
+  }
+  return step(combat, events, spiritEvents)
+}
+
+/** Fire a hook for every alive party combatant that holds powers (party-wide events). */
+function firePartyPowers(c: CombatState, hook: HookName): CombatStep {
+  let combat = c
+  const events: GameEvent[] = []
+  const spiritEvents: SpiritEvent[] = []
+  for (const id of combat.partyOrder) {
+    const r = firePowerHook(combat, hook, id)
+    combat = r.combat
+    events.push(...r.events)
+    spiritEvents.push(...r.spiritEvents)
+  }
+  return step(combat, events, spiritEvents)
+}
+
 /**
  * "Last stand": the instant a flagged foe becomes the SOLE living (revealed) enemy it rallies — steps
  * to the front (so the buff isn't swallowed by a back-row penalty) and gains the reusable `lastStand`
@@ -318,8 +389,11 @@ function applyEffect(
     case 'damage': {
       const targets = resolveTargets(combat, sourceId, op.target ?? defaultTarget, chosenId)
       const hits = op.hits ?? 1
-      const base = spiritScaled(card, op.amount, spirit, source.scale)
-      if (base <= 0) return step(combat, [{ type: 'cardFizzled', iid: '', defId: card.id, reason: 'lowSpirit' }])
+      const baseScaled = spiritScaled(card, op.amount, spirit, source.scale)
+      if (baseScaled <= 0) return step(combat, [{ type: 'cardFizzled', iid: '', defId: card.id, reason: 'lowSpirit' }])
+      // Sword of the Spirit: a flat per-attack damage floor (×scale), added to the base so it amplifies
+      // through Vulnerable. Single-hit attacks only — multi-hit gets its payoff from Strength instead.
+      const base = baseScaled + swordBonus(card, source, hits)
       for (const tid of targets) {
         for (let h = 0; h < hits; h++) {
           const r = damageTarget(combat, sourceId, tid, base, { nonLethal: card.nonLethal ?? false })
@@ -332,12 +406,48 @@ function applyEffect(
     }
     case 'block': {
       const targets = resolveTargets(combat, sourceId, op.target ?? 'self', chosenId)
-      const amount = spiritScaled(card, op.amount, spirit, source.scale, { floor: 1 })
+      // Dexterity (the block-mirror of Strength) adds stacks×scale to block gained, read on the
+      // casting source — exactly as Strength adds to damage in physicalAmount.
+      const amount = spiritScaled(card, op.amount, spirit, source.scale, { floor: 1 }) + dexterityBlockBonus(source)
       for (const tid of targets) {
         combat = withCombatant(combat, tid, (x) => ({ ...x, block: x.block + amount }))
         events.push({ type: 'blockGained', targetId: tid, amount })
       }
       return step(combat, events)
+    }
+    case 'damageScaling': {
+      const targets = resolveTargets(combat, sourceId, op.target ?? defaultTarget, chosenId)
+      const base = scalingDamageBase(op, source, combat, targets[0] ? getC(combat, targets[0]) : undefined)
+      if (base <= 0) return step(combat, events)
+      for (const tid of targets) {
+        const r = damageTarget(combat, sourceId, tid, base, { nonLethal: card.nonLethal ?? false })
+        combat = r.combat
+        events.push(...r.events)
+        spiritEvents.push(...r.spiritEvents)
+      }
+      return step(combat, events, spiritEvents)
+    }
+    case 'blockScaling': {
+      const targets = resolveTargets(combat, sourceId, op.target ?? 'self', chosenId)
+      // reuse the shared scaling-base helper (same formula as damageScaling) + Dexterity on top
+      const amount = scalingDamageBase(op, source, combat, undefined) + dexterityBlockBonus(source)
+      for (const tid of targets) {
+        combat = withCombatant(combat, tid, (x) => ({ ...x, block: x.block + amount }))
+        events.push({ type: 'blockGained', targetId: tid, amount })
+      }
+      return step(combat, events)
+    }
+    case 'execute': {
+      const targets = resolveTargets(combat, sourceId, op.target ?? defaultTarget, chosenId)
+      for (const tid of targets) {
+        const base = executeDamageBase(op, source, getC(combat, tid)) + swordBonus(card, source, 1)
+        if (base <= 0) continue
+        const r = damageTarget(combat, sourceId, tid, base, { nonLethal: card.nonLethal ?? false })
+        combat = r.combat
+        events.push(...r.events)
+        spiritEvents.push(...r.spiritEvents)
+      }
+      return step(combat, events, spiritEvents)
     }
     case 'heal': {
       const targets = resolveTargets(combat, sourceId, op.target ?? 'self', chosenId)
@@ -353,6 +463,14 @@ function applyEffect(
       for (const tid of targets) {
         combat = applyStatusTo(combat, tid, op.status, op.stacks)
         events.push({ type: 'statusApplied', targetId: tid, status: op.status, stacks: op.stacks })
+      }
+      return step(combat, events)
+    }
+    case 'gainPower': {
+      const targets = resolveTargets(combat, sourceId, op.target ?? 'self', chosenId)
+      for (const tid of targets) {
+        combat = withPower(combat, tid, op.power, op.stacks)
+        events.push({ type: 'powerGained', targetId: tid, power: op.power, stacks: op.stacks })
       }
       return step(combat, events)
     }
@@ -534,6 +652,9 @@ export function startCombat(init: CombatInit): CombatStep {
     energy: { current: 0, max: init.energyMax },
     grace: { current: init.graceMax, max: init.graceMax },
     roundActionTaken: false,
+    cardsPlayedThisTurn: 0,
+    firstAttackUsedThisTurn: false,
+    shieldUsedThisRound: [],
     flags: init.flags,
     winCondition: init.winCondition,
     outcome: 'ongoing',
@@ -561,7 +682,7 @@ export function startCombat(init: CombatInit): CombatStep {
 
 function beginRound(c: CombatState): CombatStep {
   const round = c.roundNumber + 1
-  let combat: CombatState = { ...c, roundNumber: round, roundActionTaken: false, phase: 'roundStart' }
+  let combat: CombatState = { ...c, roundNumber: round, roundActionTaken: false, shieldUsedThisRound: [], phase: 'roundStart' }
 
   // reset party block + tick down the Divine Protection shield (expires at 0 turns)
   for (const id of combat.partyOrder) {
@@ -571,8 +692,14 @@ function beginRound(c: CombatState): CombatStep {
     })
   }
 
+  // fire onRoundStart powers (Breastplate block, Belt of Truth weaken, Steadfast/Zeal strength) AFTER
+  // the block reset, so power-granted block survives into the action phase.
+  const roundStart = firePartyPowers(combat, 'onRoundStart')
+  combat = roundStart.combat
+  const events: GameEvent[] = [{ type: 'roundAdvanced', round }, ...roundStart.events]
+  const spiritEvents: SpiritEvent[] = [...roundStart.spiritEvents]
+
   // telegraph enemy intents
-  const events: GameEvent[] = [{ type: 'roundAdvanced', round }]
   for (const id of combat.enemyOrder) {
     const e = combat.combatants[id]!
     if (!e.alive || e.hidden) continue
@@ -581,12 +708,13 @@ function beginRound(c: CombatState): CombatStep {
   }
 
   combat = { ...combat, phase: 'partyDecision' }
-  return step(combat, events)
+  return step(combat, events, spiritEvents)
 }
 
 function beginAction(c: CombatState): CombatStep {
   if (c.phase !== 'partyDecision') return reject(c, 'not-decision-phase')
-  let combat: CombatState = { ...c, phase: 'partyAction', energy: { ...c.energy, current: c.energy.max } }
+  // reset per-turn power counters (Helmet card-count, Gospel-Shod first-attack gate)
+  let combat: CombatState = { ...c, phase: 'partyAction', energy: { ...c.energy, current: c.energy.max }, cardsPlayedThisTurn: 0, firstAttackUsedThisTurn: false }
   const evs: GameEvent[] = [{ type: 'energyChanged', current: combat.energy.current, max: combat.energy.max }]
   const drawn = drawCards(combat, HAND_SIZE)
   combat = drawn.combat
@@ -678,6 +806,21 @@ export function playCard(c: CombatState, iid: string, chosenId: CombatantId | un
     // stamp the played iid onto fizzle events
     events.push(...r.events.map((e) => (e.type === 'cardFizzled' ? { ...e, iid } : e)))
     spiritEvents.push(...r.spiritEvents)
+  }
+
+  // power triggers: count this card, then fire onCardPlayed (Helmet draw) and, for attacks,
+  // onAttackPlayed (Gospel-Shod energy) before sealing the gate. Uses the RESOLVED def's type.
+  combat = { ...combat, cardsPlayedThisTurn: combat.cardsPlayedThisTurn + 1 }
+  const onPlayed = firePartyPowers(combat, 'onCardPlayed')
+  combat = onPlayed.combat
+  events.push(...onPlayed.events)
+  spiritEvents.push(...onPlayed.spiritEvents)
+  if (def.type === 'attack') {
+    const onAttack = firePartyPowers(combat, 'onAttackPlayed')
+    combat = onAttack.combat
+    events.push(...onAttack.events)
+    spiritEvents.push(...onAttack.spiritEvents)
+    combat = { ...combat, firstAttackUsedThisTurn: true }
   }
 
   const ended = finalizeIfEnded(combat)
@@ -780,12 +923,17 @@ function buildEnemyOrder(c: CombatState): CombatantId[] {
     .map((x) => x.id)
 }
 
-/** round resolve: tick status durations, then end combat or begin the next round */
+/** round resolve: tick poison DoT (deals HP, may kill), then status durations, then end combat or
+ *  begin the next round. tickDots runs FIRST and owns the poison lifecycle (tickStatuses skips it). */
 function resolveRound(c: CombatState): CombatStep {
-  const combat = tickStatuses(c)
+  const dot = tickDots(c)
+  const combat = tickStatuses(dot.combat)
   const ended = finalizeIfEnded(combat)
-  if (ended.combat.outcome !== 'ongoing') return ended
-  return beginRound(ended.combat)
+  const events = [...dot.events, ...ended.events]
+  const spiritEvents = [...dot.spiritEvents, ...ended.spiritEvents]
+  if (ended.combat.outcome !== 'ongoing') return step(ended.combat, events, spiritEvents)
+  const next = beginRound(ended.combat)
+  return step(next.combat, [...events, ...next.events], [...spiritEvents, ...next.spiritEvents])
 }
 
 /** end the party's action phase: discard the hand → 'partyEnd' (shared by the batch + stepped paths) */
@@ -902,14 +1050,40 @@ function executeIntent(c: CombatState, enemyId: CombatantId): CombatStep {
   }
 }
 
+/** Poison (and any future DoT): deal stacks×scale unblocked HP to each afflicted combatant, then spend
+ *  one stack. Bypasses block + the physical pipeline (fromDot); a lethal tick routes through
+ *  damageTarget→killCombatant, so poisoning a human to death still griefs Spirit. Self-sourced (the
+ *  source's stats are irrelevant — fromDot skips physicalAmount). */
+function tickDots(c: CombatState): CombatStep {
+  let combat = c
+  const events: GameEvent[] = []
+  const spiritEvents: SpiritEvent[] = []
+  for (const id of Object.keys(combat.combatants)) {
+    const x = combat.combatants[id]
+    if (!x || !x.alive) continue
+    const poison = statusStacks(x, 'poison')
+    if (poison <= 0) continue
+    const r = damageTarget(combat, id, id, poison * x.scale, { nonLethal: false, fromDot: true })
+    combat = r.combat
+    events.push(...r.events)
+    spiritEvents.push(...r.spiritEvents)
+    // spend one poison stack (harmless if the target died this tick)
+    combat = withCombatant(combat, id, (t) => ({
+      ...t,
+      statuses: t.statuses.map((s) => (s.id === 'poison' ? { ...s, stacks: s.stacks - 1 } : s)).filter((s) => s.stacks > 0),
+    }))
+  }
+  return step(combat, events, spiritEvents)
+}
+
 function tickStatuses(c: CombatState): CombatState {
   let combat = c
   for (const id of Object.keys(combat.combatants)) {
     combat = withCombatant(combat, id, (x) => {
       if (!x.alive) return x
       const statuses = x.statuses
-        // strength + lastStand persist (no per-round decay); the rest count down
-        .map((s) => (s.id === 'strength' || s.id === 'lastStand' ? s : { ...s, stacks: s.stacks - 1 }))
+        // strength/dexterity/lastStand persist; poison is owned by tickDots (skip it here); the rest count down
+        .map((s) => (s.id === 'strength' || s.id === 'dexterity' || s.id === 'lastStand' || s.id === 'poison' ? s : { ...s, stacks: s.stacks - 1 }))
         .filter((s) => s.stacks > 0)
       return { ...x, statuses }
     })

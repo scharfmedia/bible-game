@@ -239,7 +239,7 @@ function collectI18nKeys(): Set<string> {
   }
   for (const enc of Object.values(content.encounters)) for (const e of enc.enemies) add(e.nameKey)
   for (const item of Object.values(content.items)) { add(item.nameKey); add(item.descKey) }
-  for (const card of Object.values(content.cards)) { add(card.nameKey); add(card.textKey) }
+  for (const card of Object.values(content.cards)) { add(card.nameKey); add(card.textKey); if (card.descKey) add(card.descKey) }
   return keys
 }
 

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { CardFace } from './CardFace'
@@ -6,12 +7,15 @@ import type { CardRarity } from '../selectors'
 /**
  * A read-only modal listing a set of cards (a combat pile, or the run deck). Reuses the menu
  * `CardFace` + the shared `.modal-overlay` / `.panel` / `.card-row` chrome. Honed copies get a small
- * gold mark; clutter (unplayable) copies are dimmed. Clicking the backdrop or ✕ closes it.
+ * gold mark; clutter (unplayable) copies are dimmed. Clicking a card opens an enlarged detail view
+ * (big card + its long-form description); clicking the backdrop or ✕ closes the modal.
  */
 export interface ModalCard {
   iid?: string
   nameKey: string
   textKey: string
+  /** optional long-form lore shown in the enlarged detail view */
+  descKey?: string
   cost: number
   layer: 'flesh' | 'spirit' | 'both'
   verse?: boolean
@@ -23,6 +27,7 @@ export interface ModalCard {
 
 export function CardListModal({ titleKey, cards, onClose }: { titleKey: string; cards: ModalCard[]; onClose: () => void }) {
   const { t } = useTranslation()
+  const [detail, setDetail] = useState<ModalCard | null>(null)
   return (
     <div className="modal-overlay" onClick={onClose}>
       <motion.div
@@ -44,13 +49,30 @@ export function CardListModal({ titleKey, cards, onClose }: { titleKey: string; 
                 key={c.iid ?? `${c.nameKey}-${i}`}
                 className={['modal-card', c.honed ? 'honed' : '', c.unplayable ? 'unplayable' : ''].join(' ')}
               >
-                <CardFace cost={c.cost} layer={c.layer} nameKey={c.nameKey} textKey={c.textKey} values={c.values} verse={c.verse} rarity={c.rarity} />
+                <CardFace cost={c.cost} layer={c.layer} nameKey={c.nameKey} textKey={c.textKey} values={c.values} verse={c.verse} rarity={c.rarity} onClick={() => setDetail(c)} />
                 {c.honed && <span className="modal-card-badge" title={t('ui.deck.honed')}>✦</span>}
               </div>
             ))}
           </div>
         )}
       </motion.div>
+
+      {/* enlarged detail view — the card "turned around" with its full description */}
+      {detail && (
+        <div className="card-detail-overlay" onClick={(e) => { e.stopPropagation(); setDetail(null) }}>
+          <motion.div className="card-detail" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} onClick={(e) => e.stopPropagation()}>
+            <div className="card-detail-big">
+              <CardFace cost={detail.cost} layer={detail.layer} nameKey={detail.nameKey} textKey={detail.textKey} values={detail.values} verse={detail.verse} rarity={detail.rarity} />
+            </div>
+            <div className="card-detail-body">
+              <h4>{t(detail.nameKey)}</h4>
+              <p className="card-detail-text">{t(detail.textKey, detail.values)}</p>
+              {detail.descKey && <p className="card-detail-desc">{t(detail.descKey)}</p>}
+              <button className="btn small card-detail-close" onClick={() => setDetail(null)}>{t('ui.common.close')}</button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

@@ -6,11 +6,48 @@
 // ×0.5 → ×lastStand-in(0.5) → block (in damageTarget). There is NO flat defense and NO damage cap —
 // the only mitigation is block (and the `lastStand` rally buff: a cornered lone foe hits ×2, takes ×½).
 
-import type { StatusId } from '../cards/types'
+import type { CardDef, PowerId, StatusId } from '../cards/types'
 import type { Combatant } from './types'
 
 export const statusStacks = (c: Combatant, id: StatusId): number =>
   c.statuses.find((s) => s.id === id)?.stacks ?? 0
+
+export const powerStacks = (c: Combatant, id: PowerId): number =>
+  c.powers?.find((p) => p.id === id)?.stacks ?? 0
+
+/** Dexterity's flat addition to block gained (the block-mirror of Strength), read on the caster.
+ *  Centralized so every block path stays consistent. */
+export const dexterityBlockBonus = (source: Combatant): number => statusStacks(source, 'dexterity') * source.scale
+
+/** Sword of the Spirit's flat damage bonus — single-hit attacks only (multi-hit relies on Strength).
+ *  Shared by applyEffect + preview so the previewed number can never drift from the real hit. */
+export const swordBonus = (card: Pick<CardDef, 'type'>, source: Combatant, hits: number): number =>
+  card.type === 'attack' && hits === 1 ? powerStacks(source, 'sword_of_spirit') * source.scale : 0
+
+/** The pre-pipeline base for a `damageScaling` op, shared by applyEffect + preview so the previewed
+ *  number can never drift. `block` reads the SOURCE's (already-scaled) block; the other metrics are raw
+ *  counts scaled with the printed amount by the source's level. */
+export function scalingDamageBase(
+  op: { per: 'poisonOnTarget' | 'block' | 'cardsPlayedThisTurn'; amount: number; coeff: number },
+  source: Combatant,
+  combat: { cardsPlayedThisTurn: number },
+  target: Combatant | undefined,
+): number {
+  if (op.per === 'block') return Math.max(0, op.amount * source.scale + op.coeff * source.block)
+  const metric = op.per === 'cardsPlayedThisTurn' ? combat.cardsPlayedThisTurn : target ? statusStacks(target, 'poison') : 0
+  return Math.max(0, (op.amount + op.coeff * metric) * source.scale)
+}
+
+/** The pre-pipeline base for an `execute` op: amount, +bonus when the target is below the HP threshold.
+ *  Shared by applyEffect + preview so the previewed number can't drift (no target ⇒ no bonus). */
+export function executeDamageBase(
+  op: { amount: number; bonus: number; below: number },
+  source: Combatant,
+  target: Combatant | undefined,
+): number {
+  const low = target ? target.hp / Math.max(1, target.maxHp) < op.below : false
+  return (op.amount + (low ? op.bonus : 0)) * source.scale
+}
 
 export interface HitResult {
   amount: number

@@ -7,10 +7,28 @@ export type CardType = 'attack' | 'skill' | 'power' | 'spiritual' | 'verse' | 's
 
 export type TargetKind = 'enemy' | 'allEnemies' | 'ally' | 'self' | 'allAllies' | 'none'
 
-/** Milestone-1 status library (kept small and composable). 'lastStand' is a reusable "rally" buff:
- *  while held, the combatant deals ×2 damage and takes ×½ (see damage.ts physicalAmount). Any trigger
- *  can grant it; today the sole-surviving-foe trigger does (combat.ts refreshLastStand). */
-export type StatusId = 'weak' | 'vulnerable' | 'strength' | 'bound' | 'lastStand'
+/** Status library (kept small and composable). 'lastStand' is a reusable "rally" buff: while held,
+ *  the combatant deals ×2 damage and takes ×½ (see damage.ts physicalAmount). Any trigger can grant
+ *  it; today the sole-surviving-foe trigger does (combat.ts refreshLastStand).
+ *  - 'strength'/'dexterity' PERSIST (no per-round decay): strength adds to damage (physicalAmount),
+ *    dexterity adds to block gained (the `block` EffectOp case) — the block-mirror of strength.
+ *  - 'poison' is damage-over-time: ticked by tickDots() at round resolve (deals stacks×scale HP,
+ *    bypassing block + physicalAmount), then -1/tick. It is NOT touched by the generic decay map.
+ *  - 'weak'/'vulnerable' decay 1/round; 'bound' is spent by skipping a turn (executeIntent). */
+export type StatusId = 'weak' | 'vulnerable' | 'strength' | 'dexterity' | 'poison' | 'bound' | 'lastStand'
+
+/** Persistent powers (the Armor of God). Unlike statuses, powers NEVER decay and react to events via
+ *  hooks (combat/powers.ts) — they are what make cards combine into an engine. 'sword_of_spirit' and
+ *  'shield_of_faith' are pipeline reads (damage / damageTarget), not hooks; the rest fire on a hook. */
+export type PowerId =
+  | 'steadfast'
+  | 'belt_of_truth'
+  | 'breastplate'
+  | 'shield_of_faith'
+  | 'helmet_salvation'
+  | 'sword_of_spirit'
+  | 'gospel_shod'
+  | 'zeal'
 
 export type FruitAffinity = 'mercy' | 'faith' | 'knowledge'
 
@@ -22,9 +40,21 @@ export type FruitAffinity = 'mercy' | 'faith' | 'knowledge'
  */
 export type EffectOp =
   | { kind: 'damage'; amount: number; target?: TargetKind; hits?: number }
+  /** SCALING attack: base = amount + coeff × metric, then the normal damage pipeline (block/strength/
+   *  vulnerable still apply). `per:'block'` reads the SOURCE's block (Body of Christ — non-consuming);
+   *  `poisonOnTarget` reads the target's Poison; `cardsPlayedThisTurn` reads the turn counter. */
+  | { kind: 'damageScaling'; per: 'poisonOnTarget' | 'block' | 'cardsPlayedThisTurn'; amount: number; coeff: number; target?: TargetKind }
   | { kind: 'block'; amount: number; target?: TargetKind }
+  /** SCALING block: amount + coeff × cardsPlayedThisTurn (Dexterity still applies on top). */
+  | { kind: 'blockScaling'; per: 'cardsPlayedThisTurn'; amount: number; coeff: number; target?: TargetKind }
+  /** EXECUTE attack: deal `amount`, +`bonus` if the target's HP fraction is below `below` (0-1), then
+   *  the normal damage pipeline (block/strength/vulnerable + Sword apply). e.g. Deathblow 12 → 24. */
+  | { kind: 'execute'; amount: number; bonus: number; below: number; target?: TargetKind }
   | { kind: 'heal'; amount: number; target?: TargetKind }
   | { kind: 'applyStatus'; status: StatusId; stacks: number; target?: TargetKind }
+  /** install/stack a persistent Power on the target (default self) — the seam that activates the
+   *  trigger engine. A `power`-type card's effects are simply `[{ kind:'gainPower', … }]`. */
+  | { kind: 'gainPower'; power: PowerId; stacks: number; target?: TargetKind }
   | { kind: 'draw'; count: number }
   | { kind: 'gainEnergy'; amount: number }
   /** push the target to the back row (e.g. "shove") */
@@ -54,6 +84,9 @@ export interface CardDef {
   effects: EffectOp[]
   nameKey: I18nKey
   textKey: I18nKey
+  /** optional long-form lore/detail shown in the card detail view (deck modal). The on-card `textKey`
+   *  stays terse; this holds the full name + scripture + flavor. */
+  descKey?: I18nKey
   art?: AssetRef
   rarity?: 'starter' | 'common' | 'uncommon' | 'rare'
   exhaust?: boolean

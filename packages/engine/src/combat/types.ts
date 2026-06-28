@@ -1,4 +1,4 @@
-import type { CardDef, CardInstance, StatusId } from '../cards/types'
+import type { CardDef, CardInstance, PowerId, StatusId } from '../cards/types'
 import type { CombatStats } from '../state/stats'
 import type { RngState } from '../rng/rng'
 import type { CardDefId, CombatantId, EncounterId, GraceAbilityId, MemberId, NodeId } from '../types'
@@ -9,6 +9,13 @@ export type Side = 'left' | 'center' | 'right'
 
 export interface StatusInstance {
   id: StatusId
+  stacks: number
+}
+
+/** A held persistent power (the Armor of God). Reacts to events via hooks (combat/powers.ts) and never
+ *  decays. Lives on the combatant that cast the installing card; dropped on that member's death. */
+export interface PowerInstance {
+  id: PowerId
   stacks: number
 }
 
@@ -55,6 +62,8 @@ export interface Combatant {
    *  enemy: enemyScale(heroLevel, depth)). Content is authored in level-1 units; this scales it. */
   scale: number
   statuses: StatusInstance[]
+  /** persistent powers (Armor of God) that react to events via hooks — see combat/powers.ts */
+  powers?: PowerInstance[]
 
   // --- party members ---
   memberId?: MemberId
@@ -172,6 +181,12 @@ export interface CombatState {
 
   /** true once a card is played OR a position/flee action is committed this round */
   roundActionTaken: boolean
+  /** transient power-trigger counters. cardsPlayedThisTurn + firstAttackUsedThisTurn reset each action
+   *  phase (beginAction); shieldUsedThisRound resets each round (beginRound). Plain serializable data. */
+  cardsPlayedThisTurn: number
+  firstAttackUsedThisTurn: boolean
+  /** party combatants whose Shield of Faith has already blunted a hit THIS round (one per round) */
+  shieldUsedThisRound: CombatantId[]
   flags: CombatFlags
   winCondition: WinCondition
   outcome: Outcome

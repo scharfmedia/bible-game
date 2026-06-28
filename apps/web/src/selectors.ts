@@ -135,7 +135,7 @@ export function selectStory(state: GameState): StoryView | null {
 
 export interface SpoilView { id: string; kind: 'money' | 'relic'; label: string; claimed: boolean }
 export type CardRarity = 'starter' | 'common' | 'uncommon' | 'rare'
-export interface CardOfferView { defId: string; nameKey: string; textKey: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean; rarity: CardRarity; values?: Record<string, number> }
+export interface CardOfferView { defId: string; nameKey: string; textKey: string; descKey?: string; cost: number; layer: 'flesh' | 'spirit' | 'both'; verse: boolean; rarity: CardRarity; values?: Record<string, number> }
 
 /** Scaled card-text interpolation values at the run's current hero level + Spirit (for menu cards). */
 function runCardValues(run: NonNullable<GameState['run']>, defId: string): Record<string, number> | undefined {
@@ -160,6 +160,7 @@ function cardOffer(run: NonNullable<GameState['run']>, defId: string): CardOffer
     defId,
     nameKey: def?.nameKey ?? defId,
     textKey: def?.textKey ?? '',
+    descKey: def?.descKey,
     cost: def?.cost ?? 0,
     layer: def?.layer ?? 'flesh',
     verse: def?.type === 'verse',
@@ -325,6 +326,11 @@ export interface CombatantView {
   shield?: { turns: number; chance: number }
   /** "last stand" rally: a cornered lone foe deals ×2 and takes ×½ (intentValue already doubled) */
   lastStand?: boolean
+  /** buffs/debuffs shown as chips (weak/vulnerable/strength/dexterity/poison/bound). lastStand has
+   *  its own badge so it is excluded here. */
+  statuses: { id: string; stacks: number }[]
+  /** persistent powers (Armor of God) shown as gold chips */
+  powers: { id: string; stacks: number }[]
   row: 'front' | 'back'
   intentKind?: string
   intentValue?: number
@@ -418,6 +424,8 @@ export function selectCombat(state: GameState): CombatView | null {
       block: x.block,
       shield: x.shield,
       lastStand,
+      statuses: x.statuses.filter((s) => s.id !== 'lastStand' && s.stacks > 0).map((s) => ({ id: s.id, stacks: s.stacks })),
+      powers: (x.powers ?? []).filter((p) => p.stacks > 0).map((p) => ({ id: p.id, stacks: p.stacks })),
       row: x.row,
       intentKind: x.intent?.kind,
       intentValue,
