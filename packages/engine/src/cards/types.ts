@@ -29,6 +29,11 @@ export type PowerId =
   | 'whetstone'
   | 'adrenaline'
   | 'fury'
+  // ENEMY auras (installed per-archetype at encounter build; fire each round while the holder lives).
+  // They reuse the SAME hook engine + applyEffect as the player's powers — only the holder's faction
+  // differs, and target resolution is source-relative (combat.ts resolveTargets).
+  | 'aegis' // shield-bearer: grants Block to its whole line each round (the screen synergy)
+  | 'warleader' // champion / idol-spirit: rallies the line's Strength each round
 
 export type FruitAffinity = 'mercy' | 'faith' | 'knowledge'
 

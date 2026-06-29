@@ -155,7 +155,7 @@ export const ENCOUNTERS: Record<string, EncounterDef> = {
     id: 'thiefGreed',
     enemies: [
       { id: 'thief', archetype: 'thief', nameKey: 'enemy.thief', isHuman: true, revealsId: 'greed', scaling: { baseHp: 8, baseAtk: 2 } },
-      { id: 'greed', archetype: 'demon', nameKey: 'enemy.greed', isHuman: false, isDemon: true, hidden: true, boundToId: 'thief', scaling: { baseHp: 5, baseAtk: 4 } },
+      { id: 'greed', archetype: 'demon', nameKey: 'enemy.greed', isHuman: false, isDemon: true, hidden: true, boundToId: 'thief', aiProfileId: 'greed', scaling: { baseHp: 5, baseAtk: 4 } },
     ],
     // The Spirit of Greed binds you to the spot — once joined, there is no fleeing the rocky pass.
     // (You may still avoid the pass entirely by routing around it on the map.)
@@ -169,7 +169,7 @@ export const ENCOUNTERS: Record<string, EncounterDef> = {
   accuser: {
     id: 'accuser',
     enemies: [
-      { id: 'accuser', archetype: 'demon', nameKey: 'enemy.accuser', isHuman: false, isDemon: true, scaling: { baseHp: 20, baseAtk: 5 } },
+      { id: 'accuser', archetype: 'demon', nameKey: 'enemy.accuser', isHuman: false, isDemon: true, aiProfileId: 'accuser', scaling: { baseHp: 20, baseAtk: 5 } },
     ],
     flags: { mandatory: false, allowFlee: false, isBoss: true },
     winCondition: { kind: 'allDemonsDestroyed' },

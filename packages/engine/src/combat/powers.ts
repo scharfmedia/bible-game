@@ -49,4 +49,10 @@ export const POWERS: Record<PowerId, PowerDef> = {
   whetstone: { hooks: {} },
   // Bastion — pipeline read in damageTarget (first HP hit/round blunted). No hook.
   bastion: { hooks: {} },
+  // Aegis (enemy) — a shield-bearer screens its line: Block to all allies each round. `target:'allAllies'`
+  // resolves to the HOLDER's own faction (source-relative resolveTargets), so on an enemy holder this
+  // shields the enemy line, not the party. Block scales by the holder's level (flesh pseudo-card).
+  aegis: { hooks: { onRoundStart: ({ stacks }) => [{ kind: 'block', amount: stacks, target: 'allAllies' }] } },
+  // War-Leader (enemy) — rallies the line: +Strength to all allies each round (read ×scale in damage).
+  warleader: { hooks: { onRoundStart: ({ stacks }) => [{ kind: 'applyStatus', status: 'strength', stacks, target: 'allAllies' }] } },
 }

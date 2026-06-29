@@ -11,8 +11,20 @@ import type { PartyMember } from '../state/character'
 import type { RunState } from '../state/gameState'
 import type { CardDefId, EncounterId, NodeId } from '../types'
 import type { EnemyTemplate } from '../content/bundle'
+import { ARCHETYPE_PROFILE } from './ai'
 import { startCombat, type CombatStep } from './combat'
-import type { Combatant } from './types'
+import type { Combatant, PowerInstance } from './types'
+
+/** Persistent ENEMY auras installed by archetype at build time (fire each round via fireEnemyPowers
+ *  while the holder lives). These are the enemy-to-enemy synergies — they reuse the player's power
+ *  engine; only the holder's faction differs. Authors get them for free per archetype; nothing to wire
+ *  in content. Goliath is intentionally omitted (his own brace step is his ramp; his shield-bearer
+ *  company supplies the Aegis screen). */
+const ARCHETYPE_POWERS: Record<string, PowerInstance[]> = {
+  shieldBearer: [{ id: 'aegis', stacks: 3 }], // screens the whole line with Block each round
+  philistineChampion: [{ id: 'warleader', stacks: 1 }], // rallies its soldiers' Strength each round
+  idolSpirit: [{ id: 'warleader', stacks: 1 }], // empowers its bound host's line (once revealed)
+}
 
 function partyCombatant(m: PartyMember): Combatant {
   const stats = deriveStats(m.level, m.allocated)
@@ -53,11 +65,13 @@ function enemyCombatant(t: EnemyTemplate, heroLevel: number, runDepth: number, l
     stats,
     scale: enemyScale(heroLevel, runDepth),
     statuses: [],
+    powers: ARCHETYPE_POWERS[t.archetype],
     hidden: t.hidden,
     revealsId: t.revealsId,
     boundToId: t.boundToId,
     banishImmune: t.banishImmune,
-    aiProfileId: t.aiProfileId,
+    // strategy comes from the template's explicit aiProfileId, else the per-archetype default
+    aiProfileId: t.aiProfileId ?? ARCHETYPE_PROFILE[t.archetype],
     lastStandWhenAlone,
   }
 }

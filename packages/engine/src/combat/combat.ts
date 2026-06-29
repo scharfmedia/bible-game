@@ -60,6 +60,16 @@ const aliveParty = (c: CombatState): Combatant[] =>
 const targetableEnemies = (c: CombatState): Combatant[] =>
   c.enemyOrder.map((id) => c.combatants[id]!).filter((x) => x.alive && !x.hidden)
 
+/** The faction OPPOSING `source` — its targetable members. For a party source this is the enemies;
+ *  for an enemy source it is the living party. Makes effect targeting source-relative. */
+const opposingTargetable = (c: CombatState, source: Combatant): Combatant[] =>
+  source.faction === 'party' ? targetableEnemies(c) : aliveParty(c)
+
+/** `source`'s OWN faction — its living members. Enemy "allies" reuse `targetableEnemies`, so a
+ *  not-yet-revealed bound demon is never counted as an ally (e.g. a shield-bearer can't screen it). */
+const ownFactionAlive = (c: CombatState, source: Combatant): Combatant[] =>
+  source.faction === 'party' ? aliveParty(c) : targetableEnemies(c)
+
 const aliveDemons = (c: CombatState): Combatant[] =>
   Object.values(c.combatants).filter((x) => x.faction === 'enemy' && x.alive && x.isDemon)
 
@@ -122,27 +132,36 @@ function injectCards(c: CombatState, defId: CardDefId, count: number, pile: 'dra
   return step(combat, [{ type: 'cardsInjected', defId, iids, pile }])
 }
 
+// Targets are resolved RELATIVE to the source's faction: 'ally'/'allAllies' = the source's own side,
+// 'enemy'/'allEnemies' = the opposing side. For a PARTY source this is identical to the old hardcoded
+// behavior (own=party, opposing=enemies) — so player cards/items/powers are unaffected. An ENEMY source
+// (an enemy power or, later, an enemy move) now correctly buffs its own line and afflicts the party.
 function resolveTargets(
   c: CombatState,
   sourceId: CombatantId,
   target: TargetKind,
   chosenId: CombatantId | undefined,
 ): CombatantId[] {
+  const source = getC(c, sourceId)
+  if (!source) return []
   switch (target) {
     case 'self':
       return [sourceId]
     case 'allAllies':
-      return aliveParty(c).map((x) => x.id)
+      return ownFactionAlive(c, source).map((x) => x.id)
     case 'allEnemies':
-      return targetableEnemies(c).map((x) => x.id)
+      return opposingTargetable(c, source).map((x) => x.id)
     case 'ally': {
-      const id = chosenId && getC(c, chosenId)?.faction === 'party' ? chosenId : sourceId
-      return [id]
+      // a chosen member of the SOURCE's own faction, else the source itself
+      const chosen = chosenId ? getC(c, chosenId) : undefined
+      const ok = chosen && chosen.faction === source.faction && chosen.alive && !chosen.hidden
+      return [ok ? chosenId! : sourceId]
     }
     case 'enemy': {
+      // a chosen targetable OPPONENT, else the front-of-list living opponent
       const chosen = chosenId ? getC(c, chosenId) : undefined
-      if (chosen && chosen.faction === 'enemy' && chosen.alive && !chosen.hidden) return [chosenId!]
-      const first = targetableEnemies(c)[0]
+      if (chosen && chosen.faction !== source.faction && chosen.alive && !chosen.hidden) return [chosenId!]
+      const first = opposingTargetable(c, source)[0]
       return first ? [first.id] : []
     }
     case 'none':
@@ -334,6 +353,23 @@ function firePartyPowers(c: CombatState, hook: HookName): CombatStep {
   const events: GameEvent[] = []
   const spiritEvents: SpiritEvent[] = []
   for (const id of combat.partyOrder) {
+    const r = firePowerHook(combat, hook, id)
+    combat = r.combat
+    events.push(...r.events)
+    spiritEvents.push(...r.spiritEvents)
+  }
+  return step(combat, events, spiritEvents)
+}
+
+/** Fire a hook for every revealed enemy that holds powers — the mirror of firePartyPowers for enemy
+ *  auras (Aegis line-screen, War-Leader rally). `firePowerHook` already skips dead/power-less holders,
+ *  so an aura simply stops the round its holder dies ("as long as he lives"). enemyOrder excludes
+ *  hidden demons, so a not-yet-revealed idol's aura lies dormant until Sight reveals it. */
+function fireEnemyPowers(c: CombatState, hook: HookName): CombatStep {
+  let combat = c
+  const events: GameEvent[] = []
+  const spiritEvents: SpiritEvent[] = []
+  for (const id of combat.enemyOrder) {
     const r = firePowerHook(combat, hook, id)
     combat = r.combat
     events.push(...r.events)
@@ -699,6 +735,14 @@ function beginRound(c: CombatState): CombatStep {
   combat = roundStart.combat
   const events: GameEvent[] = [{ type: 'roundAdvanced', round }, ...roundStart.events]
   const spiritEvents: SpiritEvent[] = [...roundStart.spiritEvents]
+
+  // enemy auras (Aegis line-screen, War-Leader rally) fire each round while their holder lives. Enemy
+  // block is NOT reset at round start (only the party's is), so ally block stands through the party's
+  // upcoming attack — the screen is up exactly when the party would hit. Mirrors firePartyPowers.
+  const enemyStart = fireEnemyPowers(combat, 'onRoundStart')
+  combat = enemyStart.combat
+  events.push(...enemyStart.events)
+  spiritEvents.push(...enemyStart.spiritEvents)
 
   // telegraph enemy intents
   for (const id of combat.enemyOrder) {
