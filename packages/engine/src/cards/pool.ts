@@ -65,8 +65,9 @@ export function effectivePool(character: Character, content: ContentBundle, deck
     if (seen.has(id)) continue
     const def = content.cards[id]
     // '+' upgrade variants are never offered. Verse (spirit) cards are FIREPLACE-ONLY now — acquired
-    // solely by studying a Scripture Fragment — so they are never offered in rewards/shops.
-    if (!def || targets.has(id) || def.type === 'verse') continue
+    // solely by studying a Scripture Fragment. Clutter/affliction cards (the enemy-injected Thorn:
+    // `unplayable`, type 'status'/'curse') are removed after battle and must never be bought/rewarded.
+    if (!def || targets.has(id) || def.type === 'verse' || def.type === 'status' || def.type === 'curse' || def.unplayable) continue
     // don't offer a card the deck already holds the maximum copies of
     if (deck && !canAddCopy(content, deck, id)) continue
     seen.add(id)

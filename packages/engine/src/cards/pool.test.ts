@@ -41,6 +41,14 @@ describe('effectivePool', () => {
     expect(pool.length).toBeGreaterThan(effectivePool(charAt(1), content).length)
   })
 
+  it('clutter/affliction cards (unplayable, e.g. the Thorn) are never offered — not even for Enoch', () => {
+    const thorn: CardDef = { id: 'thorn_demo', type: 'status', layer: 'flesh', cost: 0, target: 'none', unplayable: true, nameKey: '', textKey: '', effects: [] }
+    const c = { ...content, cards: { ...content.cards, thorn_demo: thorn } }
+    expect(effectivePool(charAt(1, ['thorn_demo']), c)).not.toContain('thorn_demo')
+    const enoch: Character = { ...createCharacter('h', 'Enoch', 1), level: 1, pool: [] }
+    expect(effectivePool(enoch, c)).not.toContain('thorn_demo')
+  })
+
   it('verse (spirit) cards are FIREPLACE-ONLY: never offered, even when in the character pool', () => {
     const verseDef = { id: 'verse_demo', type: 'verse' as const, layer: 'spirit' as const, cost: 1, target: 'enemy' as const, nameKey: '', textKey: '', effects: [] }
     const verseContent = { ...content, cards: { ...content.cards, verse_demo: verseDef } }

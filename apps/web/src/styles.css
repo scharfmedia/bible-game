@@ -513,10 +513,12 @@ button.card-stack { background: none; padding: 0; font: inherit; cursor: pointer
 .card-stack.draw { transform: rotate(-8deg); }
 .card-stack.discard { transform: rotate(8deg); }
 
-.btn.end-turn { font-size: 1.14rem; padding: 0.72rem 1.92rem; background: linear-gradient(180deg, var(--gold-bright), var(--gold) 45%, #a8842f); color: #1a160c; font-weight: 700; letter-spacing: 0.03em; border: 1px solid var(--gold-bright); border-radius: 12px; box-shadow: 0 3px 12px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 0 0 2px rgba(0,0,0,0.12); text-shadow: 0 1px 1px rgba(255,255,255,0.4); transition: transform 0.12s, filter 0.2s; }
-.btn.end-turn:hover { filter: brightness(1.08); transform: translateY(-1px); }
-/* "ready" cue: nothing left to play this turn → the button pulses with a bright halo to draw the eye */
-.btn.end-turn.ready { animation: endTurnReady 2.6s ease-in-out infinite; }
+/* MUTED by default — while you still have energy/playable cards, End Turn is de-emphasized (subdued
+   olive) so it doesn't tempt an early end. It lights up gold only once `.ready` (no plays left). */
+.btn.end-turn { font-size: 1.14rem; padding: 0.72rem 1.92rem; background: linear-gradient(180deg, #3b4330, #23281b); color: #b9b29a; font-weight: 700; letter-spacing: 0.03em; border: 1px solid var(--panel-edge); border-radius: 12px; box-shadow: 0 3px 10px rgba(0,0,0,0.5); transition: transform 0.12s, filter 0.2s, background 0.25s, color 0.25s, border-color 0.25s, box-shadow 0.25s; }
+.btn.end-turn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+/* "ready" cue: nothing left to play this turn → full gold + a bright pulsing halo to draw the eye */
+.btn.end-turn.ready { background: linear-gradient(180deg, var(--gold-bright), var(--gold) 45%, #a8842f); color: #1a160c; border-color: var(--gold-bright); text-shadow: 0 1px 1px rgba(255,255,255,0.4); animation: endTurnReady 2.6s ease-in-out infinite; }
 /* a slow, gentle breathing halo — never fully off (no harsh blink), soft peak for the eyes */
 @keyframes endTurnReady {
   0%, 100% { box-shadow: 0 3px 12px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 0 0 2px rgba(0,0,0,0.12), 0 0 10px 1px rgba(255,243,196,0.25); }
