@@ -370,6 +370,9 @@ body {
 
 /* a combatant is a CHARACTER standing on the field (not a card): figure + ground shadow + nameplate */
 .unit { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; cursor: default; }
+/* a hovered/focused unit jumps in front of its neighbours so its plate chips + tooltip aren't covered
+   by an adjacent unit's sprite (which previously ate the hover on the front-row foes) */
+.unit:hover, .unit:focus-within { z-index: 30; }
 .unit.back { margin-bottom: 100px; }
 .unit.back .sprite { font-size: 6.6rem; opacity: 0.9; }
 .unit.targetable { cursor: pointer; }
@@ -444,31 +447,59 @@ body {
 @media (prefers-reduced-motion: reduce) { .unit .sprite { animation: none; } }
 
 /* enemy next-turn telegraph: a crimson "red-sword" pill above the unit */
-.intent { display: flex; gap: 4px; align-items: center; background: rgba(28,10,8,0.9); border: 1px solid #d05a4e; border-radius: 9px; padding: 2px 8px; font-size: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 0 10px rgba(192,69,60,0.45); }
-.intent b { color: #ff9a8a; font-size: 1.05rem; font-weight: 800; text-shadow: 0 1px 2px #000; }
+.intent { display: flex; gap: 3px; align-items: center; background: rgba(28,10,8,0.9); border: 1px solid #d05a4e; border-radius: 8px; padding: 1px 7px; font-size: 0.82rem; box-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 0 10px rgba(192,69,60,0.45); }
+.intent b { color: #ff9a8a; font-size: 0.88rem; font-weight: 800; text-shadow: 0 1px 2px #000; }
 .dmg-float { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); font-size: 1.9rem; font-weight: 800; color: #ff6b5e; text-shadow: 0 2px 6px #000; pointer-events: none; z-index: 4; }
 
-.unit-plate { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+/* z-index lifts the plate (HP + chips) above ADJACENT units' sprites — like .unit-overhead (z-index:3)
+   already does for the intent pill. Without this, a neighbour's sprite covered the front foes' chips,
+   so only the un-overlapped (back-row) foe's tooltips fired. */
+.unit-plate { position: relative; z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .unit-name { font-size: 1rem; font-weight: 600; color: #efe9d6; text-shadow: 0 1px 3px #000; background: rgba(0,0,0,0.42); padding: 2px 11px; border-radius: 7px; }
 .unit .hp-bar { position: relative; width: 156px; height: 15px; background: #3a1414; border-radius: 7px; overflow: hidden; border: 1px solid rgba(0,0,0,0.6); box-shadow: inset 0 0 4px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.5); }
 .unit .hp-fill { height: 100%; background: linear-gradient(180deg, #7d9a5c, #46602f); transition: width 0.3s ease; box-shadow: inset 0 1px 0 rgba(255,255,255,0.12); }
 .unit .hp-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; line-height: 1; font-size: 0.8rem; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
-.badges { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; min-height: 28px; }
-.badge { font-size: 1.15rem; padding: 2px 10px; border-radius: 8px; background: rgba(0,0,0,0.55); }
+.badges { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; min-height: 22px; }
+/* ALL chips share one compact size — only color/background distinguish them (no "wild west" sizes) */
+.badge { display: inline-flex; align-items: center; gap: 3px; font-size: 0.82rem; font-weight: 700; line-height: 1.2; padding: 2px 7px; border-radius: 7px; background: rgba(0,0,0,0.55); cursor: help; }
 .badge.block { color: #9fd1ff; }
 .badge.ward { color: var(--gold-bright); }
-.badge.laststand { color: #ff9d5c; background: rgba(120,30,0,0.6); font-weight: 700; }
+.badge.laststand { color: #ff9d5c; background: rgba(120,30,0,0.6); }
 .badge.row { color: var(--spirit); }
-/* buff/debuff status chips — slightly smaller than the HP-plate badges; green for buffs, red for debuffs */
-.badge.status { font-size: 0.95rem; padding: 1px 7px; font-weight: 700; cursor: help; }
+/* buff/debuff status chips — green for buffs, red for debuffs */
 .badge.status.buff { color: #8fe39a; background: rgba(20,80,30,0.55); }
 .badge.status.debuff { color: #ff8f8f; background: rgba(100,20,20,0.55); }
 /* persistent powers (Armor of God) — gold, set apart from the green/red status chips */
-.badge.power { font-size: 0.95rem; padding: 1px 7px; font-weight: 700; color: var(--gold-bright); background: rgba(90,70,10,0.55); border: 1px solid rgba(220,190,90,0.35); cursor: help; }
+.badge.power { color: var(--gold-bright); background: rgba(90,70,10,0.55); border: 1px solid rgba(220,190,90,0.35); }
+
+/* Battle info tooltip: any intent pill or symbol chip explains itself on HOVER or TAP/CLICK. The host
+   is focusable (tabindex), so a tap focuses it and shows the tip — the no-hover (touch) path. The tip
+   has pointer-events:none so it never eats the tap. The intent pill lives in `.unit-overhead`, which is
+   pointer-events:none, so re-enable events on the host there. */
+.tip-host { position: relative; cursor: help; outline: none; }
+.intent.tip-host { pointer-events: auto; }
+.intel-tip {
+  position: absolute; left: 50%; transform: translateX(-50%); z-index: 40;
+  width: max-content; max-width: 190px; pointer-events: none;
+  padding: 0.4rem 0.55rem; text-align: center;
+  background: rgba(0,0,0,0.94); border: 1px solid var(--panel-edge); border-radius: 7px; box-shadow: var(--shadow);
+  color: #d8d2c0; font-size: 0.72rem; font-weight: 500; line-height: 1.3;
+  opacity: 0; visibility: hidden; transition: opacity 0.12s ease;
+}
+.intel-tip b { color: var(--gold-bright); font-weight: 700; }
+.tip-host:hover > .intel-tip, .tip-host:focus > .intel-tip, .tip-host:focus-within > .intel-tip, .tip-host.pinned > .intel-tip { opacity: 1; visibility: visible; }
+/* plate chips sit low → tip floats ABOVE; the intent pill sits up top → tip drops BELOW */
+.badge.tip-host > .intel-tip { bottom: calc(100% + 6px); }
+.intent.tip-host > .intel-tip { top: calc(100% + 6px); }
 
 /* bottom HUD: draw stack hugs the bottom-left corner with the energy orb up+right of it; the fanned
    hand sits centre; the discard stack hugs the bottom-right corner with End Turn up+left of it. */
-.combat-hud { position: relative; z-index: 3; height: 210px; display: grid; grid-template-columns: 280px 1fr 340px; align-items: end; gap: 0.5rem; padding: 0 max(2.2rem, env(safe-area-inset-right)) max(0.5rem, env(safe-area-inset-bottom)) max(2.2rem, env(safe-area-inset-left)); background: linear-gradient(0deg, rgba(8,10,6,0.92) 35%, transparent); }
+.combat-hud { position: relative; z-index: 3; height: 210px; display: grid; grid-template-columns: 280px 1fr 340px; align-items: end; gap: 0.5rem; padding: 0 max(2.2rem, env(safe-area-inset-right)) max(0.5rem, env(safe-area-inset-bottom)) max(2.2rem, env(safe-area-inset-left)); background: linear-gradient(0deg, rgba(8,10,6,0.92) 35%, transparent); pointer-events: none; }
+/* The HUD bar sits ABOVE the battlefield (z-index 3 > 2), and its tall transparent top + the fanned
+   cards reach over the lower foes — which silently swallowed the hover on their chip tooltips (only the
+   raised back-row foe escaped). So the bar itself passes pointer events THROUGH; only the real controls
+   (cards, piles, End Turn) capture them. The energy orb is display-only → stays click-through. */
+.combat-hud .card-stack, .combat-hud .end-turn, .combat-hud .hand-fan .card { pointer-events: auto; }
 /* [draw pile, inset from the edge] [energy orb, raised + further right] */
 .hud-left { display: flex; flex-direction: row; align-items: flex-end; gap: 3.4rem; padding: 0 0 1rem; }
 .hud-left .energy-orb { margin-bottom: 40px; }
@@ -516,7 +547,18 @@ button.card-stack { background: none; padding: 0; font: inherit; cursor: pointer
 /* MUTED by default — while you still have energy/playable cards, End Turn is de-emphasized (subdued
    olive) so it doesn't tempt an early end. It lights up gold only once `.ready` (no plays left). */
 .btn.end-turn { font-size: 1.14rem; padding: 0.72rem 1.92rem; background: linear-gradient(180deg, #3b4330, #23281b); color: #b9b29a; font-weight: 700; letter-spacing: 0.03em; border: 1px solid var(--panel-edge); border-radius: 12px; box-shadow: 0 3px 10px rgba(0,0,0,0.5); transition: transform 0.12s, filter 0.2s, background 0.25s, color 0.25s, border-color 0.25s, box-shadow 0.25s; }
-.btn.end-turn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+/* default (not-yet-ready) End Turn: clearly-interactive hover so it never reads as disabled —
+   warms the fill, brightens the label to cream, gold-rims it, lifts it, and adds a soft glow */
+.btn.end-turn:not(.ready):hover:not(:disabled) {
+  background: linear-gradient(180deg, #57693f, #333d26);
+  color: #f4efdb;
+  border-color: var(--gold);
+  transform: translateY(-2px);
+  box-shadow: 0 7px 18px rgba(0,0,0,0.5), 0 0 16px rgba(220,190,90,0.4), inset 0 1px 0 rgba(255,255,255,0.18);
+  filter: none;
+}
+/* the already-glowing "ready" End Turn just gets a brighter lift on hover (keeps its gold + pulse) */
+.btn.end-turn.ready:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-2px); }
 /* "ready" cue: nothing left to play this turn → full gold + a bright pulsing halo to draw the eye */
 .btn.end-turn.ready { background: linear-gradient(180deg, var(--gold-bright), var(--gold) 45%, #a8842f); color: #1a160c; border-color: var(--gold-bright); text-shadow: 0 1px 1px rgba(255,255,255,0.4); animation: endTurnReady 2.6s ease-in-out infinite; }
 /* a slow, gentle breathing halo — never fully off (no harsh blink), soft peak for the eyes */

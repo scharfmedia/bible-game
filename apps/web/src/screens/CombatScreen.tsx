@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion, useAnimationControls } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { assetBg } from '@bible/assets'
@@ -16,12 +16,47 @@ import { useCombatFeedback, type UnitFloat, type UnitReaction } from './useComba
 import { useCardDrag, type CardDrag } from './useCardDrag'
 import { spriteUrl, spriteEmoji, spriteScale } from '../sprites'
 
-const INTENT_ICON: Record<string, string> = { attack: '⚔️', attackMulti: '⚔️', dread: '🌑', block: '🛡️', buff: '⬆️', debuff: '⬇️', clutter: '🌫️', special: '…', unknown: '❔' }
+const INTENT_ICON: Record<string, string> = { attack: '⚔️', attackMulti: '⚔️', block: '🛡️', buff: '⬆️', debuff: '⬇️', clutter: '🌫️', special: '…', unknown: '❔' }
 // chips for buffs/debuffs on a combatant (lastStand keeps its own badge). 'buff' = green, 'debuff' = red tint.
 const STATUS_ICON: Record<string, string> = { strength: '💪', dexterity: '🤚', poison: '☠️', weak: '💢', vulnerable: '🎯', bound: '⛓️' }
 const STATUS_KIND: Record<string, 'buff' | 'debuff'> = { strength: 'buff', dexterity: 'buff', poison: 'debuff', weak: 'debuff', vulnerable: 'debuff', bound: 'debuff' }
 // persistent powers — gold chips, distinct from the buff/debuff status chips (match the card art)
-const POWER_ICON: Record<string, string> = { steadfast: '🗿', menace: '😠', bulwark: '🏰', bastion: '🗼', momentum: '🌀', whetstone: '🔪', adrenaline: '⚡', fury: '🔥' }
+const POWER_ICON: Record<string, string> = { steadfast: '🗿', menace: '😠', bulwark: '🏰', bastion: '🗼', momentum: '🌀', whetstone: '🔪', adrenaline: '⚡', fury: '🔥', aegis: '🛡️', warleader: '🚩' }
+
+// A plain-language description of what an enemy's telegraphed intent will do, built from the localized
+// kind label plus the live numbers/status — so hovering or tapping the intent pill explains the move
+// (e.g. "Curses you: Vulnerable 2 — Takes 50% more damage. Wanes each round.").
+function intentText(c: CombatantView, t: (key: string) => string): string {
+  const k = c.intentKind
+  if (!k) return ''
+  const base = t(`intent.${k}`)
+  if (k === 'attack') return c.intentValue ? `${base} — ${c.intentValue}` : base
+  if (k === 'attackMulti') return c.intentValue ? `${base} — ${c.intentValue}×${c.intentHits ?? 1}` : base
+  if (k === 'block') return c.intentValue ? `${base} — ${c.intentValue}` : base
+  if (k === 'buff' || k === 'debuff') {
+    if (!c.intentStatus) return base
+    const amt = c.intentStacks ? ` ${c.intentStacks}` : ''
+    return `${base}: ${t(`status.${c.intentStatus}.name`)}${amt} — ${t(`status.${c.intentStatus}.desc`)}`
+  }
+  return base
+}
+
+// An intent pill / symbol chip that explains itself: the tip shows on HOVER (mouse) and on TAP/CLICK
+// (a pinned toggle — reliable on touch, where :focus on a non-button is flaky). Clicking inspects
+// without also targeting the unit (stopPropagation). The host carries the visual class (.intent/.badge).
+function Tip({ text, className, children }: { text: ReactNode; className: string; children: ReactNode }) {
+  const [pinned, setPinned] = useState(false)
+  return (
+    <span
+      className={`${className} tip-host${pinned ? ' pinned' : ''}`}
+      tabIndex={0}
+      onClick={(e) => { e.stopPropagation(); setPinned((p) => !p) }}
+    >
+      {children}
+      <span className="intel-tip" role="tooltip">{text}</span>
+    </span>
+  )
+}
 
 // Pause between each enemy's action during the UI-paced enemy turn (one engine step per gap). Long
 // enough to read the lunge → hit → HP-drop → damage float before the next foe steps up.
@@ -543,7 +578,7 @@ function CombatUnit({
       {/* over-head stack: name (always) + intent pill (alive enemy) / defeated marker — all ABOVE the head */}
       <div className="unit-overhead">
         {side === 'enemy' && c.alive && c.intentKind && (
-          <div className="intent">
+          <Tip className="intent" text={intentText(c, t)}>
             {INTENT_ICON[c.intentKind] ?? '❔'}
             {c.intentKind === 'attackMulti' && c.intentValue ? (
               <b>{c.intentValue}×{c.intentHits ?? 1}</b>
@@ -552,7 +587,7 @@ function CombatUnit({
             ) : c.intentStacks ? (
               <b>{c.intentStacks}</b>
             ) : null}
-          </div>
+          </Tip>
         )}
         {!c.alive && <div className="unit-defeated" title={c.subdued ? 'subdued' : 'defeated'}>{c.subdued ? '💫' : '💀'}</div>}
         <div className="unit-name">{c.displayName ?? t(c.nameKey)}</div>
@@ -583,19 +618,23 @@ function CombatUnit({
           <span className="hp-text">{c.hp}/{c.maxHp}</span>
         </div>
         <div className="badges">
-          {c.block > 0 && <span className="badge block">🛡 {c.block}</span>}
-          {c.shield && <span className="badge ward">🛡✨ {Math.round(c.shield.chance * 100)}% · {c.shield.turns}t</span>}
-          {c.lastStand && <span className="badge laststand" title={t('ui.combat.lastStandHint')}>🔥 {t('ui.combat.lastStand')}</span>}
-          {c.row === 'back' && <span className="badge row">{t('ui.combat.backRow')}</span>}
+          {c.block > 0 && <Tip className="badge block" text={t('ui.combat.blockHint')}>🛡 {c.block}</Tip>}
+          {c.shield && (
+            <Tip className="badge ward" text={t('ui.combat.wardHint')}>
+              🛡✨ {Math.round(c.shield.chance * 100)}% · {c.shield.turns}t
+            </Tip>
+          )}
+          {c.lastStand && <Tip className="badge laststand" text={t('ui.combat.lastStandHint')}>🔥 {t('ui.combat.lastStand')}</Tip>}
+          {c.row === 'back' && <Tip className="badge row" text={t('ui.combat.backRowHint')}>{t('ui.combat.backRow')}</Tip>}
           {c.statuses.map((s) => (
-            <span key={s.id} className={'badge status ' + (STATUS_KIND[s.id] ?? 'debuff')} title={`${t(`status.${s.id}.name`)} — ${t(`status.${s.id}.desc`)}`}>
+            <Tip key={s.id} className={'badge status ' + (STATUS_KIND[s.id] ?? 'debuff')} text={<><b>{t(`status.${s.id}.name`)}</b> — {t(`status.${s.id}.desc`)}</>}>
               {STATUS_ICON[s.id] ?? '◆'} {s.stacks}
-            </span>
+            </Tip>
           ))}
           {c.powers.map((p) => (
-            <span key={p.id} className="badge power" title={`${t(`power.${p.id}.name`)} — ${t(`power.${p.id}.desc`)}`}>
+            <Tip key={p.id} className="badge power" text={<><b>{t(`power.${p.id}.name`)}</b> — {t(`power.${p.id}.desc`)}</>}>
               {POWER_ICON[p.id] ?? '✦'}{p.stacks > 1 ? ` ${p.stacks}` : ''}
-            </span>
+            </Tip>
           ))}
         </div>
       </div>

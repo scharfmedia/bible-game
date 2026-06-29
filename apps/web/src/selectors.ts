@@ -336,6 +336,8 @@ export interface CombatantView {
   intentValue?: number
   intentHits?: number
   intentStacks?: number
+  /** the status a buff/debuff intent will apply (e.g. 'vulnerable') — drives the intent description */
+  intentStatus?: string
 }
 
 export interface HandCardView {
@@ -431,6 +433,7 @@ export function selectCombat(state: GameState): CombatView | null {
       intentValue,
       intentHits: x.intent?.hits,
       intentStacks: x.intent?.stacks,
+      intentStatus: x.intent?.status,
     }
   }
 
