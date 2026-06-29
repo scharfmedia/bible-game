@@ -419,16 +419,25 @@ body {
 /* Active target: the persistently-selected enemy (number keys play onto it; Q/E + arrows + click move
    it, kept across turns). Marked simply by tinting its NAME PLATE text gold — the default plate is
    otherwise untouched (the lightest possible "selected" cue). */
-/* the active target's name plate stays gold; the instant a unit BECOMES the target (Q/E, cursor keys,
-   or click) it briefly pops + glows so switching targets is unmistakable, then settles to that steady
-   gold highlight. The animation fires on class-add only, so it won't replay on unrelated re-renders. */
-@keyframes targetSelectGlow {
-  0%   { box-shadow: 0 0 0 0 rgba(247,224,138,0); }
-  45%  { box-shadow: 0 0 9px 2px rgba(247,224,138,0.5); }
-  100% { box-shadow: 0 0 0 0 rgba(247,224,138,0); }
+/* the active target's name plate stays gold (steady cue); the SNAP-ON lock reticle is the animated cue */
+.unit.active-target .unit-name { color: var(--gold-bright); position: relative; }
+/* Target lock-on: gold corner brackets that snap onto the selected enemy's NAME PLATE and hold. The
+   reticle is mounted only WHILE the unit is the active target, so the snap replays each time the target
+   changes (Q/E, cursor keys, or click). */
+.target-reticle { position: absolute; inset: -5px; pointer-events: none; z-index: 2; color: var(--gold-bright);
+  animation: lockOn 0.42s cubic-bezier(0.2, 0.8, 0.25, 1) both; }
+.tr-corner { position: absolute; width: 10px; height: 10px; border: 2px solid currentColor; border-radius: 1px;
+  filter: drop-shadow(0 0 3px rgba(247, 224, 138, 0.75)); }
+.tr-corner.tl { top: 0; left: 0; border-right: none; border-bottom: none; }
+.tr-corner.tr { top: 0; right: 0; border-left: none; border-bottom: none; }
+.tr-corner.bl { bottom: 0; left: 0; border-right: none; border-top: none; }
+.tr-corner.br { bottom: 0; right: 0; border-left: none; border-top: none; }
+@keyframes lockOn {
+  0%   { opacity: 0; transform: scale(1.45); }
+  55%  { opacity: 1; transform: scale(0.94); }
+  100% { opacity: 0.9; transform: scale(1); }
 }
-.unit.active-target .unit-name { color: var(--gold-bright); animation: targetSelectGlow 0.9s ease-out 1; }
-.app.reduced-motion .unit.active-target .unit-name { animation: none; }
+.app.reduced-motion .target-reticle { animation: none; opacity: 0.9; }
 @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
 @keyframes idleBreathe { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-2px) scale(1.015); } }
 

@@ -590,7 +590,19 @@ function CombatUnit({
           </Tip>
         )}
         {!c.alive && <div className="unit-defeated" title={c.subdued ? 'subdued' : 'defeated'}>{c.subdued ? '💫' : '💀'}</div>}
-        <div className="unit-name">{c.displayName ?? t(c.nameKey)}</div>
+        <div className="unit-name">
+          {c.displayName ?? t(c.nameKey)}
+          {/* target lock-on: corner brackets that snap onto the selected enemy's NAME PLATE and hold
+              (re-mounts — so the snap replays — whenever the active target changes) */}
+          {activeTarget && (
+            <span className="target-reticle" aria-hidden="true">
+              <span className="tr-corner tl" />
+              <span className="tr-corner tr" />
+              <span className="tr-corner bl" />
+              <span className="tr-corner br" />
+            </span>
+          )}
+        </div>
       </div>
       <div className="unit-figure">
         {predicted !== null && <div className="dmg-predict">−{predicted}</div>}
