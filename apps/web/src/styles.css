@@ -419,7 +419,16 @@ body {
 /* Active target: the persistently-selected enemy (number keys play onto it; Q/E + arrows + click move
    it, kept across turns). Marked simply by tinting its NAME PLATE text gold — the default plate is
    otherwise untouched (the lightest possible "selected" cue). */
-.unit.active-target .unit-name { color: var(--gold-bright); }
+/* the active target's name plate stays gold; the instant a unit BECOMES the target (Q/E, cursor keys,
+   or click) it briefly pops + glows so switching targets is unmistakable, then settles to that steady
+   gold highlight. The animation fires on class-add only, so it won't replay on unrelated re-renders. */
+@keyframes targetSelectGlow {
+  0%   { box-shadow: 0 0 0 0 rgba(247,224,138,0); }
+  45%  { box-shadow: 0 0 9px 2px rgba(247,224,138,0.5); }
+  100% { box-shadow: 0 0 0 0 rgba(247,224,138,0); }
+}
+.unit.active-target .unit-name { color: var(--gold-bright); animation: targetSelectGlow 0.9s ease-out 1; }
+.app.reduced-motion .unit.active-target .unit-name { animation: none; }
 @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
 @keyframes idleBreathe { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-2px) scale(1.015); } }
 
