@@ -1011,14 +1011,23 @@ body.holding-item, body.holding-item * { cursor: none; }
 
 /* real graphics */
 .startup-img { display: block; object-fit: contain; }
-/* self-contained logos on a LIGHT background: let their background melt into the black via an edge mask */
+/* self-contained logos on a LIGHT background: melt the background into the black. `closest-side`
+   tracks the image edges so the FLAT sides feather too (not just the corners), killing the hard square. */
 .startup-img.t-feather {
-  width: min(64vh, 80vw); height: auto; max-height: 74vh;
-  -webkit-mask-image: radial-gradient(ellipse 75% 75% at 50% 48%, #000 66%, transparent 100%);
-          mask-image: radial-gradient(ellipse 75% 75% at 50% 48%, #000 66%, transparent 100%);
+  width: min(72vh, 88vw); height: auto; max-height: 82vh;
+  -webkit-mask-image: radial-gradient(ellipse closest-side at 50% 49%, #000 78%, transparent 100%);
+          mask-image: radial-gradient(ellipse closest-side at 50% 49%, #000 78%, transparent 100%);
 }
-/* cinematic graphic already on a DARK background: show it large/full-bleed (its own edges blend) */
-.startup-img.t-bleed { width: min(94vw, 150vh); height: auto; max-height: 84vh; }
+/* a faint warm wash behind the cream studio logo so its edges blend into a glow, not into pure black */
+.startup-card.v-studio { background: radial-gradient(ellipse 60% 60% at 50% 49%, rgba(244,236,217,0.09), transparent 60%); }
+
+/* cinematic graphic already on a DARK background: size it large and feather the edges so the side
+   seams dissolve into black (keeps the 16:9 aspect — no distortion, no cropping of the dove/text). */
+.startup-img.t-bleed {
+  width: min(98vw, 172vh); height: auto; max-height: 96vh;
+  -webkit-mask-image: radial-gradient(ellipse closest-side at 50% 50%, #000 88%, transparent 100%);
+          mask-image: radial-gradient(ellipse closest-side at 50% 50%, #000 88%, transparent 100%);
+}
 /* transparent logo / wordmark: shown as-is, modest size, a soft shadow for legibility on black */
 .startup-img.t-plain { width: min(48vh, 66vw); height: auto; max-height: 32vh; filter: drop-shadow(0 4px 22px rgba(0,0,0,0.7)); }
 /* portraits / photos: a rounded, bordered card */
